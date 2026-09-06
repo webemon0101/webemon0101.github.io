@@ -1,90 +1,149 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progate</title>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-  <link rel="stylesheet" type="text/css" href="stylesheet.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>HAMZWORKERZ GAMES</title>
+<meta name="google-adsense-account" content="ca-pub-8860612143084575">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
+     crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; }
+  :root {
+    --bg: #0d1220;
+    --panel: #161d2f;
+    --panel-line: #2a3550;
+    --text: #e8ecf7;
+    --muted: #8f9ac0;
+    --accent: #56c7ff;
+  }
+  html, body { min-height: 100%; }
+  body {
+    background:
+      radial-gradient(1000px 520px at 50% -10%, #1c2a4a 0, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: "Courier New", ui-monospace, monospace;
+    -webkit-text-size-adjust: 100%;
+    padding: 7vh 20px 60px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  header { text-align: center; margin-bottom: 44px; }
+  h1 {
+    font-size: clamp(24px, 7vw, 48px);
+    letter-spacing: 0.1em;
+    line-height: 1.15;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(86,199,255,0.55), 0 0 30px rgba(86,199,255,0.25);
+  }
+  header p {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px; letter-spacing: 0.22em;
+  }
+
+  .grid {
+    width: 100%; max-width: 760px;
+    display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  .card {
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 16px;
+    padding: 22px 22px 20px;
+    text-decoration: none; color: inherit;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  }
+  .card:hover, .card:focus-visible {
+    transform: translateY(-4px);
+    border-color: var(--card-accent, var(--accent));
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    outline: none;
+  }
+  .icon {
+    width: 56px; height: 56px; border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 30px;
+    background: rgba(86,199,255,0.12);
+    border: 1px solid var(--card-accent, var(--accent));
+  }
+  .card h2 {
+    margin-top: 16px;
+    font-size: 20px; letter-spacing: 0.06em;
+    color: var(--card-accent, var(--accent));
+  }
+  .card .desc {
+    margin-top: 8px; color: var(--muted);
+    font-size: 13px; line-height: 1.6; flex: 1;
+  }
+  .card .play {
+    margin-top: 18px;
+    font-size: 13px; letter-spacing: 0.18em;
+    color: var(--text);
+  }
+  .card .play::after { content: " \25B6"; color: var(--card-accent, var(--accent)); }
+
+  /* ad area — invisible until an ad actually fills, so it never looks broken */
+  .ad-slot { width: 100%; max-width: 760px; margin: 40px auto 0; text-align: center; }
+  .ad-slot .ad-label {
+    display: none;
+    font-size: 10px; letter-spacing: 0.24em; color: var(--muted); margin-bottom: 8px;
+  }
+  .ad-slot ins { display: block; }
+  .ad-slot ins[data-ad-status="unfilled"] { display: none !important; }
+  .ad-slot:has(ins[data-ad-status="filled"]) .ad-label { display: block; }
+
+  footer {
+    margin-top: 44px; color: var(--muted);
+    font-size: 11px; letter-spacing: 0.1em; text-align: center;
+  }
+</style>
 </head>
 <body>
   <header>
-    <div class="container">
-      <div class="header-left">
-        <img class="logo" src="https://prog-8.com/images/html/advanced/main_logo.png">
-      </div>
-      <span class="fa fa-bars menu-icon"></span>
-      <div class="header-right">
-        <a href="#">レッスン</a>
-        <a href="#">新規登録</a>
-        <a href="#" class="login">ログイン</a>
-      </div>
-    </div>
+    <h1>HAMZWORKERZ GAMES</h1>
+    <p>SELECT A GAME</p>
   </header>
-  <div class="top-wrapper">
-    <div class="container">
-      <h1>LEARN TO CODE.<br>LEARN TO BE CREATIVE.</h1>
-      <p>Progateはオンラインプログラミング学習サービスです。<br>初心者にもやさしいスライドとレッスンで、ウェブサービスを作りながらプログラミングを学んでいきましょう。</p>
-      <div class="btn-wrapper">
-        <a href="#" class="btn signup">新規登録はこちら</a>
-        <p>or</p>
-        <a href="#" class="btn facebook"><span class="fa fa-facebook"></span>Facebookで登録</a>
-        <a href="#" class="btn twitter"><span class="fa fa-twitter"></span>Twitterで登録</a>
-      </div>
-    </div>
-  </div>
-  <div class="lesson-wrapper">
-    <div class="container">
-      <div class="heading">
-        <h2>Learn Where to Get Started!</h2>
-      </div>
-      <div class="lessons">
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/html.png">
-            <p>HTML & CSS</p>
-          </div>
-          <p class="text-contents">ウェブページの作成に使用される言語です。HTMLとCSSを組み合わせることで、静的なページを作り上げることができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/jQuery.png">
-            <p>jQuery</p>
-          </div>
-          <p class="text-contents">素敵な動きを手軽に実装できるJavaScriptライブラリです。 アニメーション効果をつけたり、Ajax（エイジャックス）を使って外部ファイルを読み込んだりと色々なことができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/ruby.png">
-            <p>Ruby</p>
-          </div>
-          <p class="text-contents">オープンソースの動的なプログラミング言語で、 シンプルさと高い生産性を備えています。大きなWebアプリケーションから小さな日用ツールまで、さまざまなソフトウェアを作ることができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/php.png">
-            <p>PHP</p>
-          </div>
-          <p class="text-contents">HTMLだけではページの内容を変えることはできません。PHPはHTMLにプログラムを埋め込み、それを可能にします。</p>
-        </div>
-      </div>
-      <div class="clear"></div>
-    </div>
-  </div>
-  <div class="message-wrapper">
-    <div class="container">
-      <div class="heading">
-        <h2>さぁ、あなたもProgateでプログラミングを学んでみませんか?</h2>
-        <h3>Let's learn to code, learn to be creative!</h3>
-      </div>
-      <span class="btn message">さっそく開発する</span>
-    </div>
-  </div>
-  <footer>
-    <div class="container">
-      <img src="https://prog-8.com/images/html/advanced/footer_logo.png">
-      <p>Learn to Code, Learn to be Creative.</p>
-    </div>
-  </footer>
+
+  <main class="grid">
+    <a class="card" style="--card-accent:#7c5cff" href="games/aether-warden/">
+      <div class="icon">🛸</div>
+      <h2>AETHER WARDEN</h2>
+      <p class="desc">縦スクロールのスペースシューター。スマホは傾けて移動・スワイプで射撃。</p>
+      <span class="play">PLAY</span>
+    </a>
+
+    <a class="card" style="--card-accent:#ff7a59" href="games/fire/">
+      <div class="icon">🚒</div>
+      <h2>FIRE RESCUE</h2>
+      <p class="desc">ゲーム＆ウオッチ風のレトロLCDゲーム。担架で住人を受け止め、救急車へ運ぶ。</p>
+      <span class="play">PLAY</span>
+    </a>
+  </main>
+
+  <!--
+    Google AdSense display unit for the menu page.
+    Until the site is approved this stays invisible (see .ad-slot CSS).
+    To activate a MANUAL unit: create a "Display ad" in AdSense and replace
+    the data-ad-slot value below with the 10-digit slot ID it gives you.
+    (Auto ads work without this, straight from the loader in <head>.)
+  -->
+  <aside class="ad-slot">
+    <div class="ad-label">SPONSORED</div>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8860612143084575"
+         data-ad-slot="0000000000"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+  </aside>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
+  <footer>HAMZWORKERZ &middot; hosted on GitHub Pages</footer>
 </body>
 </html>
