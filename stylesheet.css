@@ -1,0 +1,147 @@
+.Card{
+    display:grid;
+    row-gap:20px;
+}
+.Card > span{
+    align-self: end;
+  justify-self: end;
+}
+
+.english{
+  color:orange;
+  font-size:small;
+}
+
+p{
+  
+  font-size:x-large;
+}
+
+.btn{
+  width:150px;
+  height: 150px;
+  color:green;
+}
+
+.btn1{
+  /*display: inline-block;*/
+  width:50%;
+  padding:10px 0;
+  margin:10px 0;
+  text-align: center;
+  background: skyblue;
+  font-weight:bold;
+  color:pink;
+  aspect-ratio: 1/1;
+  font-size:xx-large;
+   border-radius: 50%;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   
+   text-decoration: none;
+   text-align: center;
+   margin: 10px 0;
+   display: inline-flex;    /* 修正 */
+   justify-content: center; /* 追加 左右中央 */
+   align-items: center;     /* 追加 上下中央 */
+   
+   border: 0.7rem outset lightblue;
+
+
+}
+
+.parent{
+  width:auto;
+  text-align:center;
+  
+}
+
+h1{
+  text-align:center;
+}
+
+#inputtag{
+  width:50%;
+  padding:10px;
+  margin:10px;
+  font-size:large;
+}
+
+#outputtag{
+  width:50%;
+  padding:10px;
+  margin:10px;
+  font-size:large;
+}
+
+.btnlist{
+  /*display:inline-block;*/
+  width:30%;
+  /*background:yellow;*/
+  color:brown;
+  aspect-ratio: 1 / 1;
+  font-size:x-large;
+  display: inline-flex;    /* 修正 */
+  justify-content: center; /* 追加 左右中央 */
+  align-items: center;     /* 追加 上下中央 */
+  transform:rotate(-90deg);   
+  border: 0.5rem outset yellow;
+  border-radius: 12px;
+}
+ .btnlist .sonomama{
+  transform:rotate(90deg);
+ }
+ 
+div{
+  text-align:center;
+}
+
+h2{
+  text-align:center;
+}
+
+.b1{
+  width:100%;
+  aspect-ratio:1/1;
+  display:inline-block;
+  
+  
+   border-radius: 50%;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+  
+   width: 200px;
+   height: 200px;
+   background: #6fa1ff;
+   color: #FFF;
+   text-decoration: none;
+   text-align: center;
+   margin: 10px 0;
+   
+
+  
+}
+
+.reverse{
+  transform:scale(-1,-1);
+}
+
+img{
+  width:100%;
+  margin:0px 0;
+}
+
+.selector{
+  border: 0.5rem outset pink;
+  /*
+  outline: 0.5rem solid khaki;
+  box-shadow: 0 0 0 2rem skyblue;
+  */
+  border-radius: 12px;
+  font: bold 1rem sans-serif;
+  margin: 2rem;
+  padding: 1rem;
+  
+}
