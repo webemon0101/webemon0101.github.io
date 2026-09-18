@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-GK5QCXSGJB"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-GK5QCXSGJB');
+  </script>
+  <meta name="google-adsense-account" content="ca-pub-8860612143084575">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
+       crossorigin="anonymous"></script>
+  <title>Webemon</title>
+  <!--
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+  -->
+  <link rel="stylesheet" type="text/css" href="stylesheet.css">
+</head>
+<body>
+<script type="text/javascript" src="speech.js">
+</script>
+<!--
+<h1>ほんやくこんにゃく</h1>
+<hr>
+-->
+<h2 class="reverse">
+<form id="outputtag2" class="Card">
+    <div>出力言語を選ぶ</div><div class="english">(Choose an input language)</div> 
+<select name="eng" id="outputtag" class="selector">
+    <option value="ja-JP" >日本語（Japanese）</option>
+    <option value="en-US" selected>英語(アメリカ)（US English）</option>
+    <option value="en-GB">英語(イギリス)（UK English）</option>
+    <option value="zh-CN">中国語（中文）</option>
+    <option value="es">スペイン語（Español）</option>
+    <option value="hi">ヒンディー語（インド）（हिंदी）</option>
+    <option value="ar">アラビア語（عربى）</option>
+    <option value="pl">ポルトガル語（ブラジル）（Portugues do Brasil）</option>
+    <option value="ru">ロシア語（русский）</option>
+    <option value="bn">ベンガル語（バングラディシュ）（বাংলা）</option>
+    <option value="de-DE">ドイツ語（Deutsch）</option>
+    <option value="jv">ジャワ語（Wong jawa）</option>
+    <option value="ko-KR">韓国語（한국）</option>
+    <option value="pa">パンジャブ語（インド北部）（ਪੰਜਾਬੀ）</option>
+    <option value="te">テルグ語（インド南東部）（తెలుగు）</option>
+    <option value="fr-FR">フランス語（Français）</option>
+    <option value="mr">マラーティー語（インド西部）（मराठी）</option>
+    <option value="ta">タミル語（インド南部）（தமிழ்）</option>
+    <option value="it-IT">イタリア語（Italiano）</option>
+    <option value="el">現代ギリシア語（ελληνική γλώσσα）</option>
+    <option value="gu">グジャラート語（インド）（ગુજરાતી）</option>
+    <option value="id">インドネシア語（Bahasa Indonesia）</option>
+    <option value="ka">ジョージア語（グルジア）（ქართული）</option>
+    <option value="km">クメール語（カンボジア）（ខ្មែរ）</option>
+    <option value="kn">カンナダ語（インド南部）（ಕನ್ನಡ）</option>
+    <option value="my">ビルマ語（ミャンマー）（ဗမာ）</option>
+    <option value="ne">ネパール語（नेपाली）</option>
+    <option value="nl">オランダ語（Nederlands）</option>
+    <option value="pl">ポーランド語（Polski）</option>
+    <option value="si">シンハラ語（スリランカ）（සිංහල）</option>
+    <option value="th">タイ語（ไทย）</option>
+    <option value="tl">タガログ語（フィリピン）（Tagalog）</option>
+    <option value="zh-HK">香港語（香港）</option>
+    <option value="zh-TW">台湾語（台湾）</option>
+    <option value="zu">スワヒリ語（東アフリカ）（Kiswahili）</option>
+</select>
+</form>
+
+<div id="result-div" class="text-info"></div>
+<hr>
+<div class="parent">
+    <button id="start-btn2" class="btn1"><img src="mic.png" class="b1">
+    </button>
+</div>
+</h2>
+
+<hr>
+<hr>
+<hr>
+
+<div>    
+    <button id="reverse-btn" class="btnlist"><img src="reverse.png" alt="入力⇔出力（Reverse)">
+    </button>
+    <button id="rep-btn" class="btnlist"><img src="respeak.png" class="sonomama" alt="もう一度発音（Repeat)"> 
+    </button>
+    <button id="trans-btn" class="btnlist"><img src="retranslate.jpg" class="sonomama" alt="再翻訳（Retranslate)">
+    </button>
+</div>
+<hr>
+<hr>
+<hr>
+
+<h2>
+<form id="inputtag2" class="Card">
+    <div>入力言語を選ぶ</div><div class="english">(Choose an output language)</div> 
+<select name="jap" id="inputtag" class="selector">
+    <option value="ja-JP" selected>日本語（Japanese）</option>
+    <option value="en-US">英語(アメリカ)（US English）</option>
+    <option value="en-GB">英語(イギリス)（UK English）</option>
+    <option value="zh-CN">中国語（中文）</option>
+    <option value="es">スペイン語（Español）</option>
+    <option value="hi">ヒンディー語（インド）（हिंदी）</option>
+    <option value="ar">アラビア語（عربى）</option>
+    <option value="pl">ポルトガル語（ブラジル）（Portugues do Brasil）</option>
+    <option value="ru">ロシア語（русский）</option>
+    <option value="bn">ベンガル語（バングラディシュ）（বাংলা）</option>
+    <option value="de-DE">ドイツ語（Deutsch）</option>
+    <option value="jv">ジャワ語（Wong jawa）</option>
+    <option value="ko-KR">韓国語（한국）</option>
+    <option value="pa">パンジャブ語（インド北部）（ਪੰਜਾਬੀ）</option>
+    <option value="te">テルグ語（インド南東部）（తెలుగు）</option>
+    <option value="fr-FR">フランス語（Français）</option>
+    <option value="mr">マラーティー語（インド西部）（मराठी）</option>
+    <option value="ta">タミル語（インド南部）（தமிழ்）</option>
+    <option value="it-IT">イタリア語（Italiano）</option>
+    <option value="el">現代ギリシア語（ελληνική γλώσσα）</option>
+    <option value="gu">グジャラート語（インド）（ગુજરાતી）</option>
+    <option value="id">インドネシア語（Bahasa Indonesia）</option>
+    <option value="ka">ジョージア語（グルジア）（ქართული）</option>
+    <option value="km">クメール語（カンボジア）（ខ្មែរ）</option>
+    <option value="kn">カンナダ語（インド南部）（ಕನ್ನಡ）</option>
+    <option value="my">ビルマ語（ミャンマー）（ဗမာ）</option>
+    <option value="ne">ネパール語（नेपाली）</option>
+    <option value="nl">オランダ語（Nederlands）</option>
+    <option value="pl">ポーランド語（Polski）</option>
+    <option value="si">シンハラ語（スリランカ）（සිංහල）</option>
+    <option value="th">タイ語（ไทย）</option>
+    <option value="tl">タガログ語（フィリピン）（Tagalog）</option>
+    <option value="zh-HK">香港語（香港）</option>
+    <option value="zh-TW">台湾語（台湾）</option>
+    <option value="zu">スワヒリ語（東アフリカ）（Kiswahili）</option>
+</select>
+</form>
+</h2>
+
+<h2>    
+   
+<div id="input-div" class="text-danger"></div>
+  
+</h2>
+
+<hr>
+<div class="parent">
+    <button id="start-btn" class="btn1"><img src="mic.png" class="b1" alt="音声入力（Speak)">
+    </button>
+</div>
+
+<!--
+<hr>
+<p>version beta 0.1</p>
+-->
+<script type="text/javascript" src="honyakuButton.js">
+</script>
+
+</body>
+</html>
