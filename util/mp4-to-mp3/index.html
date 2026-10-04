@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MP4 → MP3 変換</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#4da3ff;--acc2:#2f7fd6;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:860px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  #drop{border:2px dashed var(--line);text-align:center;color:var(--sub);cursor:pointer;padding:36px 16px;transition:.15s}
+  #drop.over,#drop:hover{border-color:var(--acc);color:var(--fg);background:#1a2030}
+  #drop b{color:var(--fg)}
+  audio{width:100%;margin-top:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:16px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  input[type=number],select{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:1rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  .bar{height:10px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .1s}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .info b{color:var(--fg)}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>MP4 → MP3 変換</h1>
+  <p class="lead">動画の音声をMP3として取り出します。ブラウザ内だけで処理し、ファイルはアップロードされません。</p>
+
+  <div id="drop" class="panel">
+    <p style="margin:0"><b>ここに MP4 をドラッグ＆ドロップ</b><br>またはクリックしてファイルを選択（mov・webm・m4a・wav なども可）</p>
+    <input id="file" type="file" accept="video/*,audio/*" class="hidden">
+  </div>
+
+  <section id="editor" class="panel hidden">
+    <div class="info" id="meta"></div>
+    <audio id="player" controls></audio>
+
+    <div class="grid">
+      <div><label>開始 (秒)</label><input id="start" type="number" min="0" step="0.1" value="0"></div>
+      <div><label>終了 (秒)</label><input id="end" type="number" min="0" step="0.1" value="0"></div>
+      <div><label>ビットレート</label>
+        <select id="kbps"><option>96</option><option>128</option><option selected>192</option><option>256</option><option>320</option></select></div>
+      <div><label>チャンネル</label>
+        <select id="ch"><option value="auto" selected>元のまま</option><option value="1">モノラル</option></select></div>
+    </div>
+    <div class="info" id="est"></div>
+
+    <div class="row">
+      <button id="go" type="button">MP3 に変換</button>
+      <button id="cancel" type="button" class="sec hidden">キャンセル</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section id="result" class="panel hidden">
+    <audio id="out" controls></audio>
+    <div class="info" id="rinfo" style="text-align:center"></div>
+    <div class="row" style="justify-content:center"><a id="dl" class="btn" download="output.mp3">MP3 をダウンロード</a></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const drop = $('drop'), fileIn = $('file'), player = $('player');
+let srcName = 'output', srcUrl = null, outUrl = null, buffer = null, cancelled = false;
+
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+fileIn.addEventListener('change', () => { if (fileIn.files[0]) load(fileIn.files[0]); });
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+const fmt = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+async function load(f) {
+  $('editor').classList.remove('hidden');
+  $('result').classList.add('hidden');
+  $('prog').style.width = '0';
+  buffer = null;
+  $('go').disabled = true;
+  if (typeof lamejs === 'undefined') { setStatus('MP3エンコーダ(lamejs)の読み込みに失敗しました。ネット接続を確認して再読み込みしてください。', true); return; }
+  srcName = f.name.replace(/\.[^.]+$/, '') || 'output';
+  if (srcUrl) URL.revokeObjectURL(srcUrl);
+  srcUrl = URL.createObjectURL(f);
+  player.src = srcUrl;
+  setStatus('音声を読み込み中…');
+  try {
+    const ab = await f.arrayBuffer();
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    buffer = await ac.decodeAudioData(ab);
+    ac.close();
+  } catch (e) {
+    setStatus('音声を読み取れませんでした（音声トラックがない、またはブラウザ非対応の形式の可能性）。', true);
+    return;
+  }
+  const d = buffer.duration;
+  $('start').value = 0; $('end').value = d.toFixed(1);
+  $('start').max = $('end').max = d.toFixed(2);
+  $('meta').innerHTML = `<b>${f.name}</b> / 長さ <b>${fmt(d)}</b> / <b>${buffer.sampleRate} Hz</b> / <b>${buffer.numberOfChannels === 1 ? 'モノラル' : 'ステレオ'}</b>`;
+  setStatus('');
+  $('go').disabled = false;
+  updateEst();
+}
+
+function range() {
+  const d = buffer ? buffer.duration : 0;
+  let s = Math.max(0, +$('start').value || 0), e = Math.min(d, +$('end').value || d);
+  if (e <= s) { s = 0; e = d; }
+  return { s, e };
+}
+function updateEst() {
+  if (!buffer) return;
+  const { s, e } = range(), k = +$('kbps').value;
+  $('est').innerHTML = `出力: <b>${fmt(e - s)}</b> / 約 <b>${((e - s) * k / 8 / 1048576).toFixed(1)} MB</b>（目安）`;
+}
+['start', 'end', 'kbps'].forEach(i => $(i).addEventListener('input', updateEst));
+
+const toInt16 = (f32, a, b) => {
+  const out = new Int16Array(b - a);
+  for (let i = a; i < b; i++) { const v = Math.max(-1, Math.min(1, f32[i])); out[i - a] = v < 0 ? v * 0x8000 : v * 0x7FFF; }
+  return out;
+};
+
+$('go').onclick = async () => {
+  if (!buffer) return;
+  cancelled = false;
+  $('go').disabled = true; $('cancel').classList.remove('hidden');
+  $('result').classList.add('hidden');
+  try {
+    const { s, e } = range();
+    const sr = buffer.sampleRate;
+    const a = Math.floor(s * sr), b = Math.min(buffer.length, Math.floor(e * sr));
+    const mono = $('ch').value === '1' || buffer.numberOfChannels === 1;
+    const L = buffer.getChannelData(0);
+    let R = null;
+    if (!mono) R = buffer.getChannelData(1);
+    let mixed = null;
+    if ($('ch').value === '1' && buffer.numberOfChannels > 1) {
+      const R2 = buffer.getChannelData(1);
+      mixed = new Float32Array(buffer.length);
+      for (let i = a; i < b; i++) mixed[i] = (L[i] + R2[i]) / 2;
+    }
+    const enc = new lamejs.Mp3Encoder(mono ? 1 : 2, sr, +$('kbps').value);
+    const parts = [];
+    const BLOCK = 1152 * 20;
+    for (let i = a; i < b; i += BLOCK) {
+      if (cancelled) throw new Error('cancel');
+      const j = Math.min(b, i + BLOCK);
+      const l = toInt16(mixed || L, i, j);
+      const buf = mono ? enc.encodeBuffer(l) : enc.encodeBuffer(l, toInt16(R, i, j));
+      if (buf.length) parts.push(new Uint8Array(buf));
+      const pct = (i - a) / (b - a) * 100;
+      $('prog').style.width = pct + '%';
+      setStatus(`変換中… ${Math.round(pct)}%`);
+      await new Promise(r => setTimeout(r));
+    }
+    const end = enc.flush();
+    if (end.length) parts.push(new Uint8Array(end));
+    const blob = new Blob(parts, { type: 'audio/mpeg' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('out').src = outUrl;
+    $('dl').href = outUrl; $('dl').download = srcName + '.mp3';
+    $('rinfo').innerHTML = `長さ <b>${fmt(e - s)}</b> / <b>${$('kbps').value} kbps</b> / <b>${(blob.size / 1048576).toFixed(2)} MB</b>`;
+    $('prog').style.width = '100%';
+    $('result').classList.remove('hidden');
+    setStatus('完了しました。');
+  } catch (err) {
+    $('prog').style.width = '0';
+    setStatus(err.message === 'cancel' ? 'キャンセルしました。' : '変換に失敗しました: ' + err.message, err.message !== 'cancel');
+  } finally {
+    $('go').disabled = false; $('cancel').classList.add('hidden');
+  }
+};
+$('cancel').onclick = () => { cancelled = true; };
+})();
+</script>
+</body>
+</html>
