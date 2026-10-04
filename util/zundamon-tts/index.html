@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ずんだもん読み上げ</title>
+<title>VOICEVOX 読み上げ</title>
 <style>
   :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#5cc46a;--acc2:#44a352;--err:#ff6b6b}
   *{box-sizing:border-box}
@@ -40,8 +40,8 @@
 <body>
 <main>
   <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
-  <h1>ずんだもん読み上げ</h1>
-  <p class="lead">文章を入力すると、ずんだもんが読み上げます。WAV でダウンロードできます。</p>
+  <h1>VOICEVOX 読み上げ</h1>
+  <p class="lead">文章を入力すると、選んだキャラクターが読み上げます（標準はずんだもん）。WAV でダウンロードできます。</p>
 
   <section class="panel">
     <textarea id="text" placeholder="ここに読み上げたい文章を入力">こんにちは、ぼくはずんだもんなのだ。</textarea>
@@ -53,6 +53,7 @@
           <option value="local">自分のPCの VOICEVOX（無制限・高品質）</option>
           <option value="web">Web API（tts.quest・インストール不要・制限あり）</option>
         </select></div>
+      <div><label>話者</label><select id="speaker"></select></div>
       <div><label>スタイル</label><select id="style"></select></div>
     </div>
 
@@ -85,7 +86,7 @@
     <div class="row" style="justify-content:center"><a id="dl" class="btn" download="zundamon.wav">WAV をダウンロード</a></div>
   </section>
 
-  <p class="credit">音声: VOICEVOX:ずんだもん　／　音声を公開・配布する場合は「VOICEVOX:ずんだもん」のクレジット表記と、<a href="https://zunko.jp/con_ongen_kiyaku.html" target="_blank" rel="noopener" style="color:inherit">東北ずん子・ずんだもんプロジェクトの利用規約</a>の確認が必要です。</p>
+  <p class="credit">クレジット表記: <b id="credit"></b>　／　音声を公開・配布する場合は、この表記と、キャラクターごとの利用規約（話者によって条件が異なります）の確認が必要です。ずんだもんは<a href="https://zunko.jp/con_ongen_kiyaku.html" target="_blank" rel="noopener" style="color:inherit">東北ずん子・ずんだもんプロジェクトの利用規約</a>を参照してください。</p>
 </main>
 
 <script>
@@ -107,19 +108,38 @@ $('count').textContent = $('text').value.length;
 [['speed','speedv'],['pitch','pitchv'],['into','intov'],['vol','volv']].forEach(([i, v]) =>
   $(i).addEventListener('input', () => $(v).textContent = (+$(i).value).toFixed(2)));
 
-function fillStyles(list) {
-  const cur = $('style').value;
-  $('style').innerHTML = list.map(([id, n]) => `<option value="${id}">ずんだもん（${n}）</option>`).join('');
-  if (cur && list.some(([id]) => String(id) === cur)) $('style').value = cur;
-}
-fillStyles(ZUNDA);
+// Web API 用の話者（IDが確実なものだけ）
+const WEB_SPEAKERS = [
+  { name: 'ずんだもん', styles: ZUNDA },
+  { name: '四国めたん', styles: [[2,'ノーマル'],[0,'あまあま'],[6,'ツンツン'],[4,'セクシー']] },
+  { name: '春日部つむぎ', styles: [[8,'ノーマル']] },
+  { name: '雨晴はう', styles: [[10,'ノーマル']] }
+];
+let speakers = WEB_SPEAKERS;
 
-async function loadLocalStyles() {
+function fillSpeakers(list, keep) {
+  speakers = list;
+  const cur = keep ? $('speaker').value : 'ずんだもん';
+  $('speaker').innerHTML = list.map(s => `<option>${s.name}</option>`).join('');
+  $('speaker').value = list.some(s => s.name === cur) ? cur : list[0].name;
+  fillStyles();
+}
+function fillStyles() {
+  const sp = speakers.find(s => s.name === $('speaker').value) || speakers[0];
+  const cur = $('style').value;
+  $('style').innerHTML = sp.styles.map(([id, n]) => `<option value="${id}">${n}</option>`).join('');
+  if (sp.styles.some(([id]) => String(id) === cur)) $('style').value = cur;
+  $('credit').textContent = 'VOICEVOX:' + sp.name;
+}
+$('speaker').addEventListener('change', fillStyles);
+fillSpeakers(WEB_SPEAKERS);
+
+async function loadLocalSpeakers() {
   try {
     const r = await fetch(LOCAL + '/speakers', { signal: AbortSignal.timeout(2500) });
-    const sp = (await r.json()).find(s => s.name === 'ずんだもん');
-    if (sp) fillStyles(sp.styles.map(s => [s.id, s.name]));
-    setStatus('VOICEVOX エンジンに接続できました。');
+    const list = (await r.json()).map(s => ({ name: s.name, styles: s.styles.map(t => [t.id, t.name]) }));
+    fillSpeakers(list, true);
+    setStatus(`VOICEVOX エンジンに接続できました（${list.length} 人の話者）。`);
   } catch {
     setStatus('VOICEVOX エンジンに接続できません（起動と、下の「使い方」の許可設定を確認してください）。', true);
     $('help').open = true;
@@ -128,7 +148,7 @@ async function loadLocalStyles() {
 function onEngine() {
   const local = $('engine').value === 'local';
   $('params').classList.toggle('hidden', !local);
-  if (local) loadLocalStyles(); else { fillStyles(ZUNDA); setStatus(''); }
+  if (local) loadLocalSpeakers(); else { fillSpeakers(WEB_SPEAKERS, true); setStatus(''); }
 }
 $('engine').addEventListener('change', onEngine);
 onEngine();
