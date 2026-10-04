@@ -72,10 +72,12 @@
     <div id="status"></div>
 
     <details id="help">
-      <summary>自分のPCの VOICEVOX を使うには</summary>
-      <p>1. <a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener" style="color:var(--acc)">VOICEVOX</a> を起動しておきます（エンジンが <code>http://127.0.0.1:50021</code> で動きます）。</p>
-      <p>2. このページのアドレスからの接続を許可します。VOICEVOX の「設定 → エンジン → 追加のオリジン許可」に <code id="origin"></code> を追加するか、エンジンを <code>--cors_policy_mode all</code> 付きで起動してください。</p>
-      <p>3. ブラウザが「ローカルネットワークへのアクセス」を確認してきたら許可してください。</p>
+      <summary>自分のPCの VOICEVOX を使うには（初回だけ設定）</summary>
+      <p>1. <a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener" style="color:var(--acc)">VOICEVOX</a> を起動します。</p>
+      <p>2. ブラウザで <a href="http://127.0.0.1:50021" target="_blank" rel="noopener" style="color:var(--acc)"><code>http://127.0.0.1:50021</code></a> を開き、「設定」を押します。</p>
+      <p>3. 「CORS Policy Mode」を <code>all</code> にして保存します（<code>localapps</code> のまま「Allow Origin」に <code id="origin"></code> を入れても可）。</p>
+      <p>4. VOICEVOX のメニュー「エンジン → 再起動」でエンジンを再起動します。</p>
+      <p>5. このページを再読み込みすると、全キャラクターが選べるようになります。ブラウザが「ローカルネットワークへのアクセス」を確認してきたら許可してください。</p>
       <p>Web API は文字数・回数の制限があり、話速などの細かい調整はできません。</p>
     </details>
   </section>
