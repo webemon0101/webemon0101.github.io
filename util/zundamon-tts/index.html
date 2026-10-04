@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ずんだもん読み上げ</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#5cc46a;--acc2:#44a352;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:860px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  textarea{width:100%;min-height:160px;resize:vertical;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 12px;font-size:1rem;font-family:inherit}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=text]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:1rem}
+  input[type=range]{width:100%}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#10210f;font-weight:600;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  .bar{height:10px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .1s}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .info b{color:var(--fg)}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  audio{width:100%}
+  details{margin-top:12px;color:var(--sub);font-size:.85rem}
+  details code{background:#12141a;padding:1px 6px;border-radius:4px;color:var(--fg)}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+  .credit{color:var(--sub);font-size:.8rem;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>ずんだもん読み上げ</h1>
+  <p class="lead">文章を入力すると、ずんだもんが読み上げます。WAV でダウンロードできます。</p>
+
+  <section class="panel">
+    <textarea id="text" placeholder="ここに読み上げたい文章を入力">こんにちは、ぼくはずんだもんなのだ。</textarea>
+    <div class="info"><span id="count">0</span> 文字</div>
+
+    <div class="grid">
+      <div><label>音声エンジン</label>
+        <select id="engine">
+          <option value="local">自分のPCの VOICEVOX（無制限・高品質）</option>
+          <option value="web">Web API（tts.quest・インストール不要・制限あり）</option>
+        </select></div>
+      <div><label>スタイル</label><select id="style"></select></div>
+    </div>
+
+    <div id="params" class="grid">
+      <div><label>話速: <span id="speedv">1.00</span></label><input id="speed" type="range" min="0.5" max="2" step="0.05" value="1"></div>
+      <div><label>音高: <span id="pitchv">0.00</span></label><input id="pitch" type="range" min="-0.15" max="0.15" step="0.01" value="0"></div>
+      <div><label>抑揚: <span id="intov">1.00</span></label><input id="into" type="range" min="0" max="2" step="0.05" value="1"></div>
+      <div><label>音量: <span id="volv">1.00</span></label><input id="vol" type="range" min="0.2" max="2" step="0.05" value="1"></div>
+    </div>
+
+    <div class="row">
+      <button id="go" type="button">読み上げる</button>
+      <button id="cancel" type="button" class="sec hidden">キャンセル</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+
+    <details id="help">
+      <summary>自分のPCの VOICEVOX を使うには</summary>
+      <p>1. <a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener" style="color:var(--acc)">VOICEVOX</a> を起動しておきます（エンジンが <code>http://127.0.0.1:50021</code> で動きます）。</p>
+      <p>2. このページのアドレスからの接続を許可します。VOICEVOX の「設定 → エンジン → 追加のオリジン許可」に <code id="origin"></code> を追加するか、エンジンを <code>--cors_policy_mode all</code> 付きで起動してください。</p>
+      <p>3. ブラウザが「ローカルネットワークへのアクセス」を確認してきたら許可してください。</p>
+      <p>Web API は文字数・回数の制限があり、話速などの細かい調整はできません。</p>
+    </details>
+  </section>
+
+  <section id="result" class="panel hidden">
+    <audio id="out" controls></audio>
+    <div class="info" id="rinfo" style="text-align:center"></div>
+    <div class="row" style="justify-content:center"><a id="dl" class="btn" download="zundamon.wav">WAV をダウンロード</a></div>
+  </section>
+
+  <p class="credit">音声: VOICEVOX:ずんだもん　／　音声を公開・配布する場合は「VOICEVOX:ずんだもん」のクレジット表記と、<a href="https://zunko.jp/con_ongen_kiyaku.html" target="_blank" rel="noopener" style="color:inherit">東北ずん子・ずんだもんプロジェクトの利用規約</a>の確認が必要です。</p>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const LOCAL = 'http://127.0.0.1:50021';
+// ずんだもんのスタイルID（Web版・フォールバック用）
+const ZUNDA = [[3,'ノーマル'],[1,'あまあま'],[7,'ツンツン'],[5,'セクシー'],[22,'ささやき'],[38,'ヒソヒソ'],[75,'ヘロヘロ'],[76,'なみだめ']];
+let cancelled = false, outUrl = null;
+$('origin').textContent = location.origin;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- UI ---------- */
+$('text').addEventListener('input', () => $('count').textContent = $('text').value.length);
+$('count').textContent = $('text').value.length;
+[['speed','speedv'],['pitch','pitchv'],['into','intov'],['vol','volv']].forEach(([i, v]) =>
+  $(i).addEventListener('input', () => $(v).textContent = (+$(i).value).toFixed(2)));
+
+function fillStyles(list) {
+  const cur = $('style').value;
+  $('style').innerHTML = list.map(([id, n]) => `<option value="${id}">ずんだもん（${n}）</option>`).join('');
+  if (cur && list.some(([id]) => String(id) === cur)) $('style').value = cur;
+}
+fillStyles(ZUNDA);
+
+async function loadLocalStyles() {
+  try {
+    const r = await fetch(LOCAL + '/speakers', { signal: AbortSignal.timeout(2500) });
+    const sp = (await r.json()).find(s => s.name === 'ずんだもん');
+    if (sp) fillStyles(sp.styles.map(s => [s.id, s.name]));
+    setStatus('VOICEVOX エンジンに接続できました。');
+  } catch {
+    setStatus('VOICEVOX エンジンに接続できません（起動と、下の「使い方」の許可設定を確認してください）。', true);
+    $('help').open = true;
+  }
+}
+function onEngine() {
+  const local = $('engine').value === 'local';
+  $('params').classList.toggle('hidden', !local);
+  if (local) loadLocalStyles(); else { fillStyles(ZUNDA); setStatus(''); }
+}
+$('engine').addEventListener('change', onEngine);
+onEngine();
+
+/* ---------- Text splitting ---------- */
+function split(text, max) {
+  const sentences = text.replace(/\r/g, '').split(/(?<=[。！？!?\n])/).map(s => s.trim()).filter(Boolean);
+  const out = [];
+  let cur = '';
+  const push = () => { if (cur) { out.push(cur); cur = ''; } };
+  for (let s of sentences) {
+    while (s.length > max) {            // 句点なしの長文はカンマ・文字数で強制分割
+      const cut = s.lastIndexOf('、', max) > 20 ? s.lastIndexOf('、', max) + 1 : max;
+      push(); out.push(s.slice(0, cut)); s = s.slice(cut);
+    }
+    if ((cur + s).length > max) push();
+    cur += s;
+  }
+  push();
+  return out;
+}
+
+/* ---------- Engines ---------- */
+async function synthLocal(text, speaker) {
+  const q = await fetch(`${LOCAL}/audio_query?speaker=${speaker}&text=${encodeURIComponent(text)}`, { method: 'POST' });
+  if (!q.ok) throw new Error('audio_query 失敗 (' + q.status + ')');
+  const query = await q.json();
+  query.speedScale = +$('speed').value;
+  query.pitchScale = +$('pitch').value;
+  query.intonationScale = +$('into').value;
+  query.volumeScale = +$('vol').value;
+  const s = await fetch(`${LOCAL}/synthesis?speaker=${speaker}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(query)
+  });
+  if (!s.ok) throw new Error('synthesis 失敗 (' + s.status + ')');
+  return new Uint8Array(await s.arrayBuffer());
+}
+async function synthWeb(text, speaker) {
+  const r = await fetch(`https://api.tts.quest/v3/voicevox/synthesis?speaker=${speaker}&text=${encodeURIComponent(text)}`);
+  const j = await r.json();
+  if (!j.success) throw new Error(j.errorMessage || j.error || 'Web API エラー（回数制限の可能性）');
+  for (let i = 0; i < 40; i++) {
+    const st = await (await fetch(j.audioStatusUrl, { cache: 'no-store' })).json();
+    if (st.isAudioError) throw new Error('Web API の音声生成に失敗しました');
+    if (st.isAudioReady) break;
+    await delay(1000);
+    if (i === 39) throw new Error('Web API がタイムアウトしました');
+  }
+  const w = await fetch(j.wavDownloadUrl);
+  if (!w.ok) throw new Error('音声の取得に失敗しました');
+  return new Uint8Array(await w.arrayBuffer());
+}
+
+/* ---------- WAV concat (PCM) ---------- */
+function parseWav(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let p = 12, fmt = null, data = null;
+  while (p + 8 <= u8.length) {
+    const id = String.fromCharCode(u8[p], u8[p + 1], u8[p + 2], u8[p + 3]);
+    let size = dv.getUint32(p + 4, true);
+    if (p + 8 + size > u8.length) size = u8.length - p - 8;
+    if (id === 'fmt ') fmt = u8.slice(p + 8, p + 8 + size);
+    else if (id === 'data') { data = u8.subarray(p + 8, p + 8 + size); break; }
+    p += 8 + size + (size & 1);
+  }
+  if (!fmt || !data) throw new Error('WAV を解析できませんでした');
+  return { fmt, data };
+}
+function concatWav(list) {
+  const parsed = list.map(parseWav);
+  const fmt = parsed[0].fmt;
+  const sr = new DataView(fmt.buffer).getUint32(4, true), ch = new DataView(fmt.buffer).getUint16(2, true);
+  const bytes = sr * ch * 2;
+  const gap = new Uint8Array(Math.round(bytes * 0.25) & ~1); // 文の間に0.25秒の無音
+  const total = parsed.reduce((n, x) => n + x.data.length, 0) + gap.length * (parsed.length - 1);
+  const out = new Uint8Array(44 + total), dv = new DataView(out.buffer);
+  const str = (o, s) => [...s].forEach((c, i) => out[o + i] = c.charCodeAt(0));
+  str(0, 'RIFF'); dv.setUint32(4, 36 + total, true); str(8, 'WAVE'); str(12, 'fmt '); dv.setUint32(16, 16, true);
+  out.set(fmt.subarray(0, 16), 20);
+  str(36, 'data'); dv.setUint32(40, total, true);
+  let o = 44;
+  parsed.forEach((x, i) => { if (i) { out.set(gap, o); o += gap.length; } out.set(x.data, o); o += x.data.length; });
+  return { bytes: out, seconds: total / bytes };
+}
+
+/* ---------- Run ---------- */
+$('go').onclick = async () => {
+  const text = $('text').value.trim();
+  if (!text) { setStatus('文章を入力してください。', true); return; }
+  const local = $('engine').value === 'local', speaker = $('style').value;
+  const chunks = split(text, local ? 120 : 100);
+  cancelled = false;
+  $('go').disabled = true; $('cancel').classList.remove('hidden');
+  $('result').classList.add('hidden'); $('prog').style.width = '0';
+  try {
+    const wavs = [];
+    for (let i = 0; i < chunks.length; i++) {
+      if (cancelled) throw new Error('cancel');
+      setStatus(`合成中… ${i + 1} / ${chunks.length}`);
+      wavs.push(await (local ? synthLocal : synthWeb)(chunks[i], speaker));
+      $('prog').style.width = ((i + 1) / chunks.length * 100) + '%';
+    }
+    const { bytes, seconds } = concatWav(wavs);
+    const blob = new Blob([bytes], { type: 'audio/wav' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('out').src = outUrl;
+    $('dl').href = outUrl;
+    $('rinfo').innerHTML = `長さ <b>${seconds.toFixed(1)} 秒</b> / <b>${(blob.size / 1048576).toFixed(2)} MB</b>`;
+    $('result').classList.remove('hidden');
+    $('out').play().catch(() => {});
+    setStatus('完了しました。');
+  } catch (e) {
+    $('prog').style.width = '0';
+    const net = e instanceof TypeError;
+    setStatus(e.message === 'cancel' ? 'キャンセルしました。'
+      : net ? '接続できませんでした。' + (local ? 'VOICEVOX の起動と許可設定を確認してください。' : 'ネット接続を確認してください。')
+      : '失敗しました: ' + e.message, e.message !== 'cancel');
+  } finally {
+    $('go').disabled = false; $('cancel').classList.add('hidden');
+  }
+};
+$('cancel').onclick = () => { cancelled = true; };
+})();
+</script>
+</body>
+</html>
