@@ -15,7 +15,6 @@
   .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-  .grid+.grid{margin-top:14px}
   label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
   select,input[type=file]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
   input[type=color]{width:100%;height:42px;background:#12141a;border:1px solid var(--line);border-radius:8px;padding:3px;cursor:pointer}
@@ -40,7 +39,7 @@
 <main>
   <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
   <h1>ムンカー錯視メーカー</h1>
-  <p class="lead">「同じ色なのに、重なる縞の色で違う色に見える」ムンカー錯視を、問いかけ → 縞を消す → 並べて種明かしの動画にします。ブラウザ内で処理されます。</p>
+  <p class="lead">背景は左右とも同じ2色の縞。中の形だけ、左は片方の色の縞を、右はもう片方の色の縞を「同じ色」に置き換えます。すると同じ色の形が、左右で違う色に見えます。問いかけ → 縞を消す → 並べて種明かしの動画にします。</p>
 
   <section class="panel">
     <h2>色</h2>
@@ -48,15 +47,15 @@
       <div><label>おすすめ配色</label>
         <select id="preset">
           <option value="skull">赤いガイコツ（紺 / 黄 → 紫 / オレンジに見える）</option>
-          <option value="pink">ピンク / 水色（灰色の四角）</option>
-          <option value="red">赤 / 青（灰色の四角）</option>
-          <option value="orange">オレンジ / 緑（灰色の四角）</option>
-          <option value="yellow">黄 / 紫（灰色の四角）</option>
+          <option value="pink">ピンク / 水色（灰色の形）</option>
+          <option value="red">赤 / 青（灰色の形）</option>
+          <option value="orange">オレンジ / 緑（灰色の形）</option>
+          <option value="yellow">黄 / 紫（灰色の形）</option>
           <option value="custom">カスタム</option>
         </select></div>
-      <div><label>左（上）の縞の色</label><input id="c1" type="color" value="#1b2a80"></div>
-      <div><label>右（下）の縞の色</label><input id="c2" type="color" value="#ffd400"></div>
-      <div><label>中央の形の色（左右共通）</label><input id="c0" type="color" value="#e3231b"></div>
+      <div><label>背景の縞の色A（左の形に残る色）</label><input id="c1" type="color" value="#0b4d90"></div>
+      <div><label>背景の縞の色B（右の形に残る色）</label><input id="c2" type="color" value="#ffe81a"></div>
+      <div><label>中央の形の色（左右共通）</label><input id="c0" type="color" value="#d71e24"></div>
     </div>
     <div class="row" style="margin-top:12px"><button id="rand" type="button" class="sec">🎲 ランダム配色</button></div>
 
@@ -76,9 +75,8 @@
     <h2 style="margin-top:20px">縞・画面</h2>
     <div class="grid">
       <div><label>縞の向き</label>
-        <select id="orient"><option value="h">横縞</option><option value="v">縦縞</option><option value="g">格子</option></select></div>
-      <div><label>縞の太さ: <span id="tv">45</span> %</label><input id="thick" type="range" min="15" max="60" step="5" value="45"></div>
-      <div><label>縞の細かさ（本数）: <span id="nv">40</span></label><input id="count" type="range" min="12" max="80" step="2" value="40"></div>
+        <select id="orient"><option value="v">縦縞</option><option value="h">横縞</option></select></div>
+      <div><label>縞の細かさ（組数）: <span id="nv">22</span></label><input id="count" type="range" min="8" max="50" step="1" value="22"></div>
       <div><label>画面の比率</label>
         <select id="aspect">
           <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
@@ -86,7 +84,7 @@
           <option value="1:1">正方形 1:1　900×900</option>
         </select></div>
     </div>
-    <div class="info">縞が細いほど、また画面を小さく（離れて）見るほど色づいて見えます。見えにくいときは本数を増やしてみてください。</div>
+    <div class="info">縞が細いほど、また画面を小さく（離れて）見るほど、形が縞の色に染まって見えます。</div>
 
     <div class="row">
       <button id="play" type="button">▶ プレビュー再生</button>
@@ -114,7 +112,7 @@ const cv = $('cv'), ctx = cv.getContext('2d');
 const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
 const GRAY = '#a0a0a0';
 const PRESETS = {
-  skull: { c: ['#1b2a80', '#ffd400'], t: '#e3231b', shape: 'skull' },
+  skull: { c: ['#0b4d90', '#ffe81a'], t: '#d71e24', shape: 'skull' },
   pink: { c: ['#ff2a8a', '#00b7ff'], t: GRAY },
   red: { c: ['#ff2020', '#2040ff'], t: GRAY },
   orange: { c: ['#ff9a00', '#12c24a'], t: GRAY },
@@ -125,15 +123,29 @@ let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
 
 function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
 const ease = p => p <= 0 ? 0 : p >= 1 ? 1 : p * p * (3 - 2 * p);
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
-/* ---------- Custom shape: image -> single-colour silhouette ---------- */
+/* ---------- Shapes (white alpha masks, pz x pz) ---------- */
+function skullMask(pz) {
+  const c = mk(pz, pz), g = c.getContext('2d'), u = pz;
+  g.fillStyle = '#fff';
+  g.beginPath(); g.ellipse(u * 0.5, u * 0.4, u * 0.37, u * 0.35, 0, 0, 7); g.fill();
+  g.beginPath(); g.roundRect(u * 0.28, u * 0.58, u * 0.44, u * 0.32, u * 0.07); g.fill();
+  g.beginPath(); g.roundRect(u * 0.2, u * 0.5, u * 0.6, u * 0.16, u * 0.08); g.fill();
+  g.globalCompositeOperation = 'destination-out';
+  [0.355, 0.645].forEach(x => { g.beginPath(); g.ellipse(u * x, u * 0.43, u * 0.1, u * 0.115, 0, 0, 7); g.fill(); });
+  g.beginPath(); g.moveTo(u * 0.5, u * 0.52); g.lineTo(u * 0.455, u * 0.62); g.lineTo(u * 0.545, u * 0.62); g.closePath(); g.fill();
+  g.lineWidth = u * 0.018; g.strokeStyle = '#000';
+  for (let i = 1; i < 5; i++) { const x = u * (0.34 + i * 0.064); g.beginPath(); g.moveTo(x, u * 0.74); g.lineTo(x, u * 0.9); g.stroke(); }
+  g.beginPath(); g.moveTo(u * 0.3, u * 0.75); g.lineTo(u * 0.7, u * 0.75); g.stroke();
+  return c;
+}
 function maskCanvas(im, pz, mode) {
   const sc = Math.min(1, 800 / Math.max(im.naturalWidth, im.naturalHeight));
   const w = Math.max(1, Math.round(im.naturalWidth * sc)), h = Math.max(1, Math.round(im.naturalHeight * sc));
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d', { willReadFrequently: true });
+  const c = mk(w, h), g = c.getContext('2d', { willReadFrequently: true });
   g.drawImage(im, 0, 0, w, h);
-  const id = g.getImageData(0, 0, w, h), d = id.data, at = (x, y) => (y * w + x) * 4;
+  const d = g.getImageData(0, 0, w, h).data, at = (x, y) => (y * w + x) * 4;
   const alpha = new Uint8Array(w * h);
   const corners = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)];
   const hasAlpha = corners.some(i => d[i + 3] < 200);
@@ -167,64 +179,75 @@ function maskCanvas(im, pz, mode) {
   }
   if (x1 < 0) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }
   const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-  const m = document.createElement('canvas'); m.width = bw; m.height = bh;
-  const mg = m.getContext('2d'), md = mg.createImageData(bw, bh);
+  const m = mk(bw, bh), mg = m.getContext('2d'), md = mg.createImageData(bw, bh);
   for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
     const i = (y * bw + x) * 4; md.data[i] = md.data[i + 1] = md.data[i + 2] = 255; md.data[i + 3] = alpha[(y + y0) * w + x + x0];
   }
   mg.putImageData(md, 0, 0);
-  const out = document.createElement('canvas'); out.width = out.height = pz;
-  const og = out.getContext('2d'), s = Math.min(pz / bw, pz / bh);
+  const out = mk(pz, pz), og = out.getContext('2d'), s = Math.min(pz / bw, pz / bh);
   og.imageSmoothingQuality = 'high';
   og.drawImage(m, (pz - bw * s) / 2, (pz - bh * s) / 2, bw * s, bh * s);
   return out;
 }
-function skullMask(pz) {
-  const c = document.createElement('canvas'); c.width = c.height = pz;
-  const g = c.getContext('2d'), u = pz;
-  g.fillStyle = '#fff';
-  g.beginPath(); g.ellipse(u * 0.5, u * 0.4, u * 0.37, u * 0.35, 0, 0, 7); g.fill();            // cranium
-  g.beginPath(); g.roundRect(u * 0.28, u * 0.58, u * 0.44, u * 0.32, u * 0.07); g.fill();        // jaw
-  g.beginPath(); g.roundRect(u * 0.2, u * 0.5, u * 0.6, u * 0.16, u * 0.08); g.fill();           // cheeks
-  g.globalCompositeOperation = 'destination-out';
-  [0.355, 0.645].forEach(x => { g.beginPath(); g.ellipse(u * x, u * 0.43, u * 0.1, u * 0.115, 0, 0, 7); g.fill(); }); // eye sockets
-  g.beginPath(); g.moveTo(u * 0.5, u * 0.52); g.lineTo(u * 0.455, u * 0.62); g.lineTo(u * 0.545, u * 0.62); g.closePath(); g.fill(); // nose
-  g.lineWidth = u * 0.018; g.strokeStyle = '#000';                                                // teeth gaps
-  for (let i = 1; i < 5; i++) { const x = u * (0.34 + i * 0.064); g.beginPath(); g.moveTo(x, u * 0.74); g.lineTo(x, u * 0.9); g.stroke(); }
-  g.beginPath(); g.moveTo(u * 0.3, u * 0.75); g.lineTo(u * 0.7, u * 0.75); g.stroke();
+function shapeMask(pz) {
+  const kind = $('shape').value;
+  if (kind === 'skull') return skullMask(pz);
+  if (kind === 'img' && shapeImg) return maskCanvas(shapeImg, pz, $('mode').value);
+  const c = mk(pz, pz), g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.beginPath();
+  if (kind === 'circle') g.arc(pz / 2, pz / 2, pz / 2, 0, 7); else g.rect(0, 0, pz, pz);
+  g.fill();
   return c;
 }
 function tinted(mask, color) {
-  const c = document.createElement('canvas'); c.width = mask.width; c.height = mask.height;
-  const g = c.getContext('2d'); g.drawImage(mask, 0, 0);
+  const c = mk(mask.width, mask.height), g = c.getContext('2d');
+  g.drawImage(mask, 0, 0);
   g.globalCompositeOperation = 'source-in'; g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
   return c;
 }
 
 /* ---------- Build ---------- */
+function stripes(ps, n, orient, draw) {   // draw(k, x0, y0, w, h) for each stripe k (0=A, 1=B, ...)
+  const half = ps / (2 * n);
+  for (let k = 0; k < 2 * n; k++) {
+    const a = Math.round(k * half), b = Math.round((k + 1) * half);
+    if (orient === 'v') draw(k, a, 0, b - a, ps); else draw(k, 0, a, ps, b - a);
+  }
+}
 function rebuild() {
   const [W, H] = SIZES[$('aspect').value];
   cv.width = W; cv.height = H;
   const vertical = W < H;
   const ps = vertical ? Math.round(Math.min(W * 0.84, H * 0.36)) : Math.round(Math.min(W * 0.44, H * 0.72));
-  const pz = Math.round(ps * 0.46);
+  const pz = Math.round(ps * 0.72);
   const centers = vertical ? [[W / 2, H * 0.31], [W / 2, H * 0.73]] : [[W * 0.27, H * 0.56], [W * 0.73, H * 0.56]];
   const mid = vertical ? [W / 2, H * 0.52] : [W / 2, H * 0.56];
-  const tint = $('c0').value;
-  let img = null;
-  if ($('shape').value === 'img' && shapeImg) img = tinted(maskCanvas(shapeImg, pz, $('mode').value), tint);
-  else if ($('shape').value === 'skull') img = tinted(skullMask(pz), tint);
+  const A = $('c1').value, B = $('c2').value, T = $('c0').value;
+  const n = +$('count').value, orient = $('orient').value;
+  const mask = shapeMask(pz);
+  const solid = tinted(mask, T);
+  // field: both colours everywhere (identical for left & right)
+  const field = mk(ps, ps), fg = field.getContext('2d');
+  stripes(ps, n, orient, (k, x, y, w, h) => { fg.fillStyle = k % 2 ? B : A; fg.fillRect(x, y, w, h); });
+  // overlays: left replaces the B stripes with T inside the shape, right replaces the A stripes
+  const panelMask = mk(ps, ps); panelMask.getContext('2d').drawImage(mask, (ps - pz) / 2, (ps - pz) / 2);
+  const overlay = [1, 0].map(rep => {
+    const o = mk(ps, ps), og = o.getContext('2d');
+    og.fillStyle = T;
+    stripes(ps, n, orient, (k, x, y, w, h) => { if (k % 2 === rep) og.fillRect(x, y, w, h); });
+    og.globalCompositeOperation = 'destination-in'; og.drawImage(panelMask, 0, 0);
+    return o;
+  });
+  L = { W, H, vertical, ps, pz, centers, mid, field, overlay, solid, hex: T.toUpperCase() };
   const noun = $('shape').value === 'skull' ? 'ガイコツ' : '形';
-  L = { W, H, vertical, ps, pz, centers, mid, tint, img, colors: [$('c1').value, $('c2').value] };
-  const hexTxt = tint.toUpperCase();
   timeline = [
     { dur: 6, f: () => ({ cap: `左右の${noun}は\n同じ色？ 違う色？\n（少し離れて見てみて）`, lines: 1, merge: 0 }) },
     { dur: 2, f: () => ({ cap: '答えは…', lines: 1, merge: 0 }) },
-    { dur: 3, f: (t, p) => ({ cap: '縞を消すと…', lines: 1 - ease(p), merge: 0 }) },
+    { dur: 3, f: (t, p) => ({ cap: '縞を消して\n本当の色を見ると…', lines: 1 - ease(p), merge: 0 }) },
     { dur: 2.5, f: (t, p) => ({ cap: '並べてみると…', lines: 0, merge: ease(p) }) },
-    { dur: 4.5, f: () => ({ cap: `完全に同じ色でした！\n${hexTxt}`, lines: 0, merge: 1, same: true }) }
+    { dur: 4.5, f: () => ({ cap: `完全に同じ色でした！\n${L.hex}`, lines: 0, merge: 1, same: true }) }
   ];
-  total = timeline.reduce((n, p) => n + p.dur, 0);
+  total = timeline.reduce((a, p) => a + p.dur, 0);
   draw(2);
 }
 
@@ -238,14 +261,6 @@ function drawText(lines, cx, cy, size, fill) {
     ctx.fillStyle = fill; ctx.fillText(l, cx, y0 + i * lh);
   });
 }
-function drawShape(cx, cy) {
-  const { pz, img, tint } = L, kind = $('shape').value;
-  ctx.fillStyle = tint;
-  if ((kind === 'img' || kind === 'skull') && img) { ctx.drawImage(img, cx - pz / 2, cy - pz / 2); return; }
-  ctx.beginPath();
-  if (kind === 'circle') ctx.arc(cx, cy, pz / 2, 0, 7); else ctx.rect(cx - pz / 2, cy - pz / 2, pz, pz);
-  ctx.fill();
-}
 function draw(t) {
   if (!L) return;
   const { W, H, ps, pz, centers, mid, vertical } = L;
@@ -253,26 +268,23 @@ function draw(t) {
   for (const p of timeline) { ph = p; if (t < acc + p.dur) { tl = t - acc; break; } acc += p.dur; tl = p.dur; }
   const s = ph.f(tl, Math.min(1, tl / ph.dur));
   ctx.fillStyle = '#1a1a20'; ctx.fillRect(0, 0, W, H);
-  const m = s.merge;
+  const m = s.merge, lines = s.lines;
   const tg = [
     vertical ? [mid[0], mid[1] - pz / 2] : [mid[0] - pz / 2, mid[1]],
     vertical ? [mid[0], mid[1] + pz / 2] : [mid[0] + pz / 2, mid[1]]
   ];
-  const n = +$('count').value, period = ps / n, th = Math.max(1, period * (+$('thick').value / 100)), orient = $('orient').value;
   centers.forEach(([cx, cy], i) => {
     const x0 = cx - ps / 2, y0 = cy - ps / 2;
     ctx.save(); ctx.globalAlpha = 1 - m; ctx.fillStyle = '#fff'; ctx.fillRect(x0, y0, ps, ps); ctx.restore();
-    drawShape(cx + (tg[i][0] - cx) * m, cy + (tg[i][1] - cy) * m);
-    if (s.lines > 0.001) {
-      ctx.save(); ctx.globalAlpha = s.lines;
-      ctx.beginPath(); ctx.rect(x0, y0, ps, ps); ctx.clip();
-      ctx.fillStyle = L.colors[i];
-      for (let k = 0; k < n; k++) {
-        const o = (k + 0.5) * period - th / 2;
-        if (orient !== 'v') ctx.fillRect(x0, y0 + o, ps, th);
-        if (orient !== 'h') ctx.fillRect(x0 + o, y0, th, ps);
-      }
+    if (lines > 0.001) {
+      ctx.save(); ctx.globalAlpha = lines;
+      ctx.drawImage(L.field, x0, y0); ctx.drawImage(L.overlay[i], x0, y0);
       ctx.restore();
+    }
+    if (lines < 0.999) {
+      const px = cx + (tg[i][0] - cx) * m, py = cy + (tg[i][1] - cy) * m;
+      ctx.save(); ctx.globalAlpha = 1 - lines;
+      ctx.drawImage(L.solid, px - pz / 2, py - pz / 2); ctx.restore();
     }
   });
   const size = Math.round(Math.min(W, H) * (vertical ? 0.058 : 0.062));
@@ -290,12 +302,12 @@ function applyPreset() {
 function syncUI() {
   const img = $('shape').value === 'img';
   $('imgBox').classList.toggle('hidden', !img); $('modeBox').classList.toggle('hidden', !img);
-  $('tv').textContent = $('thick').value; $('nv').textContent = $('count').value;
+  $('nv').textContent = $('count').value;
 }
 function schedule() { clearTimeout(timer); timer = setTimeout(() => { stop(); rebuild(); }, 120); }
 $('preset').addEventListener('input', () => { applyPreset(); schedule(); });
 ['c1', 'c2', 'c0'].forEach(i => $(i).addEventListener('input', () => { $('preset').value = 'custom'; schedule(); }));
-['shape', 'mode', 'orient', 'thick', 'count', 'aspect'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
+['shape', 'mode', 'orient', 'count', 'aspect'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
 $('shapeImg').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) { shapeImg = null; schedule(); return; }
@@ -309,7 +321,7 @@ $('rand').onclick = () => {
     const a = s * Math.min(l, 1 - l), f = n => { const k = (n + hh / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); };
     return '#' + f(0) + f(8) + f(4);
   };
-  $('c1').value = hx(h, 1, 0.55); $('c2').value = hx((h + 150 + Math.random() * 60) % 360, 1, 0.5);
+  $('c1').value = hx(h, 1, 0.4); $('c2').value = hx((h + 150 + Math.random() * 60) % 360, 1, 0.6);
   $('preset').value = 'custom'; schedule();
 };
 
