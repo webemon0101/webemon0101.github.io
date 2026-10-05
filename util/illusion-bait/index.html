@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>動く錯視 動画メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#ffd84d;--acc2:#e6bf2f;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:900px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:14px}
+  .grid.first{margin-top:0}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=text],input[type=file],textarea{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  textarea{resize:vertical;min-height:70px}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#2a2200;font-weight:700;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:80vh}
+  .stage{display:flex;justify-content:center}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+  h2{font-size:1rem;margin:0 0 12px}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>動く錯視 動画メーカー</h1>
+  <p class="lead">動いて見える錯視パターンを自動生成し、「動いて見えたら疲れてる？」風の煽りテキストと一緒に動画にします。ブラウザ内で処理されます。</p>
+
+  <section class="panel">
+    <h2>① 錯視パターン</h2>
+    <div class="grid first">
+      <div><label>パターン</label>
+        <select id="pattern">
+          <option value="snakes">蛇の回転（青黄の円盤）</option>
+          <option value="checker">放射チェッカー（紫×黄）</option>
+          <option value="burst">サンバースト（虹色の星）</option>
+          <option value="ripple">さざなみ（マゼンタ×緑）</option>
+        </select></div>
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>自分の錯視画像を使う（任意）</label><input id="own" type="file" accept="image/*"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="reseed" type="button" class="sec">🎲 別のパターンにする</button>
+      <label class="chk"><input id="zoom" type="checkbox" checked> ゆっくりズーム（動きを強調）</label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>② 煽りテキスト</h2>
+    <div class="grid first">
+      <div><label>テンプレート</label>
+        <select id="preset">
+          <option value="tired">疲れているとき動いて見える</option>
+          <option value="mental">見るだけで精神状態がわかる</option>
+          <option value="health">動いて見えなければ体調良好</option>
+          <option value="stress">揺れて見えたらヤバイ</option>
+        </select></div>
+      <div><label>見つめる秒数（カウントダウン）: <span id="cdv">5</span> 秒</label><input id="cd" type="range" min="3" max="10" step="1" value="5"></div>
+    </div>
+    <div class="grid">
+      <div><label>冒頭のあおり（改行OK）</label><textarea id="hook"></textarea></div>
+      <div><label>見方の指示</label><textarea id="sub"></textarea></div>
+      <div><label>問いかけ</label><input id="question" type="text"></div>
+      <div><label>結果（3行：🔴🟡🟢の順）</label><textarea id="results"></textarea></div>
+      <div><label>最後のひとこと</label><textarea id="cta"></textarea></div>
+    </div>
+    <div class="grid">
+      <label class="chk"><input id="disc" type="checkbox" checked> 画面下に「娯楽目的・医学的根拠なし」の注記を入れる</label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="row" style="margin-top:0">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section class="panel">
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div id="result" class="row hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="illusion.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
+const PRESETS = {
+  tired:  { hook: '【警告】\n動いて見えたら\n疲れています', sub: '目を動かさず\n中央の赤い点を\nじっと見てください',
+            question: '動いて見えますか？', results: '動いて見えた → 疲れがたまっています\n少し動く → ちょっとお疲れ気味\n動かない → 今日は体調バッチリ！', cta: 'ゆっくり休んでね\n高評価・チャンネル登録お願いします' },
+  mental: { hook: '見るだけで\n精神状態が\nわかる画像', sub: '目を動かさず\n中央の赤い点を\nじっと見てください',
+            question: 'どう見えますか？', results: 'ぐるぐる動く → ストレスが溜まっているかも\nゆらゆら揺れる → 少し心がお疲れ気味\n全く動かない → 心は安定しています', cta: 'あなたはどうでしたか？\nコメントで教えてね' },
+  health: { hook: '動いて見えなければ\n今日の体調は\n良好！', sub: '目を動かさず\n中央の赤い点を\nじっと見てください',
+            question: '動いて見えますか？', results: '激しく動く → 睡眠不足かも…\nうっすら動く → まあまあ普通\n動かない → 絶好調！今日はいい日', cta: '結果をコメントしてね\n高評価もよろしく！' },
+  stress: { hook: '【揺れて見えたらヤバイ】\nストレス状態が\n一瞬でわかる画像', sub: '画面から少し離れて\n中央の赤い点を\n見つめてください',
+            question: '揺れて見えますか？', results: '大きく揺れる → ヤバイかも…休んで！\n少し揺れる → 軽いストレス状態\n揺れない → ストレスなし！', cta: '無理せず休んでね\nチャンネル登録お願いします' }
+};
+let seed = 1, base = null, own = null, L = null, timeline = [], total = 0, timer = 0;
+let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+function rng(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+
+/* ---------- Patterns ---------- */
+function makePattern(W, H) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  if (own) {
+    const s = Math.max(W / own.naturalWidth, H / own.naturalHeight);
+    g.drawImage(own, (W - own.naturalWidth * s) / 2, (H - own.naturalHeight * s) / 2, own.naturalWidth * s, own.naturalHeight * s);
+    return c;
+  }
+  const r = rng(seed), kind = $('pattern').value;
+  if (kind === 'snakes') return snakes(c, g, W, H, r);
+  const id = g.createImageData(W, H), d = id.data, cx = W / 2, cy = H / 2, Rmax = Math.hypot(cx, cy);
+  const put = (i, col) => { d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255; };
+  if (kind === 'checker') {
+    const pal = ['#1b0a3d', '#7a2fc0', '#ffd60a', '#fff6b8'].map(hex);
+    const Ns = 14 + Math.floor(r() * 10), A = 3.4 + r() * 2, tw = (r() - 0.5) * 1.2;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = x - cx, dy = y - cy, rr = Math.max(1, Math.hypot(dx, dy)), th = Math.atan2(dy, dx);
+      const u = Math.log(rr) * A, v = th * Ns / (2 * Math.PI) + u * tw, ring = Math.floor(u);
+      let idx = Math.floor((v - Math.floor(v)) * 4); if (ring & 1) idx = 3 - idx;
+      put((y * W + x) * 4, pal[idx]);
+    }
+  } else if (kind === 'burst') {
+    const Nk = 10 + Math.floor(r() * 8), fr = 2.5 + r() * 2, am = 0.12 + r() * 0.1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = x - cx, dy = y - cy, rr = Math.hypot(dx, dy), th = Math.atan2(dy, dx);
+      const q = (rr / Rmax) * (1 + am * Math.cos(th * Nk)) * fr;
+      const hue = (q - Math.floor(q)) * 360, l = 0.5 + 0.2 * Math.sin(q * Math.PI * 4);
+      put((y * W + x) * 4, hsl(hue, 1, l));
+    }
+  } else { // ripple
+    const pal = ['#ff1fd8', '#ffffff', '#19e31c', '#ffffff', '#111111', '#ffffff'].map(hex);
+    const Nk = 4 + Math.floor(r() * 4), fr = 9 + r() * 5, amp = 18 + r() * 14;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = x - cx, dy = y - cy, rr = Math.hypot(dx, dy), th = Math.atan2(dy, dx);
+      const q = (rr + amp * Math.sin(th * Nk + rr * 0.02)) / (Rmax / fr);
+      put((y * W + x) * 4, pal[Math.floor((q - Math.floor(q)) * 6)]);
+    }
+  }
+  g.putImageData(id, 0, 0);
+  return c;
+}
+function hsl(h, s, l) {
+  const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return [f(0) * 255, f(8) * 255, f(4) * 255];
+}
+function snakes(c, g, W, H, r) {
+  g.fillStyle = '#c9ccd0'; g.fillRect(0, 0, W, H);
+  const cols = ['#000000', '#1c3fb8', '#ffffff', '#f6d300'];
+  const D = (W < H ? W / 2 : H / 3) * 0.98, R0 = D / 2, rings = 5, ringT = R0 / (rings + 0.6);
+  const dir0 = r() < 0.5 ? 1 : -1;
+  for (let row = 0, y = D / 2 * 0.9; y < H + D; row++, y += D * 0.87) {
+    for (let x = (row & 1 ? D / 2 : 0) - (row & 1 ? 0 : 0); x < W + D; x += D) {
+      for (let k = 0; k < rings; k++) {
+        const r1 = ringT * (k + 0.6), r2 = r1 + ringT, rm = (r1 + r2) / 2;
+        const n = Math.max(6, Math.round(2 * Math.PI * rm / (ringT * 2.6)));
+        const order = ((k & 1) ? -dir0 : dir0) > 0 ? [0, 1, 2, 3] : [3, 2, 1, 0];
+        for (let i = 0; i < n * 4; i++) {
+          const a1 = i / (n * 4) * Math.PI * 2, a2 = (i + 1) / (n * 4) * Math.PI * 2 + 0.004;
+          g.beginPath(); g.arc(x, y, r2, a1, a2); g.arc(x, y, r1, a2, a1, true); g.closePath();
+          g.fillStyle = cols[order[i % 4]]; g.fill();
+        }
+      }
+      g.beginPath(); g.arc(x, y, ringT * (rings + 0.6), 0, 7); g.strokeStyle = '#7d8087'; g.lineWidth = 2; g.stroke();
+    }
+  }
+  return c;
+}
+
+/* ---------- Build timeline ---------- */
+function fillPreset(k) {
+  const p = PRESETS[k];
+  $('hook').value = p.hook; $('sub').value = p.sub; $('question').value = p.question; $('results').value = p.results; $('cta').value = p.cta;
+}
+function rebuild() {
+  const [W, H] = SIZES[$('aspect').value];
+  cv.width = W; cv.height = H;
+  base = makePattern(W, H);
+  const cd = +$('cd').value;
+  const lines = $('results').value.split('\n').filter(Boolean);
+  const dur = [3.5, 3, cd, 7, 7, 3.5];
+  const names = ['hook', 'inst', 'count', 'look', 'result', 'cta'];
+  timeline = names.map((n, i) => ({ n, dur: dur[i] }));
+  L = { W, H, lines, cd };
+  total = dur.reduce((a, b) => a + b, 0);
+  draw(3.5 + 3 + 1);
+}
+
+/* ---------- Render ---------- */
+function fitText(lines, cx, cy, size, fill, stroke, maxW) {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  let s = size;
+  ctx.font = `900 ${s}px "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width));
+  if (w > maxW) s = Math.floor(s * maxW / w);
+  ctx.font = `900 ${s}px "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  const lh = s * 1.3, y0 = cy - lh * (lines.length - 1) / 2;
+  lines.forEach((l, i) => {
+    const f = Array.isArray(fill) ? fill[i % fill.length] : fill;
+    ctx.lineWidth = s * 0.22; ctx.strokeStyle = stroke; ctx.strokeText(l, cx, y0 + i * lh);
+    ctx.fillStyle = f; ctx.fillText(l, cx, y0 + i * lh);
+  });
+  return s;
+}
+function dot() {
+  const { W, H } = L, r = Math.max(7, W * 0.011);
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, r + 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, r, 0, 7); ctx.fillStyle = '#e60012'; ctx.fill();
+}
+function draw(t) {
+  if (!L || !base) return;
+  const { W, H } = L;
+  let acc = 0, ph = timeline[0], tl = 0;
+  for (const p of timeline) { ph = p; if (t < acc + p.dur) { tl = t - acc; break; } acc += p.dur; tl = p.dur; }
+  const z = $('zoom').checked ? 1 + 0.06 * (t / total) : 1;
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
+  ctx.drawImage(base, 0, 0); ctx.restore();
+  const U = W < H ? W : Math.min(W, H) * 1.0;
+  const maxW = W * 0.92, yc = H / 2;
+  const Y = '#ffe600', RED = '#ff2d2d', K = '#000';
+  if (ph.n === 'hook') {
+    dim(0.35);
+    const pulse = 1 + 0.03 * Math.sin(tl * 10);
+    fitText($('hook').value.split('\n'), W / 2, yc, U * 0.13 * pulse, [Y, '#fff', RED], K, maxW);
+  } else if (ph.n === 'inst') {
+    dim(0.3);
+    fitText($('sub').value.split('\n'), W / 2, yc * 0.55, U * 0.095, ['#fff', Y], K, maxW);
+    dot();
+  } else if (ph.n === 'count') {
+    const n = Math.ceil(L.cd - tl), fr = (L.cd - tl) % 1;
+    fitText(['中央の赤い点を見つめて'], W / 2, H * 0.14, U * 0.06, '#fff', K, maxW);
+    fitText([String(n)], W / 2, H * 0.28, U * 0.3 * (0.85 + 0.15 * fr), Y, K, maxW);
+    dot();
+  } else if (ph.n === 'look') {
+    fitText([$('question').value], W / 2, H * 0.12, U * 0.1, [Y], K, maxW);
+    dot();
+  } else if (ph.n === 'result') {
+    dim(0.4);
+    fitText([$('question').value], W / 2, H * 0.12, U * 0.08, [Y], K, maxW);
+    const marks = ['🔴 ', '🟡 ', '🟢 '], cols = ['#ff7a7a', '#ffe066', '#7dff9a'];
+    const lines = L.lines.slice(0, 3);
+    const bh = U * 0.2 * lines.length + U * 0.05, by = yc - bh / 2;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; roundRect(W * 0.04, by, W * 0.92, bh, 24); ctx.fill();
+    lines.forEach((l, i) => {
+      if (tl < 0.8 + i * 1.3) return;
+      const a = Math.min(1, (tl - 0.8 - i * 1.3) / 0.3);
+      ctx.save(); ctx.globalAlpha = a;
+      const cy = by + U * 0.05 / 2 + U * 0.2 * (i + 0.5);
+      const parts = l.split('→').map(s => s.trim());
+      if (parts.length === 2) {
+        fitText([marks[i] + parts[0]], W / 2, cy - U * 0.045, U * 0.06, cols[i], K, W * 0.86);
+        fitText(['→ ' + parts[1]], W / 2, cy + U * 0.045, U * 0.052, '#fff', K, W * 0.86);
+      } else fitText([marks[i] + l], W / 2, cy, U * 0.058, cols[i], K, W * 0.86);
+      ctx.restore();
+    });
+  } else {
+    dim(0.45);
+    fitText($('cta').value.split('\n'), W / 2, yc, U * 0.085, ['#fff', Y], K, maxW);
+  }
+  if ($('disc').checked) fitText(['※娯楽目的の錯視です。医学的根拠はありません'], W / 2, H - U * 0.035, U * 0.026, '#fff', 'rgba(0,0,0,.85)', maxW);
+}
+function dim(a) { ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.fillRect(0, 0, L.W, L.H); }
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* ---------- Controls ---------- */
+fillPreset('tired');
+$('preset').addEventListener('change', () => { fillPreset($('preset').value); schedule(); });
+$('own').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) { own = null; schedule(); return; }
+  const im = new Image(); im.onload = () => { own = im; schedule(); }; im.onerror = () => setStatus('画像を読み込めませんでした。', true);
+  im.src = URL.createObjectURL(f);
+});
+$('reseed').onclick = () => { seed = (Math.random() * 1e9) | 0; own = null; $('own').value = ''; schedule(); };
+['pattern', 'aspect', 'zoom', 'cd', 'hook', 'sub', 'question', 'results', 'cta', 'disc'].forEach(i => $(i).addEventListener('input', () => {
+  $('cdv').textContent = $('cd').value; schedule();
+}));
+function schedule() { clearTimeout(timer); timer = setTimeout(() => { stop(); rebuild(); }, 200); }
+
+/* ---------- Playback / recording ---------- */
+function start(cb) {
+  stop();
+  onEnd = cb;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now();
+  const tick = now => {
+    const t = (now - startAt) / 1000;
+    $('prog').style.width = Math.min(100, t / total * 100) + '%';
+    if (t >= total) { draw(total - 0.001); finish(); return; }
+    draw(t);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function finish() {
+  cancelAnimationFrame(raf); raf = 0;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
+  const cb = onEnd; onEnd = null;
+  if (cb) cb();
+}
+function stop() {
+  if (!raf) return;
+  cancelAnimationFrame(raf); raf = 0; onEnd = null;
+  if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
+  recorder = null;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('rec').disabled = false;
+  setStatus('');
+}
+$('play').onclick = () => { setStatus(''); start(null); };
+$('stop').onclick = stop;
+
+$('rec').onclick = () => {
+  stop();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 10e6 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `illusion_${$('pattern').value}.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden');
+    $('rec').disabled = false;
+    setStatus('録画が完了しました。');
+    recorder = null;
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  setStatus(`録画中…（約 ${Math.round(total)} 秒。タブを切り替えないでください）`);
+  recorder.start();
+  start(() => { if (recorder && recorder.state !== 'inactive') setTimeout(() => recorder && recorder.stop(), 300); });
+};
+
+rebuild();
+})();
+</script>
+</body>
+</html>
