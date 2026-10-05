@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>錯視動画メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#c9a0ff;--acc2:#a97cf0;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:900px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  #drop{border:2px dashed var(--line);text-align:center;color:var(--sub);cursor:pointer;padding:36px 16px;transition:.15s}
+  #drop.over,#drop:hover{border-color:var(--acc);color:var(--fg);background:#1d1a2a}
+  #drop b{color:var(--fg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:1rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#1a1030;font-weight:600;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;width:100%;max-height:78vh;object-fit:contain;background:#000;border-radius:8px}
+  .stage{display:flex;justify-content:center}
+  .stage canvas{width:auto;max-width:100%}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>錯視動画メーカー</h1>
+  <p class="lead">写真を入れるだけで「中央の点を見つめる → 切り替え → 種明かし」の錯視動画を自動で作ります。ブラウザ内で処理され、写真はアップロードされません。</p>
+
+  <div id="drop" class="panel">
+    <p style="margin:0"><b>ここに写真をドラッグ＆ドロップ</b><br>またはクリックして選択（カラー写真がおすすめ）</p>
+    <input id="file" type="file" accept="image/*" class="hidden">
+  </div>
+
+  <section id="editor" class="panel hidden">
+    <div class="grid">
+      <div><label>錯視の種類</label>
+        <select id="mode">
+          <option value="neg">カラーネガ錯視（反転色を見つめた後、白黒に色が見える）</option>
+          <option value="grid">格子の着色錯視（白黒に色付き格子 → 格子を消す）</option>
+        </select></div>
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>見つめる秒数</label><input id="stare" type="number" min="5" max="30" step="1" value="10"></div>
+    </div>
+
+    <div class="row">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section id="stageWrap" class="panel hidden">
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div id="result" class="row hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="illusion.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+let img = null, srcName = 'illusion', C = {}, timeline = [], total = 0;
+let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
+
+const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+
+/* ---------- Load ---------- */
+const drop = $('drop'), fileIn = $('file');
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+fileIn.addEventListener('change', () => { if (fileIn.files[0]) load(fileIn.files[0]); });
+
+function load(f) {
+  if (!f.type.startsWith('image/')) { $('editor').classList.remove('hidden'); setStatus('画像ファイルを選んでください。', true); return; }
+  srcName = f.name.replace(/\.[^.]+$/, '') || 'illusion';
+  const im = new Image();
+  im.onload = () => { img = im; $('editor').classList.remove('hidden'); $('stageWrap').classList.remove('hidden'); rebuild(); start(null); };
+  im.onerror = () => setStatus('画像を読み込めませんでした。', true);
+  im.src = URL.createObjectURL(f);
+}
+
+/* ---------- Image processing ---------- */
+function build() {
+  const [W, H] = SIZES[$('aspect').value];
+  cv.width = W; cv.height = H;
+  const areaW = W, areaH = Math.round(H * 0.8);
+  const sc = Math.min(areaW / img.naturalWidth, areaH / img.naturalHeight);
+  const iw = Math.round(img.naturalWidth * sc), ih = Math.round(img.naturalHeight * sc);
+  const mk = () => { const c = document.createElement('canvas'); c.width = iw; c.height = ih; return c; };
+  const orig = mk(), o = orig.getContext('2d', { willReadFrequently: true });
+  o.imageSmoothingQuality = 'high'; o.drawImage(img, 0, 0, iw, ih);
+  const src = o.getImageData(0, 0, iw, ih).data;
+  const neg = mk(), gray = mk(), grid = mk();
+  const nd = new ImageData(iw, ih), gd = new ImageData(iw, ih), rd = new ImageData(iw, ih);
+  const P = Math.max(6, Math.round(iw / 90)), T = Math.max(2, Math.round(P / 3));
+  const sat = (c, y) => Math.max(0, Math.min(255, y + (c - y) * 2.2));
+  for (let y = 0; y < ih; y++) for (let x = 0; x < iw; x++) {
+    const i = (y * iw + x) * 4, r = src[i], g = src[i + 1], b = src[i + 2];
+    const Y = 0.299 * r + 0.587 * g + 0.114 * b;
+    nd.data[i] = 255 - r; nd.data[i + 1] = 255 - g; nd.data[i + 2] = 255 - b; nd.data[i + 3] = 255;
+    gd.data[i] = gd.data[i + 1] = gd.data[i + 2] = Y; gd.data[i + 3] = 255;
+    const line = (y % P) < T || (x % P) < T;
+    if (line) { rd.data[i] = sat(r, Y); rd.data[i + 1] = sat(g, Y); rd.data[i + 2] = sat(b, Y); }
+    else { rd.data[i] = rd.data[i + 1] = rd.data[i + 2] = Y; }
+    rd.data[i + 3] = 255;
+  }
+  neg.getContext('2d').putImageData(nd, 0, 0);
+  gray.getContext('2d').putImageData(gd, 0, 0);
+  grid.getContext('2d').putImageData(rd, 0, 0);
+  C = { orig, neg, gray, grid, W, H, iw, ih, ix: Math.round((W - iw) / 2), iy: Math.round((areaH - ih) / 2) + Math.round(H * 0.01) };
+}
+
+/* ---------- Timeline ---------- */
+function makeTimeline() {
+  const N = Math.max(5, Math.min(30, Math.round(+$('stare').value || 10)));
+  const intro = { dur: 3, f: () => ({ big: $('mode').value === 'neg'
+    ? `${N}秒間、中央の点を\nじっと見つめてください\n（視線は動かさないでね）`
+    : `中央の点を見つめて\nこの写真の色を当ててみて` }) };
+  const orig = { dur: 4, f: (t, p) => ({ layers: [['gray', 1], ['orig', Math.min(1, t / 1.5)]], caption: '元の写真はこちら' }) };
+  if ($('mode').value === 'neg') {
+    return [intro,
+      { dur: N, f: t => ({ layers: [['neg', 1]], dot: true, caption: `中央の点を見つめて…　あと ${Math.ceil(N - t)} 秒` }) },
+      { dur: 6, f: () => ({ layers: [['gray', 1]], dot: true, caption: '色が見えますか？\nそのまま点を見つめて' }) },
+      { dur: 4, f: () => ({ layers: [['gray', 1]], caption: '実はこの画像は完全な白黒です' }) },
+      orig];
+  }
+  return [intro,
+    { dur: N, f: t => ({ layers: [['grid', 1]], dot: true, caption: `中央の点を見つめて…　あと ${Math.ceil(N - t)} 秒` }) },
+    { dur: 3, f: (t, p) => ({ layers: [['gray', 1], ['grid', 1 - p]], dot: true, caption: 'グリッド線を消していくと…' }) },
+    { dur: 4, f: () => ({ layers: [['gray', 1]], caption: '実はこの画像は完全な白黒（グレー）です！\n色は脳が作り出した錯覚' }) },
+    orig];
+}
+function rebuild() {
+  if (!img) return;
+  build();
+  timeline = makeTimeline();
+  total = timeline.reduce((n, p) => n + p.dur, 0);
+  draw(0);
+}
+['mode', 'aspect', 'stare'].forEach(i => $(i).addEventListener('change', () => { stop(); rebuild(); }));
+
+/* ---------- Render ---------- */
+function text(lines, cx, cy, size, color) {
+  ctx.font = `bold ${size}px "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lh = size * 1.4, y0 = cy - lh * (lines.length - 1) / 2;
+  lines.forEach((l, i) => {
+    ctx.lineWidth = size * 0.18; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineJoin = 'round';
+    ctx.strokeText(l, cx, y0 + i * lh); ctx.fillStyle = color; ctx.fillText(l, cx, y0 + i * lh);
+  });
+}
+function draw(t) {
+  const { W, H } = C;
+  let acc = 0, ph = timeline[0], tl = 0;
+  for (const p of timeline) { if (t < acc + p.dur) { ph = p; tl = t - acc; break; } acc += p.dur; ph = p; tl = p.dur; }
+  const s = ph.f(tl, Math.min(1, tl / ph.dur));
+  if (s.big) {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    text(s.big.split('\n'), W / 2, H / 2, Math.round(Math.min(W, H) * 0.06), '#fff');
+    return;
+  }
+  ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, W, H);
+  for (const [k, a] of s.layers) { ctx.globalAlpha = a; ctx.drawImage(C[k], C.ix, C.iy); }
+  ctx.globalAlpha = 1;
+  if (s.dot) {
+    const r = Math.max(7, Math.round(C.iw * 0.012)), cx = C.ix + C.iw / 2, cy = C.iy + C.ih / 2;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fillStyle = '#000'; ctx.fill();
+  }
+  if (s.caption) {
+    const size = Math.round(Math.min(W, H) * 0.048), lines = s.caption.split('\n');
+    const bh = size * 1.4 * lines.length + size;
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, H - bh, W, bh);
+    text(lines, W / 2, H - bh / 2, size, '#fff');
+  }
+}
+
+/* ---------- Playback / recording ---------- */
+function start(cb) {
+  stop();
+  onEnd = cb;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now();
+  const tick = now => {
+    const t = (now - startAt) / 1000;
+    $('prog').style.width = Math.min(100, t / total * 100) + '%';
+    if (t >= total) { draw(total - 0.001); finish(); return; }
+    draw(t);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function finish() {
+  cancelAnimationFrame(raf); raf = 0;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
+  const cb = onEnd; onEnd = null;
+  if (cb) cb();
+}
+function stop() {
+  if (!raf) return;
+  cancelAnimationFrame(raf); raf = 0; onEnd = null;
+  if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
+  recorder = null;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('rec').disabled = false;
+  setStatus('');
+}
+$('play').onclick = () => { setStatus(''); start(null); };
+$('stop').onclick = stop;
+
+$('rec').onclick = () => {
+  if (!img) return;
+  stop();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  const stream = cv.captureStream(30);
+  recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `${srcName}_illusion.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden');
+    $('rec').disabled = false;
+    setStatus('録画が完了しました。');
+    recorder = null;
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  setStatus(`録画中…（約 ${Math.round(total)} 秒。タブを切り替えないでください）`);
+  recorder.start();
+  start(() => { if (recorder && recorder.state !== 'inactive') setTimeout(() => recorder && recorder.stop(), 300); });
+};
+})();
+</script>
+</body>
+</html>
