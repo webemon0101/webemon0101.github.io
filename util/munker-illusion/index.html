@@ -47,22 +47,23 @@
     <div class="grid">
       <div><label>おすすめ配色</label>
         <select id="preset">
-          <option value="0">ピンク / 水色（灰色の四角）</option>
-          <option value="1">赤 / 青（灰色の四角）</option>
-          <option value="2">オレンジ / 緑（灰色の四角）</option>
-          <option value="3">黄 / 紫（灰色の四角）</option>
+          <option value="skull">赤いガイコツ（紺 / 黄 → 紫 / オレンジに見える）</option>
+          <option value="pink">ピンク / 水色（灰色の四角）</option>
+          <option value="red">赤 / 青（灰色の四角）</option>
+          <option value="orange">オレンジ / 緑（灰色の四角）</option>
+          <option value="yellow">黄 / 紫（灰色の四角）</option>
           <option value="custom">カスタム</option>
         </select></div>
-      <div><label>左（上）の縞の色</label><input id="c1" type="color" value="#ff2a8a"></div>
-      <div><label>右（下）の縞の色</label><input id="c2" type="color" value="#00b7ff"></div>
-      <div><label>中央の形の色（左右共通）</label><input id="c0" type="color" value="#a0a0a0"></div>
+      <div><label>左（上）の縞の色</label><input id="c1" type="color" value="#1b2a80"></div>
+      <div><label>右（下）の縞の色</label><input id="c2" type="color" value="#ffd400"></div>
+      <div><label>中央の形の色（左右共通）</label><input id="c0" type="color" value="#e3231b"></div>
     </div>
     <div class="row" style="margin-top:12px"><button id="rand" type="button" class="sec">🎲 ランダム配色</button></div>
 
     <h2 style="margin-top:20px">形</h2>
     <div class="grid">
       <div><label>中央の形</label>
-        <select id="shape"><option value="rect">四角</option><option value="circle">円</option><option value="img">自分の画像（単色に塗りつぶします）</option></select></div>
+        <select id="shape"><option value="skull">ガイコツ</option><option value="rect">四角</option><option value="circle">円</option><option value="img">自分の画像（単色に塗りつぶします）</option></select></div>
       <div id="imgBox" class="hidden"><label>画像（ロゴ・イラスト・シルエット）</label><input id="shapeImg" type="file" accept="image/*"></div>
       <div id="modeBox" class="hidden"><label>画像から形を取り出す方法</label>
         <select id="mode">
@@ -76,8 +77,8 @@
     <div class="grid">
       <div><label>縞の向き</label>
         <select id="orient"><option value="h">横縞</option><option value="v">縦縞</option><option value="g">格子</option></select></div>
-      <div><label>縞の太さ: <span id="tv">30</span> %</label><input id="thick" type="range" min="15" max="60" step="5" value="30"></div>
-      <div><label>縞の細かさ（本数）: <span id="nv">44</span></label><input id="count" type="range" min="12" max="80" step="2" value="44"></div>
+      <div><label>縞の太さ: <span id="tv">45</span> %</label><input id="thick" type="range" min="15" max="60" step="5" value="45"></div>
+      <div><label>縞の細かさ（本数）: <span id="nv">40</span></label><input id="count" type="range" min="12" max="80" step="2" value="40"></div>
       <div><label>画面の比率</label>
         <select id="aspect">
           <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
@@ -111,7 +112,14 @@
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
 const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
-const PRESETS = [['#ff2a8a', '#00b7ff'], ['#ff2020', '#2040ff'], ['#ff9a00', '#12c24a'], ['#ffe600', '#8a2be2']];
+const GRAY = '#a0a0a0';
+const PRESETS = {
+  skull: { c: ['#1b2a80', '#ffd400'], t: '#e3231b', shape: 'skull' },
+  pink: { c: ['#ff2a8a', '#00b7ff'], t: GRAY },
+  red: { c: ['#ff2020', '#2040ff'], t: GRAY },
+  orange: { c: ['#ff9a00', '#12c24a'], t: GRAY },
+  yellow: { c: ['#ffe600', '#8a2be2'], t: GRAY }
+};
 let L = null, timeline = [], total = 0, timer = 0, shapeImg = null;
 let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
 
@@ -171,6 +179,21 @@ function maskCanvas(im, pz, mode) {
   og.drawImage(m, (pz - bw * s) / 2, (pz - bh * s) / 2, bw * s, bh * s);
   return out;
 }
+function skullMask(pz) {
+  const c = document.createElement('canvas'); c.width = c.height = pz;
+  const g = c.getContext('2d'), u = pz;
+  g.fillStyle = '#fff';
+  g.beginPath(); g.ellipse(u * 0.5, u * 0.4, u * 0.37, u * 0.35, 0, 0, 7); g.fill();            // cranium
+  g.beginPath(); g.roundRect(u * 0.28, u * 0.58, u * 0.44, u * 0.32, u * 0.07); g.fill();        // jaw
+  g.beginPath(); g.roundRect(u * 0.2, u * 0.5, u * 0.6, u * 0.16, u * 0.08); g.fill();           // cheeks
+  g.globalCompositeOperation = 'destination-out';
+  [0.355, 0.645].forEach(x => { g.beginPath(); g.ellipse(u * x, u * 0.43, u * 0.1, u * 0.115, 0, 0, 7); g.fill(); }); // eye sockets
+  g.beginPath(); g.moveTo(u * 0.5, u * 0.52); g.lineTo(u * 0.455, u * 0.62); g.lineTo(u * 0.545, u * 0.62); g.closePath(); g.fill(); // nose
+  g.lineWidth = u * 0.018; g.strokeStyle = '#000';                                                // teeth gaps
+  for (let i = 1; i < 5; i++) { const x = u * (0.34 + i * 0.064); g.beginPath(); g.moveTo(x, u * 0.74); g.lineTo(x, u * 0.9); g.stroke(); }
+  g.beginPath(); g.moveTo(u * 0.3, u * 0.75); g.lineTo(u * 0.7, u * 0.75); g.stroke();
+  return c;
+}
 function tinted(mask, color) {
   const c = document.createElement('canvas'); c.width = mask.width; c.height = mask.height;
   const g = c.getContext('2d'); g.drawImage(mask, 0, 0);
@@ -190,10 +213,12 @@ function rebuild() {
   const tint = $('c0').value;
   let img = null;
   if ($('shape').value === 'img' && shapeImg) img = tinted(maskCanvas(shapeImg, pz, $('mode').value), tint);
+  else if ($('shape').value === 'skull') img = tinted(skullMask(pz), tint);
+  const noun = $('shape').value === 'skull' ? 'ガイコツ' : '形';
   L = { W, H, vertical, ps, pz, centers, mid, tint, img, colors: [$('c1').value, $('c2').value] };
   const hexTxt = tint.toUpperCase();
   timeline = [
-    { dur: 6, f: () => ({ cap: '左右の中央の形は\n同じ色？ 違う色？', lines: 1, merge: 0 }) },
+    { dur: 6, f: () => ({ cap: `左右の${noun}は\n同じ色？ 違う色？\n（少し離れて見てみて）`, lines: 1, merge: 0 }) },
     { dur: 2, f: () => ({ cap: '答えは…', lines: 1, merge: 0 }) },
     { dur: 3, f: (t, p) => ({ cap: '縞を消すと…', lines: 1 - ease(p), merge: 0 }) },
     { dur: 2.5, f: (t, p) => ({ cap: '並べてみると…', lines: 0, merge: ease(p) }) },
@@ -216,7 +241,7 @@ function drawText(lines, cx, cy, size, fill) {
 function drawShape(cx, cy) {
   const { pz, img, tint } = L, kind = $('shape').value;
   ctx.fillStyle = tint;
-  if (kind === 'img' && img) { ctx.drawImage(img, cx - pz / 2, cy - pz / 2); return; }
+  if ((kind === 'img' || kind === 'skull') && img) { ctx.drawImage(img, cx - pz / 2, cy - pz / 2); return; }
   ctx.beginPath();
   if (kind === 'circle') ctx.arc(cx, cy, pz / 2, 0, 7); else ctx.rect(cx - pz / 2, cy - pz / 2, pz, pz);
   ctx.fill();
@@ -256,10 +281,11 @@ function draw(t) {
 
 /* ---------- Controls ---------- */
 function applyPreset() {
-  const v = $('preset').value;
-  if (v === 'custom') return;
-  [$('c1').value, $('c2').value] = PRESETS[+v];
-  $('c0').value = '#a0a0a0';
+  const p = PRESETS[$('preset').value];
+  if (!p) return;
+  $('c1').value = p.c[0]; $('c2').value = p.c[1]; $('c0').value = p.t;
+  if (p.shape) $('shape').value = p.shape; else if ($('shape').value === 'skull') $('shape').value = 'rect';
+  syncUI();
 }
 function syncUI() {
   const img = $('shape').value === 'img';
