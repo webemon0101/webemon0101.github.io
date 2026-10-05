@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ムンカー錯視メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#ff7ac6;--acc2:#e85fae;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:900px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=text]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  input[type=range]{width:100%}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#2a0a1c;font-weight:700;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:80vh}
+  .stage{display:flex;justify-content:center}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>ムンカー錯視メーカー</h1>
+  <p class="lead">「同じ灰色なのに、重なる縞の色で違う色に見える」ムンカー錯視を、問いかけ → 縞を消す → 並べて種明かしの動画にします。ブラウザ内で処理されます。</p>
+
+  <section class="panel">
+    <div class="grid">
+      <div><label>色の組み合わせ（左 / 右の縞）</label>
+        <select id="pair">
+          <option value="0">ピンク / 水色</option>
+          <option value="1">赤 / 青</option>
+          <option value="2">オレンジ / 緑</option>
+          <option value="3">黄 / 紫</option>
+        </select></div>
+      <div><label>縞の向き</label>
+        <select id="orient">
+          <option value="h">横縞</option>
+          <option value="v">縦縞</option>
+          <option value="g">格子</option>
+        </select></div>
+      <div><label>四角の形</label>
+        <select id="shape"><option value="rect">四角</option><option value="circle">円</option></select></div>
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>灰色の明るさ: <span id="gv">150</span></label><input id="gray" type="range" min="90" max="200" step="5" value="150"></div>
+      <div><label>縞の太さ: <span id="tv">40</span> %</label><input id="thick" type="range" min="20" max="60" step="5" value="40"></div>
+      <div><label>縞の細かさ（本数）: <span id="nv">22</span></label><input id="count" type="range" min="12" max="40" step="2" value="22"></div>
+      <div><label>問いかけ</label>
+        <select id="q">
+          <option value="0">左右の中央の四角は\n同じ色？ 違う色？</option>
+          <option value="1">中央の四角、\n左右で何色に見える？</option>
+        </select></div>
+    </div>
+    <div class="row">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section class="panel">
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div id="result" class="row hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="munker.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
+const PAIRS = [['#ff2a8a', '#00b7ff'], ['#ff2020', '#2040ff'], ['#ff9a00', '#12c24a'], ['#ffe600', '#8a2be2']];
+let L = null, timeline = [], total = 0, timer = 0;
+let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+const ease = p => p <= 0 ? 0 : p >= 1 ? 1 : p * p * (3 - 2 * p);
+
+function rebuild() {
+  const [W, H] = SIZES[$('aspect').value];
+  cv.width = W; cv.height = H;
+  const vertical = W < H, gv = +$('gray').value;
+  const ps = vertical ? Math.round(Math.min(W * 0.84, H * 0.36)) : Math.round(Math.min(W * 0.44, H * 0.72));
+  const pz = Math.round(ps * 0.46);
+  const centers = vertical ? [[W / 2, H * 0.31], [W / 2, H * 0.73]] : [[W * 0.27, H * 0.56], [W * 0.73, H * 0.56]];
+  const mid = vertical ? [W / 2, H * 0.52] : [W / 2, H * 0.56];
+  L = { W, H, vertical, ps, pz, centers, mid, gray: gv, colors: PAIRS[+$('pair').value] };
+  const q = $('q').options[$('q').selectedIndex].value === '0' ? '左右の中央の四角は\n同じ色？ 違う色？' : '中央の四角、\n左右で何色に見える？';
+  timeline = [
+    { dur: 6, f: () => ({ cap: q, lines: 1, merge: 0 }) },
+    { dur: 2, f: () => ({ cap: '答えは…', lines: 1, merge: 0 }) },
+    { dur: 3, f: (t, p) => ({ cap: '縞を消すと…', lines: 1 - ease(p), merge: 0 }) },
+    { dur: 2.5, f: (t, p) => ({ cap: '並べてみると…', lines: 0, merge: ease(p) }) },
+    { dur: 4.5, f: () => ({ cap: `完全に同じ灰色でした！\nRGB(${gv}, ${gv}, ${gv})`, lines: 0, merge: 1, same: true }) }
+  ];
+  total = timeline.reduce((n, p) => n + p.dur, 0);
+  draw(2);
+}
+
+function drawText(lines, cx, cy, size, fill) {
+  ctx.font = `900 ${size}px "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  const lh = size * 1.35, y0 = cy - lh * (lines.length - 1) / 2;
+  lines.forEach((l, i) => {
+    ctx.lineWidth = size * 0.2; ctx.strokeStyle = '#000'; ctx.strokeText(l, cx, y0 + i * lh);
+    ctx.fillStyle = fill; ctx.fillText(l, cx, y0 + i * lh);
+  });
+}
+function patchPath(cx, cy, pz) {
+  ctx.beginPath();
+  if ($('shape').value === 'circle') ctx.arc(cx, cy, pz / 2, 0, 7); else ctx.rect(cx - pz / 2, cy - pz / 2, pz, pz);
+}
+function draw(t) {
+  if (!L) return;
+  const { W, H, ps, pz, centers, mid, vertical } = L;
+  let acc = 0, ph = timeline[0], tl = 0;
+  for (const p of timeline) { ph = p; if (t < acc + p.dur) { tl = t - acc; break; } acc += p.dur; tl = p.dur; }
+  const s = ph.f(tl, Math.min(1, tl / ph.dur));
+  ctx.fillStyle = '#1a1a20'; ctx.fillRect(0, 0, W, H);
+  const g = L.gray, gray = `rgb(${g},${g},${g})`, m = s.merge;
+  const tg = [
+    vertical ? [mid[0], mid[1] - pz / 2] : [mid[0] - pz / 2, mid[1]],
+    vertical ? [mid[0], mid[1] + pz / 2] : [mid[0] + pz / 2, mid[1]]
+  ];
+  const n = +$('count').value, period = ps / n, th = period * (+$('thick').value / 100), orient = $('orient').value;
+  centers.forEach(([cx, cy], i) => {
+    const x0 = cx - ps / 2, y0 = cy - ps / 2;
+    // panel (white field)
+    ctx.save(); ctx.globalAlpha = 1 - m;
+    ctx.fillStyle = '#fff'; ctx.fillRect(x0, y0, ps, ps);
+    ctx.restore();
+    // gray target
+    const px = cx + (tg[i][0] - cx) * m, py = cy + (tg[i][1] - cy) * m;
+    ctx.fillStyle = gray; patchPath(px, py, pz); ctx.fill();
+    // coloured lines on top
+    if (s.lines > 0.001) {
+      ctx.save(); ctx.globalAlpha = s.lines;
+      ctx.beginPath(); ctx.rect(x0, y0, ps, ps); ctx.clip();
+      ctx.fillStyle = L.colors[i];
+      for (let k = 0; k < n; k++) {
+        const o = (k + 0.5) * period - th / 2;
+        if (orient !== 'v') ctx.fillRect(x0, y0 + o, ps, th);
+        if (orient !== 'h') ctx.fillRect(x0 + o, y0, th, ps);
+      }
+      ctx.restore();
+    }
+  });
+  const size = Math.round(Math.min(W, H) * (vertical ? 0.058 : 0.062));
+  drawText(s.cap.split('\n'), W / 2, vertical ? H * 0.09 : H * 0.12, size, s.same ? '#ffe600' : '#fff');
+}
+
+/* ---------- Controls ---------- */
+['pair', 'orient', 'shape', 'aspect', 'gray', 'thick', 'count', 'q'].forEach(i => $(i).addEventListener('input', () => {
+  $('gv').textContent = $('gray').value; $('tv').textContent = $('thick').value; $('nv').textContent = $('count').value;
+  clearTimeout(timer); timer = setTimeout(() => { stop(); rebuild(); }, 120);
+}));
+
+/* ---------- Playback / recording ---------- */
+function start(cb) {
+  stop();
+  onEnd = cb;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now();
+  const tick = now => {
+    const t = (now - startAt) / 1000;
+    $('prog').style.width = Math.min(100, t / total * 100) + '%';
+    if (t >= total) { draw(total - 0.001); finish(); return; }
+    draw(t);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function finish() {
+  cancelAnimationFrame(raf); raf = 0;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
+  const cb = onEnd; onEnd = null;
+  if (cb) cb();
+}
+function stop() {
+  if (!raf) return;
+  cancelAnimationFrame(raf); raf = 0; onEnd = null;
+  if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
+  recorder = null;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('rec').disabled = false;
+  setStatus('');
+}
+$('play').onclick = () => { setStatus(''); start(null); };
+$('stop').onclick = stop;
+
+$('rec').onclick = () => {
+  stop();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `munker_illusion.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden');
+    $('rec').disabled = false;
+    setStatus('録画が完了しました。');
+    recorder = null;
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  setStatus(`録画中…（約 ${Math.round(total)} 秒。タブを切り替えないでください）`);
+  recorder.start();
+  start(() => { if (recorder && recorder.state !== 'inactive') setTimeout(() => recorder && recorder.stop(), 300); });
+};
+
+rebuild();
+})();
+</script>
+</body>
+</html>
