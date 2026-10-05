@@ -62,8 +62,8 @@
     <h2 style="margin-top:20px">形</h2>
     <div class="grid">
       <div><label>中央の形</label>
-        <select id="shape"><option value="skull">ガイコツ</option><option value="rect">四角</option><option value="circle">円</option><option value="img">自分の画像（単色に塗りつぶします）</option></select></div>
-      <div id="imgBox" class="hidden"><label>画像（ロゴ・イラスト・シルエット）</label><input id="shapeImg" type="file" accept="image/*"></div>
+        <select id="shape"><option value="skull">ガイコツ</option><option value="rect">四角</option><option value="circle">円</option><option value="img">自分の画像・動画（単色に塗りつぶします）</option></select></div>
+      <div id="imgBox" class="hidden"><label>画像または動画（ロゴ・イラスト・シルエット・ダンス動画など）</label><input id="shapeImg" type="file" accept="image/*,video/*"></div>
       <div id="modeBox" class="hidden"><label>画像から形を取り出す方法</label>
         <select id="mode">
           <option value="auto">自動（透過 or 背景色を除去）</option>
@@ -123,7 +123,7 @@ const PRESETS = {
   orange: { c: ['#ff9a00', '#12c24a'], t: GRAY },
   yellow: { c: ['#ffe600', '#8a2be2'], t: GRAY }
 };
-let L = null, timeline = [], total = 0, timer = 0, shapeImg = null;
+let L = null, timeline = [], total = 0, timer = 0, shapeImg = null, shapeVid = null;
 let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
 
 function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
@@ -145,9 +145,10 @@ function skullMask(pz) {
   g.beginPath(); g.moveTo(u * 0.3, u * 0.75); g.lineTo(u * 0.7, u * 0.75); g.stroke();
   return c;
 }
-function maskCanvas(im, pz, mode) {
-  const sc = Math.min(1, 800 / Math.max(im.naturalWidth, im.naturalHeight));
-  const w = Math.max(1, Math.round(im.naturalWidth * sc)), h = Math.max(1, Math.round(im.naturalHeight * sc));
+function maskCanvas(im, pz, mode, maxDim = 800) {
+  const iw = im.naturalWidth || im.videoWidth, ih = im.naturalHeight || im.videoHeight;
+  const sc = Math.min(1, maxDim / Math.max(iw, ih));
+  const w = Math.max(1, Math.round(iw * sc)), h = Math.max(1, Math.round(ih * sc));
   const c = mk(w, h), g = c.getContext('2d', { willReadFrequently: true });
   g.drawImage(im, 0, 0, w, h);
   const d = g.getImageData(0, 0, w, h).data, at = (x, y) => (y * w + x) * 4;
@@ -197,6 +198,7 @@ function maskCanvas(im, pz, mode) {
 function shapeMask(pz) {
   const kind = $('shape').value;
   if (kind === 'skull') return skullMask(pz);
+  if (kind === 'img' && shapeVid && shapeVid.readyState >= 2) return maskCanvas(shapeVid, pz, $('mode').value, 256);
   if (kind === 'img' && shapeImg) return maskCanvas(shapeImg, pz, $('mode').value);
   const c = mk(pz, pz), g = c.getContext('2d');
   g.fillStyle = '#fff'; g.beginPath();
@@ -219,6 +221,17 @@ function stripes(ps, n, orient, draw) {   // draw(k, x0, y0, w, h) for each stri
     if (orient === 'v') draw(k, a, 0, b - a, ps); else draw(k, 0, a, ps, b - a);
   }
 }
+function applyShape() {   // (re)compute the shape mask, solid fill and masked stripe overlays
+  const { ps, pz, T } = L;
+  const mask = shapeMask(pz);
+  L.solid = tinted(mask, T);
+  const panelMask = mk(ps, ps); panelMask.getContext('2d').drawImage(mask, (ps - pz) / 2, (ps - pz) / 2);
+  L.overlay = L.tStripes.map(src => {
+    const o = mk(ps, ps), og = o.getContext('2d');
+    og.drawImage(src, 0, 0); og.globalCompositeOperation = 'destination-in'; og.drawImage(panelMask, 0, 0);
+    return o;
+  });
+}
 function rebuild() {
   const [W, H] = SIZES[$('aspect').value];
   cv.width = W; cv.height = H;
@@ -229,23 +242,21 @@ function rebuild() {
   const mid = vertical ? [W / 2, H * 0.52] : [W / 2, H * 0.56];
   const A = $('c1').value, B = $('c2').value, T = $('c0').value;
   const n = +$('count').value, orient = $('orient').value;
-  const mask = shapeMask(pz);
-  const solid = tinted(mask, T);
   // field: both colours everywhere (identical for left & right)
   const field = mk(ps, ps), fg = field.getContext('2d');
   stripes(ps, n, orient, (k, x, y, w, h) => { fg.fillStyle = k % 2 ? B : A; fg.fillRect(x, y, w, h); });
-  // overlays: left replaces the B stripes with T inside the shape, right replaces the A stripes
-  const panelMask = mk(ps, ps); panelMask.getContext('2d').drawImage(mask, (ps - pz) / 2, (ps - pz) / 2);
-  const overlay = [1, 0].map(rep => {
+  // shape-colour stripes: left replaces the B stripes, right replaces the A stripes (masked per shape later)
+  const tStripes = [1, 0].map(rep => {
     const o = mk(ps, ps), og = o.getContext('2d');
     og.fillStyle = T;
     stripes(ps, n, orient, (k, x, y, w, h) => { if (k % 2 === rep) og.fillRect(x, y, w, h); });
-    og.globalCompositeOperation = 'destination-in'; og.drawImage(panelMask, 0, 0);
     return o;
   });
   // zoom focus: just inside the top edge of the shape, identical in both panels
   const focus = [ps / 2, (ps - pz) / 2 + pz * 0.07], Z = Math.max(3, Math.min(10, n / 4));
-  L = { W, H, vertical, ps, pz, centers, mid, field, overlay, solid, focus, hex: T.toUpperCase() };
+  L = { W, H, vertical, ps, pz, centers, mid, field, tStripes, T, focus, hex: T.toUpperCase(),
+        dynamic: $('shape').value === 'img' && !!shapeVid };
+  applyShape();
   const noun = $('shape').value === 'skull' ? 'ガイコツ' : '形';
   const q = { dur: 6, f: () => ({ cap: `左右の${noun}は\n同じ色？ 違う色？\n（少し離れて見てみて）`, lines: 1, merge: 0, z: 1 }) };
   const think = { dur: 2, f: () => ({ cap: '答えは…', lines: 1, merge: 0, z: 1 }) };
@@ -276,6 +287,7 @@ function drawText(lines, cx, cy, size, fill) {
 }
 function draw(t) {
   if (!L) return;
+  if (L.dynamic) applyShape();
   const { W, H, ps, pz, centers, mid, vertical } = L;
   let acc = 0, ph = timeline[0], tl = 0;
   for (const p of timeline) { ph = p; if (t < acc + p.dur) { tl = t - acc; break; } acc += p.dur; tl = p.dur; }
@@ -331,7 +343,16 @@ $('preset').addEventListener('input', () => { applyPreset(); schedule(); });
 ['shape', 'mode', 'orient', 'count', 'aspect', 'reveal'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
 $('shapeImg').addEventListener('change', e => {
   const f = e.target.files[0];
-  if (!f) { shapeImg = null; schedule(); return; }
+  shapeImg = null; shapeVid = null;
+  if (!f) { schedule(); return; }
+  if (f.type.startsWith('video/')) {
+    const v = document.createElement('video');
+    v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+    v.onloadeddata = () => { shapeVid = v; schedule(); };
+    v.onerror = () => setStatus('動画を読み込めませんでした。', true);
+    v.src = URL.createObjectURL(f);
+    return;
+  }
   const im = new Image();
   im.onload = () => { shapeImg = im; schedule(); };
   im.onerror = () => setStatus('画像を読み込めませんでした。', true);
@@ -351,6 +372,7 @@ function start(cb) {
   stop();
   onEnd = cb;
   $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  if (L && L.dynamic) { shapeVid.currentTime = 0; shapeVid.play().catch(() => {}); }
   startAt = performance.now();
   const tick = now => {
     const t = (now - startAt) / 1000;
@@ -363,12 +385,14 @@ function start(cb) {
 }
 function finish() {
   cancelAnimationFrame(raf); raf = 0;
+  if (shapeVid) shapeVid.pause();
   $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
   const cb = onEnd; onEnd = null;
   if (cb) cb();
 }
 function stop() {
   if (!raf) return;
+  if (shapeVid) shapeVid.pause();
   cancelAnimationFrame(raf); raf = 0; onEnd = null;
   if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
   recorder = null;
