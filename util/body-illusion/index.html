@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>体型錯視メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#ffb347;--acc2:#e89a2e;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:900px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  #drop{border:2px dashed var(--line);text-align:center;color:var(--sub);cursor:pointer;padding:36px 16px;transition:.15s}
+  #drop.over,#drop:hover{border-color:var(--acc);color:var(--fg);background:#2a2216}
+  #drop b{color:var(--fg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:14px}
+  .grid:first-child{margin-top:0}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=file]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#2a1a00;font-weight:600;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:80vh}
+  .stage{display:flex;justify-content:center}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>体型錯視メーカー</h1>
+  <p class="lead">人物Aの写真を1枚入れるだけで、「太い人に挟まれたA」と「細い人に挟まれたA」を並べ、周りを消して重ねる種明かし動画を自動で作ります。写真はアップロードされません。</p>
+
+  <div id="drop" class="panel">
+    <p style="margin:0"><b>ここに人物Aの写真をドラッグ＆ドロップ</b><br>またはクリックして選択<br>
+    <small>全身が写っていて背景が単色の写真、または背景透過PNGがおすすめ</small></p>
+    <input id="file" type="file" accept="image/*" class="hidden">
+  </div>
+
+  <section id="editor" class="panel hidden">
+    <div class="grid">
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>問いかけ</label>
+        <select id="question">
+          <option value="0">どちらの人物Aが太って見えますか？</option>
+          <option value="1">この2人のAは同じ体型に見えますか？</option>
+        </select></div>
+      <div><label>太い人の幅: <span id="wv">1.80</span>倍</label><input id="wide" type="range" min="1.2" max="2.4" step="0.05" value="1.8"></div>
+      <div><label>細い人の幅: <span id="tv">0.55</span>倍</label><input id="thin" type="range" min="0.3" max="0.9" step="0.05" value="0.55"></div>
+    </div>
+
+    <div class="grid">
+      <label class="chk"><input id="key" type="checkbox" checked> 背景を自動で消す（単色背景用）</label>
+      <div><label>背景除去の強さ: <span id="kv">60</span></label><input id="tol" type="range" min="10" max="150" step="5" value="60"></div>
+      <label class="chk"><input id="sil" type="checkbox"> シルエット（黒い影）にする</label>
+    </div>
+
+    <div class="grid">
+      <div><label>周りの「太い人」に別の写真を使う（任意）</label><input id="wideImg" type="file" accept="image/*"></div>
+      <div><label>周りの「細い人」に別の写真を使う（任意）</label><input id="thinImg" type="file" accept="image/*"></div>
+    </div>
+    <div class="info">未指定なら、Aの写真を横に引き伸ばし／縮めて周りの人を自動で作ります。</div>
+
+    <div class="row">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section id="stageWrap" class="panel hidden">
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div id="result" class="row hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="illusion.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
+let imgA = null, imgWide = null, imgThin = null, srcName = 'body-illusion';
+let P = null, L = null, timeline = [], total = 0;
+let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null, rebuildTimer = 0;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+function loadImage(f) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im); im.onerror = rej;
+    im.src = URL.createObjectURL(f);
+  });
+}
+
+/* ---------- Input ---------- */
+const drop = $('drop'), fileIn = $('file');
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) loadA(e.dataTransfer.files[0]); });
+fileIn.addEventListener('change', () => { if (fileIn.files[0]) loadA(fileIn.files[0]); });
+
+async function loadA(f) {
+  $('editor').classList.remove('hidden');
+  if (!f.type.startsWith('image/')) { setStatus('画像ファイルを選んでください。', true); return; }
+  try { imgA = await loadImage(f); } catch { setStatus('画像を読み込めませんでした。', true); return; }
+  srcName = f.name.replace(/\.[^.]+$/, '') || 'body-illusion';
+  $('stageWrap').classList.remove('hidden');
+  setStatus('');
+  rebuild(); start(null);
+}
+$('wideImg').addEventListener('change', async e => { imgWide = e.target.files[0] ? await loadImage(e.target.files[0]).catch(() => null) : null; schedule(); });
+$('thinImg').addEventListener('change', async e => { imgThin = e.target.files[0] ? await loadImage(e.target.files[0]).catch(() => null) : null; schedule(); });
+['aspect', 'question', 'wide', 'thin', 'key', 'tol', 'sil'].forEach(i => $(i).addEventListener('input', () => {
+  $('wv').textContent = (+$('wide').value).toFixed(2); $('tv').textContent = (+$('thin').value).toFixed(2); $('kv').textContent = $('tol').value;
+  schedule();
+}));
+function schedule() { clearTimeout(rebuildTimer); rebuildTimer = setTimeout(() => { stop(); rebuild(); }, 150); }
+
+/* ---------- Person image (key out bg, trim, tint) ---------- */
+function personCanvas(im, key, tol, sil) {
+  const sc = Math.min(1, 900 / im.naturalHeight);
+  const w = Math.max(1, Math.round(im.naturalWidth * sc)), h = Math.max(1, Math.round(im.naturalHeight * sc));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(im, 0, 0, w, h);
+  const id = g.getImageData(0, 0, w, h), d = id.data;
+  const at = (x, y) => (y * w + x) * 4;
+  const corners = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)];
+  const hasAlpha = corners.some(i => d[i + 3] < 200);
+  if (key && !hasAlpha) {
+    const bg = [0, 1, 2].map(k => corners.reduce((s, i) => s + d[i + k], 0) / 4);
+    const near = i => Math.hypot(d[i] - bg[0], d[i + 1] - bg[1], d[i + 2] - bg[2]) <= tol;
+    const seen = new Uint8Array(w * h), stack = new Int32Array(w * h);
+    let sp = 0;
+    const push = (x, y) => { const p = y * w + x; if (!seen[p] && near(p * 4)) { seen[p] = 1; stack[sp++] = p; } };
+    for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+    for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+    while (sp) {
+      const p = stack[--sp], x = p % w, y = (p / w) | 0;
+      if (x > 0) push(x - 1, y); if (x < w - 1) push(x + 1, y);
+      if (y > 0) push(x, y - 1); if (y < h - 1) push(x, y + 1);
+    }
+    for (let p = 0; p < w * h; p++) if (seen[p]) d[p * 4 + 3] = 0;
+    g.putImageData(id, 0, 0);
+  }
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[at(x, y) + 3] > 20) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  if (x1 < 0) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }
+  const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+  const og = o.getContext('2d');
+  og.drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+  if (sil) { og.globalCompositeOperation = 'source-in'; og.fillStyle = '#23252e'; og.fillRect(0, 0, o.width, o.height); }
+  return o;
+}
+
+/* ---------- Layout ---------- */
+function rebuild() {
+  if (!imgA) return;
+  const [W, H] = SIZES[$('aspect').value];
+  cv.width = W; cv.height = H;
+  const key = $('key').checked, tol = +$('tol').value, sil = $('sil').checked;
+  const A = personCanvas(imgA, key, tol, sil);
+  const cw = imgWide ? personCanvas(imgWide, key, tol, sil) : null;
+  const ct = imgThin ? personCanvas(imgThin, key, tol, sil) : null;
+  const ra = A.width / A.height;
+  const rw = cw ? cw.width / cw.height : ra * +$('wide').value;
+  const rt = ct ? ct.width / ct.height : ra * +$('thin').value;
+  const gap = 0.06;
+  const sums = [2 * rw + ra + 2 * gap, 2 * rt + ra + 2 * gap], S = Math.max(...sums);
+  const vertical = $('aspect').value === '9:16';
+  let h, groups;
+  if (vertical) {
+    h = Math.min(0.33 * H, 0.94 * W / S);
+    groups = [{ cx: W / 2, base: 0.54 * H }, { cx: W / 2, base: 0.94 * H }];
+  } else {
+    h = Math.min(0.6 * H, 0.46 * W / S);
+    groups = [{ cx: W / 4, base: 0.9 * H }, { cx: 3 * W / 4, base: 0.9 * H }];
+  }
+  const kinds = [{ r: rw, cnv: cw || A, sum: sums[0] }, { r: rt, cnv: ct || A, sum: sums[1] }];
+  const persons = [];
+  groups.forEach((gr, gi) => {
+    const k = kinds[gi];
+    const widths = [k.r * h, ra * h, k.r * h];
+    let x = gr.cx - (widths[0] + widths[1] + widths[2] + 2 * gap * h) / 2;
+    ['L', 'A', 'R'].forEach((role, i) => {
+      persons.push({ role, gi, cnv: role === 'A' ? A : k.cnv, x, w: widths[i], h, base: gr.base, flip: role === 'R' && !!(gi === 0 ? cw : ct) });
+      x += widths[i] + gap * h;
+    });
+  });
+  L = { W, H, h, groups, persons, vertical };
+  const q = ['どちらの人物Aが\n太って見えますか？', 'この2人のAは\n同じ体型に見えますか？'][+$('question').value];
+  timeline = [
+    { dur: 5, f: () => ({ cap: q, out: 0, merge: 0 }) },
+    { dur: 2, f: () => ({ cap: '答えは…', out: 0, merge: 0 }) },
+    { dur: 2, f: (t, p) => ({ cap: '周りの人を消すと…', out: p, merge: 0 }) },
+    { dur: 2.5, f: (t, p) => ({ cap: '2人のAを重ねてみると…', out: 1, merge: p }) },
+    { dur: 4, f: () => ({ cap: '実は全く同じ画像でした！', out: 1, merge: 1, same: true }) }
+  ];
+  total = timeline.reduce((n, p) => n + p.dur, 0);
+  draw(0);
+}
+
+/* ---------- Render ---------- */
+const ease = p => p < 0 ? 0 : p > 1 ? 1 : p * p * (3 - 2 * p);
+function drawText(lines, cx, cy, size, fill, stroke) {
+  ctx.font = `bold ${size}px "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  const lh = size * 1.35, y0 = cy - lh * (lines.length - 1) / 2;
+  lines.forEach((l, i) => {
+    ctx.lineWidth = size * 0.2; ctx.strokeStyle = stroke; ctx.strokeText(l, cx, y0 + i * lh);
+    ctx.fillStyle = fill; ctx.fillText(l, cx, y0 + i * lh);
+  });
+}
+function draw(t) {
+  if (!L) return;
+  const { W, H } = L;
+  let acc = 0, ph = timeline[0], tl = 0;
+  for (const p of timeline) { ph = p; if (t < acc + p.dur) { tl = t - acc; break; } acc += p.dur; tl = p.dur; }
+  const s = ph.f(tl, Math.min(1, tl / ph.dur));
+  ctx.fillStyle = '#f3efe4'; ctx.fillRect(0, 0, W, H);
+  // floor lines
+  ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 2;
+  const o = ease(s.out), m = ease(s.merge);
+  ctx.globalAlpha = 1 - m;
+  L.groups.forEach(g => {
+    const half = L.vertical ? W * 0.47 : W * 0.23;
+    ctx.beginPath(); ctx.moveTo(g.cx - half, g.base + 4); ctx.lineTo(g.cx + half, g.base + 4); ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  const midBase = (L.groups[0].base + L.groups[1].base) / 2;
+  const target = { cx: W / 2, base: L.vertical ? midBase : L.groups[0].base };
+  // neighbours first
+  for (const p of L.persons) {
+    if (p.role === 'A') continue;
+    const a = 1 - o;
+    if (a <= 0.001) continue;
+    const dx = (p.role === 'L' ? -1 : 1) * W * 0.55 * o;
+    ctx.save(); ctx.globalAlpha = a;
+    blit(p, p.x + dx, p.base);
+    ctx.restore();
+  }
+  // As
+  const As = L.persons.filter(p => p.role === 'A');
+  As.forEach((p, i) => {
+    const gc = L.groups[p.gi].cx;
+    const x = p.x + (target.cx - gc) * m, base = p.base + (target.base - p.base) * m;
+    ctx.save();
+    ctx.globalAlpha = (s.merge > 0 && i === 1) ? 0.55 : 1;
+    blit(p, x, base);
+    ctx.restore();
+    // "A" marker
+    if (m < 1) {
+      ctx.save(); ctx.globalAlpha = (1 - o) * (1 - m);
+      const size = Math.round(Math.min(W, H) * 0.045);
+      drawText(['A'], x + p.w / 2, base - p.h - size * 0.9, size, '#d8312f', '#fff');
+      ctx.restore();
+    }
+  });
+  // caption
+  const size = Math.round(Math.min(W, H) * (L.vertical ? 0.058 : 0.062));
+  const lines = s.cap.split('\n');
+  drawText(lines, W / 2, L.vertical ? H * 0.09 : H * 0.11, size, s.same ? '#d8312f' : '#222', '#fff');
+}
+function blit(p, x, base) {
+  if (p.flip) {
+    ctx.save(); ctx.translate(x + p.w, base - p.h); ctx.scale(-1, 1);
+    ctx.drawImage(p.cnv, 0, 0, p.w, p.h); ctx.restore();
+  } else ctx.drawImage(p.cnv, x, base - p.h, p.w, p.h);
+}
+
+/* ---------- Playback / recording ---------- */
+function start(cb) {
+  stop();
+  onEnd = cb;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now();
+  const tick = now => {
+    const t = (now - startAt) / 1000;
+    $('prog').style.width = Math.min(100, t / total * 100) + '%';
+    if (t >= total) { draw(total - 0.001); finish(); return; }
+    draw(t);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function finish() {
+  cancelAnimationFrame(raf); raf = 0;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
+  const cb = onEnd; onEnd = null;
+  if (cb) cb();
+}
+function stop() {
+  if (!raf) return;
+  cancelAnimationFrame(raf); raf = 0; onEnd = null;
+  if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
+  recorder = null;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('rec').disabled = false;
+  setStatus('');
+}
+$('play').onclick = () => { setStatus(''); start(null); };
+$('stop').onclick = stop;
+
+$('rec').onclick = () => {
+  if (!imgA) return;
+  stop();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `${srcName}_body-illusion.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden');
+    $('rec').disabled = false;
+    setStatus('録画が完了しました。');
+    recorder = null;
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  setStatus(`録画中…（約 ${Math.round(total)} 秒。タブを切り替えないでください）`);
+  recorder.start();
+  start(() => { if (recorder && recorder.state !== 'inactive') setTimeout(() => recorder && recorder.stop(), 300); });
+};
+})();
+</script>
+</body>
+</html>
