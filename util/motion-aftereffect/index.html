@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>運動残効メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#7ab8ff;--acc2:#5a9be6;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:900px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  #drop{border:2px dashed var(--line);text-align:center;color:var(--sub);cursor:pointer;padding:36px 16px;transition:.15s}
+  #drop.over,#drop:hover{border-color:var(--acc);color:var(--fg);background:#16202e}
+  #drop b{color:var(--fg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:14px}
+  .grid.first{margin-top:0}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=file]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+  button,a.btn{background:var(--acc);color:#06182e;font-weight:600;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:80vh}
+  .stage{display:flex;justify-content:center}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>運動残効メーカー（滝の錯視）</h1>
+  <p class="lead">写真を拡大・縮小し続けて10秒見つめてもらい、静止した瞬間に逆向きの動きが見える錯視動画を自動で作ります。写真はアップロードされません。</p>
+
+  <div id="drop" class="panel">
+    <p style="margin:0"><b>ここに写真をドラッグ＆ドロップ</b><br>またはクリックして選択<br>
+    <small>木々・街並み・布など、細かい模様が多い写真ほどよく効きます</small></p>
+    <input id="file" type="file" accept="image/*" class="hidden">
+  </div>
+
+  <section id="editor" class="panel hidden">
+    <div class="grid first">
+      <div><label>構成</label>
+        <select id="layout">
+          <option value="2">2枚並べ（左＝縮小 / 右＝拡大）</option>
+          <option value="1">1枚を大きく表示</option>
+        </select></div>
+      <div id="dirBox" class="hidden"><label>動き（1枚のとき）</label>
+        <select id="dir"><option value="1">拡大（近づく）→ 静止すると縮んで見える</option><option value="-1">縮小（遠ざかる）→ 静止すると広がって見える</option></select></div>
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>見つめる秒数: <span id="stv">10</span> 秒</label><input id="stare" type="range" min="5" max="20" step="1" value="10"></div>
+      <div><label>動きの速さ: <span id="spv">0.35</span></label><input id="speed" type="range" min="0.1" max="1" step="0.05" value="0.35"></div>
+    </div>
+    <div class="grid">
+      <div id="img2Box"><label>右の写真に別の写真を使う（任意）</label><input id="file2" type="file" accept="image/*"></div>
+      <label class="chk"><input id="contrast" type="checkbox" checked> コントラストを強める（効果が出やすくなります）</label>
+    </div>
+
+    <div class="row">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section id="stageWrap" class="panel hidden">
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div id="result" class="row hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="aftereffect.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">効果が弱いときは、見つめる秒数を長く、写真を細かい模様の多いものに、コントラストを強めてみてください。動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
+const M = 3, R = 2.4;           // layers / zoom range of the endless zoom
+let img1 = null, img2 = null, srcName = 'aftereffect';
+let L = null, timeline = [], total = 0, timer = 0;
+let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+const loadImage = f => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(f); });
+
+/* ---------- Input ---------- */
+const drop = $('drop'), fileIn = $('file');
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+fileIn.addEventListener('change', () => { if (fileIn.files[0]) load(fileIn.files[0]); });
+
+async function load(f) {
+  $('editor').classList.remove('hidden');
+  if (!f.type.startsWith('image/')) { setStatus('画像ファイルを選んでください。', true); return; }
+  try { img1 = await loadImage(f); } catch { setStatus('画像を読み込めませんでした。', true); return; }
+  srcName = f.name.replace(/\.[^.]+$/, '') || 'aftereffect';
+  $('stageWrap').classList.remove('hidden');
+  setStatus('');
+  rebuild(); start(null);
+}
+$('file2').addEventListener('change', async e => { img2 = e.target.files[0] ? await loadImage(e.target.files[0]).catch(() => null) : null; schedule(); });
+['layout', 'dir', 'aspect', 'stare', 'speed', 'contrast'].forEach(i => $(i).addEventListener('input', () => {
+  $('stv').textContent = $('stare').value; $('spv').textContent = (+$('speed').value).toFixed(2);
+  $('dirBox').classList.toggle('hidden', $('layout').value !== '1');
+  $('img2Box').classList.toggle('hidden', $('layout').value !== '2');
+  schedule();
+}));
+function schedule() { clearTimeout(timer); timer = setTimeout(() => { stop(); rebuild(); }, 150); }
+
+/* ---------- Build ---------- */
+function squarePanel(im, ps, contrast) {
+  const c = document.createElement('canvas'); c.width = c.height = ps;
+  const g = c.getContext('2d');
+  if (contrast) g.filter = 'contrast(1.35) saturate(1.1)';
+  const s = Math.max(ps / im.naturalWidth, ps / im.naturalHeight);
+  g.drawImage(im, (ps - im.naturalWidth * s) / 2, (ps - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s);
+  return c;
+}
+function rebuild() {
+  if (!img1) return;
+  const [W, H] = SIZES[$('aspect').value];
+  cv.width = W; cv.height = H;
+  const two = $('layout').value === '2', contrast = $('contrast').checked;
+  const N = +$('stare').value;
+  let panels;
+  if (two) {
+    const ps = Math.round(Math.min(W * 0.46, H * 0.62));
+    const gap = Math.round(W * 0.04);
+    const cy = Math.round(H * 0.5);
+    panels = [
+      { cx: W / 2 - gap / 2 - ps / 2, cy, ps, dir: -1, cnv: squarePanel(img1, ps, contrast) },
+      { cx: W / 2 + gap / 2 + ps / 2, cy, ps, dir: 1, cnv: squarePanel(img2 || img1, ps, contrast) }
+    ];
+    L = { W, H, panels, fx: W / 2, fy: cy };
+  } else {
+    const ps = Math.round(Math.min(W * 0.94, H * 0.7));
+    const cy = Math.round(H * 0.52);
+    panels = [{ cx: W / 2, cy, ps, dir: +$('dir').value, cnv: squarePanel(img1, ps, contrast) }];
+    L = { W, H, panels, fx: W / 2, fy: cy };
+  }
+  const sp = () => +$('speed').value;
+  const frozen = N * sp();
+  timeline = [
+    { dur: 3, f: () => ({ big: `中央の十字を\n${N}秒間見つめてください\n（目は動かさないで）` }) },
+    { dur: N, f: t => ({ tau: t * sp(), cap: `十字を見つめて…　あと ${Math.ceil(N - t)} 秒`, cross: true }) },
+    { dur: 6, f: t => ({ tau: frozen, clean: Math.min(1, t / 0.4), cap: '写真が動いて見えませんか？\nそのまま十字を見つめて', cross: true }) },
+    { dur: 4, f: () => ({ tau: frozen, clean: 1, cap: '実はこの写真は\nずっと止まっています' }) }
+  ];
+  total = timeline.reduce((n, p) => n + p.dur, 0);
+  draw(3 + 1);
+}
+
+/* ---------- Render ---------- */
+function drawText(lines, cx, cy, size) {
+  ctx.font = `bold ${size}px "Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  const lh = size * 1.35, y0 = cy - lh * (lines.length - 1) / 2;
+  lines.forEach((l, i) => {
+    ctx.lineWidth = size * 0.2; ctx.strokeStyle = '#000'; ctx.strokeText(l, cx, y0 + i * lh);
+    ctx.fillStyle = '#fff'; ctx.fillText(l, cx, y0 + i * lh);
+  });
+}
+function drawPanel(p, tau, clean) {
+  const x = p.cx - p.ps / 2, y = p.cy - p.ps / 2;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, p.ps, p.ps); ctx.clip();
+  ctx.fillStyle = '#000'; ctx.fillRect(x, y, p.ps, p.ps);
+  ctx.globalCompositeOperation = 'lighter';
+  for (let j = 0; j < M; j++) {
+    let ph = (p.dir * tau + j / M) % 1; if (ph < 0) ph += 1;
+    const w = Math.sin(Math.PI * ph) ** 2 * 2 / M, s = Math.pow(R, ph), sz = p.ps * s;
+    ctx.globalAlpha = w;
+    ctx.drawImage(p.cnv, p.cx - sz / 2, p.cy - sz / 2, sz, sz);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  if (clean > 0) { ctx.globalAlpha = clean; ctx.drawImage(p.cnv, x, y); }
+  ctx.restore();
+}
+function drawCross() {
+  const r = Math.round(Math.min(L.W, L.H) * 0.03), cx = L.fx, cy = L.fy;
+  ctx.save(); ctx.lineCap = 'round';
+  [[ '#fff', r * 0.5 ], [ '#000', r * 0.25 ]].forEach(([c, w]) => {
+    ctx.strokeStyle = c; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
+  });
+  ctx.restore();
+}
+function draw(t) {
+  if (!L) return;
+  const { W, H } = L;
+  let acc = 0, ph = timeline[0], tl = 0;
+  for (const p of timeline) { ph = p; if (t < acc + p.dur) { tl = t - acc; break; } acc += p.dur; tl = p.dur; }
+  const s = ph.f(tl);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (s.big) { drawText(s.big.split('\n'), W / 2, H / 2, Math.round(Math.min(W, H) * 0.06)); return; }
+  L.panels.forEach(p => drawPanel(p, s.tau, s.clean || 0));
+  if (s.cross) drawCross();
+  const size = Math.round(Math.min(W, H) * (W < H ? 0.052 : 0.058));
+  drawText(s.cap.split('\n'), W / 2, H * (W < H ? 0.08 : 0.09), size);
+}
+
+/* ---------- Playback / recording ---------- */
+function start(cb) {
+  stop();
+  onEnd = cb;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now();
+  const tick = now => {
+    const t = (now - startAt) / 1000;
+    $('prog').style.width = Math.min(100, t / total * 100) + '%';
+    if (t >= total) { draw(total - 0.001); finish(); return; }
+    draw(t);
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function finish() {
+  cancelAnimationFrame(raf); raf = 0;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
+  const cb = onEnd; onEnd = null;
+  if (cb) cb();
+}
+function stop() {
+  if (!raf) return;
+  cancelAnimationFrame(raf); raf = 0; onEnd = null;
+  if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
+  recorder = null;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('rec').disabled = false;
+  setStatus('');
+}
+$('play').onclick = () => { setStatus(''); start(null); };
+$('stop').onclick = stop;
+
+$('rec').onclick = () => {
+  if (!img1) return;
+  stop();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `${srcName}_aftereffect.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden');
+    $('rec').disabled = false;
+    setStatus('録画が完了しました。');
+    recorder = null;
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  setStatus(`録画中…（約 ${Math.round(total)} 秒。タブを切り替えないでください）`);
+  recorder.start();
+  start(() => { if (recorder && recorder.state !== 'inactive') setTimeout(() => recorder && recorder.stop(), 300); });
+};
+})();
+</script>
+</body>
+</html>
