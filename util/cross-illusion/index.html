@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>十字の膨らみ錯視メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#9be000;--acc2:#84c200;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem}
+  input[type=range]{width:100%}
+  input[type=color]{width:100%;height:38px;background:#12141a;border:1px solid var(--line);border-radius:8px;padding:2px}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:14px}
+  button,a.btn{background:var(--acc);color:#1a2600;font-weight:600;border:0;border-radius:8px;padding:10px 18px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400;padding:8px 12px;font-size:.9rem}button.sec:hover{background:#383d52}
+  button.sec.on{outline:2px solid var(--acc)}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%}
+  #ed{width:100%;max-width:640px;aspect-ratio:1;margin:0 auto;touch-action:none;cursor:crosshair}
+  #cv{max-height:80vh;margin:0 auto}
+  .presets{display:flex;gap:8px;flex-wrap:wrap}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>十字の膨らみ錯視メーカー</h1>
+  <p class="lead">正方形のマス目（市松模様）の交点に、色違いの小さな十字を置くと、マス目が膨らんだりへこんだりして見えます。絵を描くと、その輪郭に合わせて十字が自動で置かれます。絵が決まったら、十字を取り除いて「実は正方形だけだった」と種明かしする動画を作れます。</p>
+
+  <section class="panel">
+    <h2>1. 絵を描く（マウス／指でなぞると、その部分が「領域」になります）</h2>
+    <canvas id="ed" width="720" height="720"></canvas>
+    <div class="row top">
+      <button id="toolDraw" type="button" class="sec on">✏ 描く</button>
+      <button id="toolErase" type="button" class="sec">⌫ 消す</button>
+      <div style="flex:1;min-width:160px"><label>ブラシの大きさ: <span id="brushV">2.0</span></label><input id="brush" type="range" min="0.5" max="8" step="0.5" value="2"></div>
+      <button id="clear" type="button" class="sec">全部消す</button>
+      <button id="invert" type="button" class="sec">領域を反転</button>
+      <label class="chk"><input id="showR" type="checkbox"> 領域の印を表示</label>
+    </div>
+    <h2 style="margin-top:18px">プリセット（描いた絵は置き換わります）</h2>
+    <div id="presets" class="presets"></div>
+  </section>
+
+  <section class="panel">
+    <h2>2. 格子と十字</h2>
+    <div class="grid">
+      <div><label>格子の細かさ: <span id="nV">16</span> × <span id="nV2">16</span> マス</label><input id="n" type="range" min="6" max="40" step="1" value="16"></div>
+      <div><label>十字の大きさ: <span id="sizeV">26</span>%</label><input id="size" type="range" min="10" max="70" step="1" value="26"></div>
+      <div><label>十字の置き方</label>
+        <select id="mode">
+          <option value="edge">輪郭だけ（内側＝色A、外側＝色B）</option>
+          <option value="both">すべての交点（内側＝色A、外側＝色B）</option>
+          <option value="inside">領域の内側だけ（色A）</option>
+        </select></div>
+      <div><label>配色</label>
+        <select id="scheme">
+          <option value="prim">黄緑＋緑 ／ 白＋赤紫</option>
+          <option value="mono">白＋黒 ／ 赤＋青</option>
+          <option value="warm">橙＋茶 ／ 黄＋青緑</option>
+          <option value="blue">水色＋紺 ／ 白＋桃</option>
+        </select></div>
+    </div>
+    <div class="grid">
+      <div><label>マスの色 1</label><input id="tA" type="color" value="#b0dc00"></div>
+      <div><label>マスの色 2</label><input id="tB" type="color" value="#3dbb85"></div>
+      <div><label>十字の色 A（内側）</label><input id="cA" type="color" value="#ffffff"></div>
+      <div><label>十字の色 B（外側）</label><input id="cB" type="color" value="#c8007f"></div>
+    </div>
+    <div class="info">コツ：十字は小さめ（25〜40%）が効きやすく、「輪郭だけ」だと白と赤紫の線が並んで原作風になります。見え方には個人差があります。</div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 種明かし動画</h2>
+    <div class="grid">
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>上の問いかけ</label><input id="title" type="text" value="どこが膨らんで見える？"></div>
+      <div><label>種明かしの言葉</label><input id="reveal" type="text" value="実は、ただの正方形のマス目だけ！"></div>
+      <div><label>十字の消え方</label>
+        <select id="order">
+          <option value="center">中心から外へ</option>
+          <option value="inward">外から中心へ</option>
+          <option value="sweep">左から右へ</option>
+          <option value="random">ランダム</option>
+          <option value="all">一斉に</option>
+        </select></div>
+    </div>
+    <div class="grid">
+      <div><label>最初に見せる: <span id="d1V">3</span>秒</label><input id="d1" type="range" min="1" max="8" step="0.5" value="3"></div>
+      <div><label>十字が消える: <span id="d2V">4</span>秒</label><input id="d2" type="range" min="1" max="10" step="0.5" value="4"></div>
+      <div><label>種明かしを見せる: <span id="d3V">3</span>秒</label><input id="d3" type="range" min="1" max="8" step="0.5" value="3"></div>
+      <div><label class="chk" style="margin-top:22px"><input id="restore" type="checkbox" checked> 最後に十字を戻す</label></div>
+    </div>
+    <div class="row top">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+    <div style="margin-top:12px"><canvas id="cv" width="720" height="1280"></canvas></div>
+    <div id="result" class="row top hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="cross-illusion.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const ed = $('ed'), ex = ed.getContext('2d');
+const cv = $('cv'), cx = cv.getContext('2d');
+const SIZES = { '9:16': [720, 1280], '16:9': [1280, 720], '1:1': [900, 900] };
+const SCHEMES = {
+  prim: ['#b0dc00', '#3dbb85', '#ffffff', '#c8007f'],
+  mono: ['#ffffff', '#111111', '#e02020', '#2050e0'],
+  warm: ['#ff9a1f', '#7a3b12', '#ffe45c', '#17a398'],
+  blue: ['#8fd3ff', '#14285a', '#ffffff', '#ff7ab6']
+};
+
+let N = 16, R = new Uint8Array(17 * 17);
+let erase = false, hv = null, drawing = false, lastP = null;
+let raf = 0, startAt = 0, onEnd = null, recorder = null, outUrl = null;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+const V = () => N + 1;
+const cfg = () => ({ tA: $('tA').value, tB: $('tB').value, cA: $('cA').value, cB: $('cB').value, size: +$('size').value / 100, mode: $('mode').value });
+
+/* ---------- 十字を置く場所 ---------- */
+function crossAt(i, j, mode) {
+  if (i < 1 || j < 1 || i >= N || j >= N) return 0;
+  const v = R[j * V() + i];
+  if (mode === 'both') return v ? 1 : 2;
+  if (mode === 'inside') return v ? 1 : 0;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const a = i + dx, b = j + dy;
+    const w = (a < 0 || b < 0 || a > N || b > N) ? 0 : R[b * V() + a];
+    if (w !== v) return v ? 1 : 2;
+  }
+  return 0;
+}
+function star(c, x, y, r) {
+  const k = r * 0.2;
+  c.beginPath();
+  c.moveTo(x + r, y); c.quadraticCurveTo(x + k, y + k, x, y + r);
+  c.quadraticCurveTo(x - k, y + k, x - r, y); c.quadraticCurveTo(x - k, y - k, x, y - r);
+  c.quadraticCurveTo(x + k, y - k, x + r, y); c.closePath(); c.fill();
+}
+// prog(i,j): 0=十字あり … 1=十字なし
+function drawBoard(c, x0, y0, S, prog) {
+  const g = cfg(), cs = S / N, e = k => Math.round(k * cs);
+  for (let r = 0; r < N; r++) for (let q = 0; q < N; q++) {
+    c.fillStyle = (r + q) % 2 ? g.tB : g.tA;
+    c.fillRect(x0 + e(q), y0 + e(r), e(q + 1) - e(q), e(r + 1) - e(r));
+  }
+  for (let j = 1; j < N; j++) for (let i = 1; i < N; i++) {
+    const t = crossAt(i, j, g.mode); if (!t) continue;
+    const p = prog ? prog(i, j) : 0; if (p >= 1) continue;
+    c.globalAlpha = 1 - p; c.fillStyle = t === 1 ? g.cA : g.cB;
+    star(c, x0 + e(i), y0 + e(j), g.size * cs * (1 - p * 0.6));
+  }
+  c.globalAlpha = 1;
+}
+
+/* ---------- エディタ ---------- */
+function renderEditor() {
+  const S = ed.width;
+  drawBoard(ex, 0, 0, S, null);
+  const cs = S / N;
+  if ($('showR').checked) {
+    ex.fillStyle = 'rgba(0,200,255,.85)';
+    for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) if (R[j * V() + i]) { ex.beginPath(); ex.arc(i * cs, j * cs, Math.max(2, cs * 0.09), 0, 7); ex.fill(); }
+  }
+  if (hv) {
+    ex.lineWidth = 2; ex.strokeStyle = erase ? '#ff5a5a' : '#00c8ff';
+    ex.beginPath(); ex.arc(hv.x * cs, hv.y * cs, +$('brush').value * cs, 0, 7); ex.stroke();
+  }
+}
+function pt(e) {
+  const r = ed.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * N, y: (e.clientY - r.top) / r.height * N };
+}
+function stamp(p) {
+  const rad = +$('brush').value, v = erase ? 0 : 1;
+  for (let j = Math.max(0, Math.floor(p.y - rad)); j <= Math.min(N, Math.ceil(p.y + rad)); j++)
+    for (let i = Math.max(0, Math.floor(p.x - rad)); i <= Math.min(N, Math.ceil(p.x + rad)); i++)
+      if ((i - p.x) ** 2 + (j - p.y) ** 2 <= rad * rad) R[j * V() + i] = v;
+}
+function stroke(a, b) {
+  const d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.ceil(d / 0.25));
+  for (let k = 1; k <= n; k++) stamp({ x: a.x + (b.x - a.x) * k / n, y: a.y + (b.y - a.y) * k / n });
+}
+ed.addEventListener('pointerdown', e => {
+  ed.setPointerCapture(e.pointerId); drawing = true;
+  const p = pt(e); hv = p; lastP = p; stamp(p); afterEdit();
+});
+ed.addEventListener('pointermove', e => {
+  const p = pt(e); hv = p;
+  if (drawing) { stroke(lastP, p); lastP = p; }
+  renderEditor(); if (drawing) drawIdle();
+});
+ed.addEventListener('pointerup', () => { drawing = false; });
+ed.addEventListener('pointerleave', () => { if (!drawing) { hv = null; renderEditor(); } });
+function afterEdit() { renderEditor(); drawIdle(); }
+
+$('toolDraw').onclick = () => { erase = false; $('toolDraw').classList.add('on'); $('toolErase').classList.remove('on'); };
+$('toolErase').onclick = () => { erase = true; $('toolErase').classList.add('on'); $('toolDraw').classList.remove('on'); };
+$('clear').onclick = () => { R.fill(0); afterEdit(); };
+$('invert').onclick = () => { for (let k = 0; k < R.length; k++) R[k] ^= 1; afterEdit(); };
+
+/* ---------- プリセット ---------- */
+const md = (a, b) => ((a % b) + b) % b;
+function inPoly(x, y, pts) {
+  let c = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+const STAR = Array.from({ length: 10 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 0.36 : 0.85; return [Math.cos(a) * r, Math.sin(a) * r]; });
+const tri = (x, c, w) => Math.max(0, 1 - Math.abs(x - c) / w);
+const PRESETS = [
+  ['円', (x, y) => x * x + y * y < 0.3],
+  ['四角', (x, y) => Math.max(Math.abs(x), Math.abs(y)) < 0.5],
+  ['ひし形', (x, y) => Math.abs(x) + Math.abs(y) < 0.7],
+  ['ひし形リング（サクラソウの丘風）', (x, y) => md(Math.floor((Math.abs(x) + Math.abs(y)) / 0.38), 2) === 0],
+  ['山', (x, y) => { const h = Math.max(1.0 * tri(x, -0.35, 0.6), 1.5 * tri(x, 0.35, 0.55)); return y < 0.7 && y > 0.7 - h; }],
+  ['同心円', (x, y) => md(Math.floor(Math.hypot(x, y) / 0.27), 2) === 0],
+  ['同心四角', (x, y) => md(Math.floor(Math.max(Math.abs(x), Math.abs(y)) / 0.24), 2) === 0],
+  ['ハート', (x, y) => { const X = x * 1.35, Y = -y * 1.35 + 0.15; return (X * X + Y * Y - 1) ** 3 - X * X * Y ** 3 < 0; }],
+  ['星', (x, y) => inPoly(x, y, STAR)],
+  ['十字', (x, y) => (Math.abs(x) < 0.2 && Math.abs(y) < 0.8) || (Math.abs(y) < 0.2 && Math.abs(x) < 0.8)],
+  ['ななめ縞', (x, y) => md(Math.floor((x + y) / 0.36), 2) === 0],
+  ['波', (x, y) => md(Math.floor((y + 0.25 * Math.sin(x * 4.5)) / 0.4), 2) === 0],
+  ['ひょうたん（2つの円）', (x, y) => Math.hypot(x, y - 0.42) < 0.38 || Math.hypot(x, y + 0.3) < 0.55]
+];
+function applyPreset(f) {
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) R[j * V() + i] = f(i / N * 2 - 1, j / N * 2 - 1) ? 1 : 0;
+  afterEdit();
+}
+PRESETS.forEach(([name, f]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'sec'; b.textContent = name;
+  b.onclick = () => applyPreset(f); $('presets').appendChild(b);
+});
+
+/* ---------- 設定 ---------- */
+function resample(newN) {
+  const nr = new Uint8Array((newN + 1) * (newN + 1));
+  for (let j = 0; j <= newN; j++) for (let i = 0; i <= newN; i++)
+    nr[j * (newN + 1) + i] = R[Math.round(j / newN * N) * (N + 1) + Math.round(i / newN * N)];
+  N = newN; R = nr;
+}
+$('n').addEventListener('input', () => {
+  const v = +$('n').value; $('nV').textContent = v; $('nV2').textContent = v;
+  resample(v); afterEdit();
+});
+['size', 'brush', 'd1', 'd2', 'd3'].forEach(i => $(i).addEventListener('input', () => { $(i + 'V').textContent = i === 'size' ? Math.round($(i).value) : $(i).value; afterEdit(); }));
+['mode', 'tA', 'tB', 'cA', 'cB', 'showR', 'title', 'reveal', 'order', 'restore'].forEach(i => $(i).addEventListener('input', afterEdit));
+$('scheme').onchange = () => { const s = SCHEMES[$('scheme').value]; ['tA', 'tB', 'cA', 'cB'].forEach((id, k) => $(id).value = s[k]); afterEdit(); };
+$('aspect').onchange = () => { const [w, h] = SIZES[$('aspect').value]; cv.width = w; cv.height = h; drawIdle(); };
+
+/* ---------- 動画 ---------- */
+function durs() { return { d1: +$('d1').value, d2: +$('d2').value, d3: +$('d3').value, d4: $('restore').checked ? 2.5 : 0, d5: $('restore').checked ? 2 : 0 }; }
+function total() { const d = durs(); return d.d1 + d.d2 + d.d3 + d.d4 + d.d5; }
+const ease = u => u * u * (3 - 2 * u);
+function hash(i, j) { let h = (i * 73856093) ^ (j * 19349663); h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) % 1000 / 1000; }
+function delay(i, j) {
+  const o = $('order').value;
+  if (o === 'all') return 0;
+  if (o === 'center') return Math.min(1, Math.hypot(i / N - 0.5, j / N - 0.5) / 0.55);
+  if (o === 'inward') return 1 - Math.min(1, Math.hypot(i / N - 0.5, j / N - 0.5) / 0.55);
+  if (o === 'sweep') return i / N;
+  return hash(i, j);
+}
+function wrap(c, text, maxW) {
+  const lines = []; let cur = '';
+  for (const ch of text) { if (c.measureText(cur + ch).width > maxW && cur) { lines.push(cur); cur = ch; } else cur += ch; }
+  if (cur) lines.push(cur); return lines;
+}
+function drawText(c, text, cxm, top, boxW, boxH, color) {
+  if (!text) return;
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  let fs = Math.round(boxH * 0.4), lines;
+  for (; fs > 14; fs -= 2) {
+    c.font = `bold ${fs}px system-ui,"Hiragino Sans","Yu Gothic",sans-serif`;
+    lines = wrap(c, text, boxW);
+    if (lines.length * fs * 1.25 <= boxH * 0.95) break;
+  }
+  const y0 = top + boxH / 2 - (lines.length - 1) * fs * 1.25 / 2;
+  lines.forEach((l, k) => {
+    const y = y0 + k * fs * 1.25;
+    c.lineWidth = fs * 0.2; c.strokeStyle = 'rgba(0,0,0,.85)'; c.strokeText(l, cxm, y);
+    c.fillStyle = color; c.fillText(l, cxm, y);
+  });
+}
+function frame(c, W, H, t) {
+  const d = durs(), tot = total();
+  let u = 0, cap = '';
+  if (t < d.d1) { u = 0; }
+  else if (t < d.d1 + d.d2) { u = (t - d.d1) / d.d2; cap = '十字を取り除くと…'; }
+  else if (t < d.d1 + d.d2 + d.d3) { u = 1; cap = $('reveal').value; }
+  else if (t < d.d1 + d.d2 + d.d3 + d.d4) { u = 1 - (t - d.d1 - d.d2 - d.d3) / d.d4; cap = '十字を戻すと…'; }
+  else { u = 0; cap = 'また膨らんで見える！'; }
+  const th = H > W ? H * 0.16 : H * 0.14;
+  const S = Math.floor(Math.min(W - 40, H - 2 * th));
+  const x0 = Math.round((W - S) / 2), y0 = Math.round((H - S) / 2);
+  c.fillStyle = '#0d0f14'; c.fillRect(0, 0, W, H);
+  const sp = $('order').value === 'all' ? 0 : 0.7;
+  drawBoard(c, x0, y0, S, (i, j) => ease(Math.max(0, Math.min(1, u * (1 + sp) - delay(i, j) * sp))));
+  drawText(c, $('title').value, W / 2, 0, W - 50, y0 > th * 0.9 ? y0 : th, '#ffffff');
+  drawText(c, cap, W / 2, y0 + S, W - 50, H - (y0 + S) > th * 0.9 ? H - (y0 + S) : th, u >= 1 ? '#ffe45c' : '#ffffff');
+  return t / tot;
+}
+function drawIdle() { if (!raf) frame(cx, cv.width, cv.height, 0); }
+
+function loop(now) {
+  const t = (now - startAt) / 1000, tot = total();
+  frame(cx, cv.width, cv.height, Math.min(t, tot - 0.001));
+  $('prog').style.width = Math.min(100, t / tot * 100) + '%';
+  if (t >= tot) { stopPlay(); if (onEnd) { const f = onEnd; onEnd = null; f(); } return; }
+  raf = requestAnimationFrame(loop);
+}
+function startPlay(end) {
+  stopPlay(); onEnd = end || null;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now(); raf = requestAnimationFrame(loop);
+}
+function stopPlay() {
+  if (raf) cancelAnimationFrame(raf); raf = 0;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden');
+  $('prog').style.width = '0';
+}
+$('play').onclick = () => startPlay();
+$('stop').onclick = () => { stopPlay(); onEnd = null; if (recorder) recorder.stop(); else drawIdle(); };
+
+$('rec').onclick = () => {
+  stopPlay();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `cross-illusion.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden'); $('rec').disabled = false;
+    setStatus('録画が完了しました。'); recorder = null;
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  setStatus(`録画中…（約 ${Math.round(total())} 秒。タブを切り替えないでください）`);
+  recorder.start();
+  startPlay(() => { if (recorder && recorder.state !== 'inactive') setTimeout(() => recorder && recorder.stop(), 300); });
+};
+
+applyPreset(PRESETS[3][1]);
+})();
+</script>
+</body>
+</html>
