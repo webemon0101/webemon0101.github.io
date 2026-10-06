@@ -69,7 +69,9 @@
           <option value="auto">自動（透過 or 背景色を除去）</option>
           <option value="dark">暗い部分を形にする</option>
           <option value="light">明るい部分を形にする</option>
+          <option value="motion">動いている部分（動画のみ・カメラ固定向け）</option>
         </select></div>
+      <div id="thrBox" class="hidden"><label>動き検出の感度（小さいほど敏感）: <span id="thv">40</span></label><input id="thr" type="range" min="10" max="120" step="5" value="40"></div>
     </div>
 
     <div class="grid" style="margin-top:14px">
@@ -158,6 +160,85 @@ function skullMask(pz) {
   g.beginPath(); g.moveTo(u * 0.3, u * 0.75); g.lineTo(u * 0.7, u * 0.75); g.stroke();
   return c;
 }
+/* ---------- Motion extraction (moving parts of a video, static camera) ---------- */
+let videoBg = null;
+const seekTo = (v, t) => new Promise(res => {
+  let done = false;
+  const f = () => { if (done) return; done = true; v.removeEventListener('seeked', f); clearTimeout(to); res(); };
+  const to = setTimeout(f, 3000);
+  v.addEventListener('seeked', f);
+  v.currentTime = Math.max(0, Math.min(t, v.duration - 0.05));
+});
+async function ensureBg() {     // per-pixel median of frames sampled across the video = background
+  const v = shapeVid;
+  if (!v || (videoBg && videoBg.src === v.src)) return;
+  setStatus('背景を解析中…（少し時間がかかります）');
+  const iw = v.videoWidth, ih = v.videoHeight, sc = Math.min(1, 256 / Math.max(iw, ih));
+  const w = Math.max(1, Math.round(iw * sc)), h = Math.max(1, Math.round(ih * sc)), N = 11;
+  const c = mk(w, h), g = c.getContext('2d', { willReadFrequently: true }), frames = [];
+  for (let i = 0; i < N; i++) {
+    await seekTo(v, v.duration * (i + 0.5) / N);
+    g.drawImage(v, 0, 0, w, h);
+    frames.push(g.getImageData(0, 0, w, h).data.slice());
+  }
+  const data = new Uint8ClampedArray(w * h * 4), tmp = new Uint8Array(N);
+  for (let i = 0; i < data.length; i++) {
+    if (i % 4 === 3) { data[i] = 255; continue; }
+    for (let j = 0; j < N; j++) tmp[j] = frames[j][i];
+    tmp.sort(); data[i] = tmp[N >> 1];
+  }
+  videoBg = { w, h, data, src: v.src };
+  v.currentTime = 0;
+  setStatus('');
+}
+function morph(a, w, h, dilate) {
+  const o = new Uint8Array(a.length);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let v = dilate ? 0 : 1;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      if (dilate) v |= a[yy * w + xx]; else v &= a[yy * w + xx];
+    }
+    o[y * w + x] = v;
+  }
+  return o;
+}
+function motionAlpha(d, w, h, alpha) {
+  const bg = videoBg.data, thr = +$('thr').value, n = w * h;
+  let a = new Uint8Array(n);
+  for (let p = 0; p < n; p++) {
+    const i = p * 4;
+    a[p] = Math.max(Math.abs(d[i] - bg[i]), Math.abs(d[i + 1] - bg[i + 1]), Math.abs(d[i + 2] - bg[i + 2])) > thr ? 1 : 0;
+  }
+  a = morph(morph(a, w, h, false), w, h, true);    // opening: drop speckle noise
+  a = morph(morph(a, w, h, true), w, h, false);    // closing: join gaps
+  // fill holes: flood the outside from the border, everything not reached is inside
+  const seen = new Uint8Array(n), stack = new Int32Array(n);
+  let sp = 0;
+  const push = p => { if (!seen[p] && !a[p]) { seen[p] = 1; stack[sp++] = p; } };
+  for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+  while (sp) {
+    const p = stack[--sp], x = p % w, y = (p / w) | 0;
+    if (x > 0) push(p - 1); if (x < w - 1) push(p + 1); if (y > 0) push(p - w); if (y < h - 1) push(p + w);
+  }
+  // keep only the largest connected blob
+  const lab = new Int32Array(n);
+  let id = 0, best = 0, bestN = 0;
+  for (let s = 0; s < n; s++) {
+    if (seen[s] || lab[s]) continue;
+    id++; let cnt = 0; sp = 0; stack[sp++] = s; lab[s] = id;
+    while (sp) {
+      const p = stack[--sp]; cnt++;
+      const x = p % w, y = (p / w) | 0;
+      const nb = [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, y > 0 ? p - w : -1, y < h - 1 ? p + w : -1];
+      for (const q of nb) if (q >= 0 && !seen[q] && !lab[q]) { lab[q] = id; stack[sp++] = q; }
+    }
+    if (cnt > bestN) { bestN = cnt; best = id; }
+  }
+  for (let p = 0; p < n; p++) alpha[p] = lab[p] === best ? 255 : 0;
+}
 function maskCanvas(im, pz, mode, maxDim = 800) {
   const iw = im.naturalWidth || im.videoWidth, ih = im.naturalHeight || im.videoHeight;
   const sc = Math.min(1, maxDim / Math.max(iw, ih));
@@ -168,7 +249,11 @@ function maskCanvas(im, pz, mode, maxDim = 800) {
   const alpha = new Uint8Array(w * h);
   const corners = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)];
   const hasAlpha = corners.some(i => d[i + 3] < 200);
-  if (mode === 'auto') {
+  const isVid = !!im.videoWidth && !im.naturalWidth;
+  if (mode === 'motion' && !(isVid && videoBg && videoBg.w === w && videoBg.h === h)) mode = 'auto';
+  if (mode === 'motion') {
+    motionAlpha(d, w, h, alpha);
+  } else if (mode === 'auto') {
     if (hasAlpha) { for (let p = 0; p < w * h; p++) alpha[p] = d[p * 4 + 3]; }
     else {
       const bg = [0, 1, 2].map(k => corners.reduce((s, i) => s + d[i + k], 0) / 4);
@@ -196,7 +281,7 @@ function maskCanvas(im, pz, mode, maxDim = 800) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (alpha[y * w + x] > 30) {
     if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
-  if (x1 < 0) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }
+  if (x1 < 0 || isVid) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }   // video: keep the whole frame fixed (no per-frame re-fit)
   const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
   const m = mk(bw, bh), mg = m.getContext('2d'), md = mg.createImageData(bw, bh);
   for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
@@ -372,12 +457,15 @@ function applyPreset() {
 function syncUI() {
   const img = $('shape').value === 'img';
   $('imgBox').classList.toggle('hidden', !img); $('modeBox').classList.toggle('hidden', !img);
+  $('thrBox').classList.toggle('hidden', !(img && $('mode').value === 'motion')); $('thv').textContent = $('thr').value;
   $('nv').textContent = $('count').value;
   $('zsv').textContent = $('zs').value; $('dxv').textContent = $('dx').value; $('dyv').textContent = $('dy').value;
 }
 function schedule() { clearTimeout(timer); timer = setTimeout(() => { stop(); rebuild(); }, 120); }
 $('preset').addEventListener('input', () => { applyPreset(); schedule(); });
 ['c1', 'c2', 'c0'].forEach(i => $(i).addEventListener('input', () => { $('preset').value = 'custom'; schedule(); }));
+$('mode').addEventListener('input', async () => { if ($('mode').value === 'motion' && shapeVid) { await ensureBg(); schedule(); } });
+$('thr').addEventListener('input', () => { syncUI(); schedule(); });
 $('resetXf').onclick = () => { $('zs').value = 100; $('dx').value = 0; $('dy').value = 0; syncUI(); schedule(); };
 ['shape', 'mode', 'orient', 'count', 'aspect', 'reveal', 'arrange', 'zs', 'dx', 'dy'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
 $('shapeImg').addEventListener('change', e => {
@@ -387,7 +475,7 @@ $('shapeImg').addEventListener('change', e => {
   if (f.type.startsWith('video/')) {
     const v = document.createElement('video');
     v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
-    v.onloadeddata = () => { shapeVid = v; schedule(); };
+    v.onloadeddata = async () => { shapeVid = v; if ($('mode').value === 'motion') await ensureBg(); schedule(); };
     v.onerror = () => setStatus('動画を読み込めませんでした。', true);
     v.src = URL.createObjectURL(f);
     return;
