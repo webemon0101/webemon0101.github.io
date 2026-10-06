@@ -72,6 +72,13 @@
         </select></div>
     </div>
 
+    <div class="grid" style="margin-top:14px">
+      <div><label>形の大きさ: <span id="zsv">100</span> %</label><input id="zs" type="range" min="30" max="300" step="5" value="100"></div>
+      <div><label>横位置: <span id="dxv">0</span></label><input id="dx" type="range" min="-50" max="50" step="1" value="0"></div>
+      <div><label>縦位置: <span id="dyv">0</span></label><input id="dy" type="range" min="-50" max="50" step="1" value="0"></div>
+    </div>
+    <div class="row" style="margin-top:8px"><button id="resetXf" type="button" class="sec">形の大きさ・位置をリセット</button></div>
+
     <h2 style="margin-top:20px">縞・画面</h2>
     <div class="grid">
       <div><label>種明かしの方法</label>
@@ -223,9 +230,11 @@ function stripes(ps, n, orient, draw) {   // draw(k, x0, y0, w, h) for each stri
 }
 function applyShape() {   // (re)compute the shape mask, solid fill and masked stripe overlays
   const { ps, pz, T } = L;
-  const mask = shapeMask(pz);
-  L.solid = tinted(mask, T);
-  const panelMask = mk(ps, ps); panelMask.getContext('2d').drawImage(mask, (ps - pz) / 2, (ps - pz) / 2);
+  const z = +$('zs').value / 100, size = Math.max(8, Math.round(pz * z));
+  const mask = shapeMask(size);
+  const panelMask = mk(ps, ps), pg = panelMask.getContext('2d');
+  pg.drawImage(mask, Math.round(ps / 2 + +$('dx').value / 100 * ps - size / 2), Math.round(ps / 2 + +$('dy').value / 100 * ps - size / 2));
+  L.solid = tinted(panelMask, T);
   L.overlay = L.tStripes.map(src => {
     const o = mk(ps, ps), og = o.getContext('2d');
     og.drawImage(src, 0, 0); og.globalCompositeOperation = 'destination-in'; og.drawImage(panelMask, 0, 0);
@@ -253,7 +262,8 @@ function rebuild() {
     return o;
   });
   // zoom focus: just inside the top edge of the shape, identical in both panels
-  const focus = [ps / 2, (ps - pz) / 2 + pz * 0.07], Z = Math.max(3, Math.min(10, n / 4));
+  const sz = pz * +$('zs').value / 100;
+  const focus = [ps / 2 + +$('dx').value / 100 * ps, ps / 2 + +$('dy').value / 100 * ps - sz / 2 + sz * 0.07], Z = Math.max(3, Math.min(10, n / 4));
   L = { W, H, vertical, ps, pz, centers, mid, field, tStripes, T, focus, hex: T.toUpperCase(),
         dynamic: $('shape').value === 'img' && !!shapeVid };
   applyShape();
@@ -294,9 +304,10 @@ function draw(t) {
   const s = ph.f(tl, Math.min(1, tl / ph.dur));
   ctx.fillStyle = '#1a1a20'; ctx.fillRect(0, 0, W, H);
   const m = s.merge, lines = s.lines;
+  const half = pz * Math.max(0.3, +$('zs').value / 100) / 2;
   const tg = [
-    vertical ? [mid[0], mid[1] - pz / 2] : [mid[0] - pz / 2, mid[1]],
-    vertical ? [mid[0], mid[1] + pz / 2] : [mid[0] + pz / 2, mid[1]]
+    vertical ? [mid[0], mid[1] - half] : [mid[0] - half, mid[1]],
+    vertical ? [mid[0], mid[1] + half] : [mid[0] + half, mid[1]]
   ];
   centers.forEach(([cx, cy], i) => {
     const x0 = cx - ps / 2, y0 = cy - ps / 2;
@@ -316,7 +327,7 @@ function draw(t) {
     if (lines < 0.999) {
       const px = cx + (tg[i][0] - cx) * m, py = cy + (tg[i][1] - cy) * m;
       ctx.save(); ctx.globalAlpha = 1 - lines;
-      ctx.drawImage(L.solid, px - pz / 2, py - pz / 2); ctx.restore();
+      ctx.drawImage(L.solid, px - ps / 2, py - ps / 2); ctx.restore();
     }
     ctx.restore();
   });
@@ -336,11 +347,13 @@ function syncUI() {
   const img = $('shape').value === 'img';
   $('imgBox').classList.toggle('hidden', !img); $('modeBox').classList.toggle('hidden', !img);
   $('nv').textContent = $('count').value;
+  $('zsv').textContent = $('zs').value; $('dxv').textContent = $('dx').value; $('dyv').textContent = $('dy').value;
 }
 function schedule() { clearTimeout(timer); timer = setTimeout(() => { stop(); rebuild(); }, 120); }
 $('preset').addEventListener('input', () => { applyPreset(); schedule(); });
 ['c1', 'c2', 'c0'].forEach(i => $(i).addEventListener('input', () => { $('preset').value = 'custom'; schedule(); }));
-['shape', 'mode', 'orient', 'count', 'aspect', 'reveal'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
+$('resetXf').onclick = () => { $('zs').value = 100; $('dx').value = 0; $('dy').value = 0; syncUI(); schedule(); };
+['shape', 'mode', 'orient', 'count', 'aspect', 'reveal', 'zs', 'dx', 'dy'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
 $('shapeImg').addEventListener('change', e => {
   const f = e.target.files[0];
   shapeImg = null; shapeVid = null;
