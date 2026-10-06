@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ダンス・シルエットメーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#ff4fd8;--acc2:#e03cc0;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=file]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem}
+  input[type=range]{width:100%}
+  input[type=color]{width:100%;height:38px;background:#12141a;border:1px solid var(--line);border-radius:8px;padding:2px}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:16px}
+  button,a.btn{background:var(--acc);color:#2a0020;font-weight:600;border:0;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button.on{outline:2px solid var(--acc)}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:80vh}
+  .stage{display:flex;justify-content:center}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+  video{display:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>ダンス・シルエットメーカー</h1>
+  <p class="lead">ダンス動画（またはウェブカメラ）から人物だけを切り出し、輪郭線と塗りつぶしで光るシルエットにします。処理はすべてブラウザ内で行われ、映像はアップロードされません。</p>
+
+  <section class="panel">
+    <h2>1. 入力</h2>
+    <div class="row">
+      <button id="pickFile" type="button">🎞 動画ファイルを選ぶ</button>
+      <button id="pickCam" type="button" class="sec">📷 ウェブカメラを使う</button>
+      <input id="file" type="file" accept="video/*" class="hidden">
+    </div>
+    <div id="status">入力を選ぶと、人物検出モデル（数MB）を読み込みます。</div>
+  </section>
+
+  <section id="editor" class="panel hidden">
+    <h2>2. 見た目</h2>
+    <div class="grid">
+      <div><label>画面の比率</label>
+        <select id="aspect">
+          <option value="orig">元の動画に合わせる</option>
+          <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
+          <option value="16:9">横長 16:9（YouTube）1280×720</option>
+          <option value="1:1">正方形 1:1　900×900</option>
+        </select></div>
+      <div><label>はめ方</label>
+        <select id="fit">
+          <option value="contain">全体を収める</option>
+          <option value="cover">画面を埋める（はみ出しはカット）</option>
+        </select></div>
+      <div><label>表示</label>
+        <select id="mode">
+          <option value="both">塗りつぶし ＋ 輪郭</option>
+          <option value="fill">塗りつぶしのみ</option>
+          <option value="line">輪郭のみ（中は背景）</option>
+        </select></div>
+      <div><label>塗りのスタイル</label>
+        <select id="fillStyle">
+          <option value="solid">単色</option>
+          <option value="grad">2色グラデーション（上→下）</option>
+          <option value="rainbow">虹色（流れる）</option>
+        </select></div>
+    </div>
+    <div class="grid">
+      <div><label>塗りの色 1</label><input id="c1" type="color" value="#ff2bd6"></div>
+      <div><label>塗りの色 2（グラデ用）</label><input id="c2" type="color" value="#2bd9ff"></div>
+      <div><label>輪郭の色</label><input id="oc" type="color" value="#ffffff"></div>
+      <div><label class="chk" style="margin-top:22px"><input id="ocRainbow" type="checkbox"> 輪郭も虹色にする</label></div>
+    </div>
+    <div class="grid">
+      <div><label>輪郭の太さ: <span id="thickV">6</span>px</label><input id="thick" type="range" min="0" max="30" step="1" value="6"></div>
+      <div><label>光（グロー）: <span id="glowV">20</span></label><input id="glow" type="range" min="0" max="60" step="1" value="20"></div>
+      <div><label>残像: <span id="trailV">0</span>%</label><input id="trail" type="range" min="0" max="95" step="1" value="0"></div>
+    </div>
+    <div class="grid">
+      <div><label>背景</label>
+        <select id="bg">
+          <option value="color">単色</option>
+          <option value="video">元の映像（暗く）</option>
+        </select></div>
+      <div><label>背景色</label><input id="bgc" type="color" value="#000000"></div>
+      <div><label>元映像の明るさ: <span id="brightV">25</span>%</label><input id="bright" type="range" min="0" max="100" step="1" value="25"></div>
+    </div>
+
+    <h2 style="margin-top:20px">人物の検出</h2>
+    <div class="grid">
+      <div><label>検出モデル</label>
+        <select id="model">
+          <option value="selfie">セルフィー（高速・上半身〜全身が大きく写る映像向け）</option>
+          <option value="landscape">セルフィー横長（横長動画向け）</option>
+          <option value="deeplab">DeepLab（重いが遠くの全身にも強め）</option>
+        </select></div>
+      <div><label>検出のしきい値: <span id="thV">50</span>%（下げると太く、上げると細く）</label><input id="th" type="range" min="20" max="80" step="1" value="50"></div>
+      <div><label class="chk" style="margin-top:22px"><input id="mirror" type="checkbox"> 左右反転</label></div>
+    </div>
+    <div class="grid">
+      <div><label class="chk"><input id="motion" type="checkbox"> 動いている部分だけ残す</label>
+        <div class="info" style="margin-top:4px">カメラ固定の映像向け。止まっている人は消えます。</div></div>
+      <div><label>動きの感度: <span id="sensV">6</span></label><input id="sens" type="range" min="1" max="10" step="1" value="6"></div>
+    </div>
+    <div class="grid">
+      <div><label class="chk"><input id="bpmOn" type="checkbox"> ビートに合わせて輪郭を脈動・色変化</label></div>
+      <div><label>BPM</label><input id="bpm" type="number" min="40" max="240" value="120"></div>
+      <div><label class="chk" style="margin-top:22px"><input id="sound" type="checkbox" checked> プレビューで音を出す（動画ファイル）</label></div>
+    </div>
+  </section>
+
+  <section id="stageWrap" class="panel hidden">
+    <div class="stage"><canvas id="cv" width="1280" height="720"></canvas></div>
+    <div class="row top" style="justify-content:center">
+      <button id="playpause" type="button" class="sec">⏸ 一時停止</button>
+      <button id="rec" type="button">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="result" class="row top hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="dance-silhouette.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画ファイルは最初から最後まで再生して保存／カメラは「止める」まで）。録画中はこのタブを表示したままにしてください。動画ファイルの場合、元の音声も録音されます。</div>
+    <div class="info">人物検出には MediaPipe（Google）の Image Segmenter を使っています。複数人は個別には区別されず、全員がひとつのシルエットになります。</div>
+  </section>
+</main>
+
+<video id="video" playsinline></video>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const video = $('video');
+const BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const MP = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/';
+const MODELS = {
+  selfie:    { url: MP + 'selfie_segmenter/float16/latest/selfie_segmenter.tflite', cat: false },
+  landscape: { url: MP + 'selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite', cat: false },
+  deeplab:   { url: MP + 'deeplab_v3/float32/latest/deeplab_v3.tflite', cat: true }
+};
+const SIZES = { '16:9': [1280, 720], '9:16': [720, 1280], '1:1': [900, 900] };
+
+let lib = null, fileset = null, seg = null, segKey = '', delegate = 'GPU', segLoading = false;
+let srcKind = '', srcName = 'dance', camStream = null, fileUrl = null;
+let hasMask = false, lastTs = 0, lastVT = -1, maskW = 0, maskH = 0, maskImg = null;
+let recorder = null, outUrl = null, audio = null;
+
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+const S = mk(2, 2), T = mk(2, 2), O = mk(2, 2);               // 出力サイズのレイヤー
+const sx = S.getContext('2d'), tx = T.getContext('2d'), ox = O.getContext('2d');
+let maskC = mk(2, 2), maskX = maskC.getContext('2d'), maskT = mk(2, 2), maskTX = maskT.getContext('2d');
+const MW = 96, MH = 96;                                        // 動き検出用の小さな画面
+const mC = mk(MW, MH), mX = mC.getContext('2d', { willReadFrequently: true });
+const moC = mk(MW, MH), moX = moC.getContext('2d'), moImg = moX.createImageData(MW, MH);
+const prev = new Float32Array(MW * MH), mot = new Float32Array(MW * MH), tmpM = new Float32Array(MW * MH);
+let havePrev = false;
+
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+
+/* ---------- 出力サイズ ---------- */
+function applySize() {
+  let w, h;
+  const a = $('aspect').value;
+  if (a === 'orig' && video.videoWidth) {
+    const k = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
+    w = Math.round(video.videoWidth * k / 2) * 2; h = Math.round(video.videoHeight * k / 2) * 2;
+  } else { [w, h] = SIZES[a] || SIZES['16:9']; }
+  if (cv.width === w && cv.height === h && S.width === w) return;
+  [cv, S, T, O].forEach(c => { c.width = w; c.height = h; });
+  ctx.fillStyle = $('bgc').value; ctx.fillRect(0, 0, w, h);
+}
+
+/* ---------- モデル ---------- */
+async function ensureLib() {
+  if (lib) return;
+  lib = await import(BASE + '/vision_bundle.mjs');
+  fileset = await lib.FilesetResolver.forVisionTasks(BASE + '/wasm');
+}
+async function makeSeg(key, dlg) {
+  const m = MODELS[key];
+  return lib.ImageSegmenter.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath: m.url, delegate: dlg },
+    runningMode: 'VIDEO', outputConfidenceMasks: !m.cat, outputCategoryMask: m.cat
+  });
+}
+async function loadModel(key) {
+  segLoading = true; hasMask = false;
+  setStatus('人物検出モデルを読み込み中…');
+  try {
+    await ensureLib();
+    if (seg) { try { seg.close(); } catch {} seg = null; }
+    seg = await makeSeg(key, delegate);
+    segKey = key;
+    setStatus(srcKind === 'cam' ? 'ウェブカメラで動作中。' : '再生中。');
+  } catch (e) {
+    console.error(e);
+    setStatus('モデルの読み込みに失敗しました（ネットワークを確認してください）: ' + (e.message || e), true);
+  }
+  segLoading = false;
+}
+
+/* ---------- 入力 ---------- */
+function stopSource() {
+  if (recorder) stopRecording();
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  video.pause(); video.removeAttribute('src'); video.srcObject = null;
+  hasMask = false; lastVT = -1; havePrev = false;
+}
+function showUI() { $('editor').classList.remove('hidden'); $('stageWrap').classList.remove('hidden'); }
+function waitMeta() {
+  return new Promise(res => {
+    if (video.readyState >= 1 && video.videoWidth) return res();
+    video.onloadedmetadata = () => res();
+  });
+}
+$('pickFile').onclick = () => $('file').click();
+$('file').onchange = async () => {
+  const f = $('file').files[0]; if (!f) return;
+  stopSource();
+  srcKind = 'file'; srcName = f.name.replace(/\.[^.]+$/, '') || 'dance';
+  if (fileUrl) URL.revokeObjectURL(fileUrl);
+  fileUrl = URL.createObjectURL(f);
+  video.srcObject = null; video.src = fileUrl; video.loop = true;
+  video.muted = !$('sound').checked;
+  $('mirror').checked = false;
+  showUI(); $('playpause').classList.remove('hidden');
+  await waitMeta(); applySize();
+  playVideo();
+  if (!seg || segKey !== $('model').value) await loadModel($('model').value); else setStatus('再生中。');
+  startLoop();
+};
+$('pickCam').onclick = async () => {
+  stopSource();
+  srcKind = 'cam'; srcName = 'camera';
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false });
+  } catch (e) { setStatus('カメラを使えませんでした（許可が必要です）: ' + (e.message || e), true); return; }
+  video.src = ''; video.removeAttribute('src'); video.srcObject = camStream; video.loop = false; video.muted = true;
+  $('mirror').checked = true;
+  showUI(); $('playpause').classList.add('hidden');
+  await waitMeta(); video.play().catch(() => {}); applySize();
+  if (!seg || segKey !== $('model').value) await loadModel($('model').value); else setStatus('ウェブカメラで動作中。');
+  startLoop();
+};
+function playVideo() {
+  video.play().catch(() => { video.muted = true; video.play().catch(() => {}); setStatus('音声の自動再生がブロックされたため、ミュートで再生しています。'); });
+  $('playpause').textContent = '⏸ 一時停止';
+}
+$('playpause').onclick = () => {
+  if (video.paused) playVideo(); else { video.pause(); $('playpause').textContent = '▶ 再生'; }
+};
+$('sound').onchange = () => {
+  video.muted = !$('sound').checked;
+  if (audio) audio.mon.gain.value = $('sound').checked ? 1 : 0;
+};
+$('model').onchange = () => { if (srcKind) loadModel($('model').value); };
+
+/* ---------- 検出 ---------- */
+function ensureMaskCanvas(w, h) {
+  if (maskW === w && maskH === h) return;
+  maskW = w; maskH = h;
+  maskC.width = w; maskC.height = h; maskT.width = w; maskT.height = h;
+  maskImg = maskX.createImageData(w, h);
+  for (let i = 3; i < maskImg.data.length; i += 4) { maskImg.data[i - 3] = maskImg.data[i - 2] = maskImg.data[i - 1] = 255; }
+}
+function segment() {
+  const ts = Math.max(performance.now(), lastTs + 1); lastTs = ts;
+  let r;
+  try { r = seg.segmentForVideo(video, ts); }
+  catch (e) {
+    if (delegate === 'GPU') {
+      console.warn('GPU失敗 → CPUで再試行', e);
+      delegate = 'CPU'; segLoading = true;
+      makeSeg(segKey, 'CPU').then(s => { try { seg.close(); } catch {} seg = s; segLoading = false; setStatus('GPUが使えないためCPUで処理しています（重い場合は動画を短く／小さくしてください）。'); })
+        .catch(e2 => { segLoading = false; setStatus('検出の初期化に失敗しました: ' + (e2.message || e2), true); });
+    } else setStatus('検出に失敗しました: ' + (e.message || e), true);
+    return false;
+  }
+  const cat = MODELS[segKey].cat;
+  const mask = cat ? r.categoryMask : (r.confidenceMasks && r.confidenceMasks[0]);
+  if (!mask) { try { r.close(); } catch {} return false; }
+  ensureMaskCanvas(mask.width, mask.height);
+  const arr = cat ? mask.getAsUint8Array() : mask.getAsFloat32Array();
+  const th = +$('th').value / 100, soft = 0.12, d = maskImg.data;
+  for (let i = 0, n = arr.length; i < n; i++) {
+    let s;
+    if (cat) s = arr[i] === 15 ? 1 : 0;
+    else { let t = (arr[i] - (th - soft)) / (2 * soft); t = t < 0 ? 0 : t > 1 ? 1 : t; s = t * t * (3 - 2 * t); }
+    d[i * 4 + 3] = s * 255;
+  }
+  try { r.close(); } catch { try { mask.close(); } catch {} }
+  maskX.putImageData(maskImg, 0, 0);
+  hasMask = true;
+  return true;
+}
+function updateMotion() {
+  mX.drawImage(video, 0, 0, MW, MH);
+  const px = mX.getImageData(0, 0, MW, MH).data;
+  const th = 40 - (+$('sens').value) * 3;
+  for (let i = 0; i < MW * MH; i++) {
+    const g = px[i * 4] * 0.3 + px[i * 4 + 1] * 0.59 + px[i * 4 + 2] * 0.11;
+    const raw = havePrev && Math.abs(g - prev[i]) > th ? 1 : 0;
+    prev[i] = g;
+    mot[i] = Math.max(mot[i] * 0.82, raw);
+  }
+  havePrev = true;
+  for (let pass = 0; pass < 2; pass++) {                       // 3x3 膨張
+    tmpM.set(mot);
+    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+      let m = tmpM[y * MW + x];
+      for (let dy = -1; dy <= 1 && m < 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = y + dy, xx = x + dx;
+        if (yy < 0 || yy >= MH || xx < 0 || xx >= MW) continue;
+        const v = tmpM[yy * MW + xx]; if (v > m) m = v;
+      }
+      mot[y * MW + x] = m;
+    }
+  }
+  const o = moImg.data;
+  for (let i = 0; i < MW * MH; i++) { o[i * 4] = o[i * 4 + 1] = o[i * 4 + 2] = 255; o[i * 4 + 3] = mot[i] * 255; }
+  moX.putImageData(moImg, 0, 0);
+}
+
+/* ---------- 描画 ---------- */
+function styleFor(c, kind, c1, c2, hue, rect) {
+  if (kind === 'rainbow') {
+    const g = c.createLinearGradient(0, rect.y, 0, rect.y + rect.h);
+    for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${(hue + i * 60) % 360},100%,60%)`);
+    return g;
+  }
+  if (kind === 'grad') {
+    const g = c.createLinearGradient(0, rect.y, 0, rect.y + rect.h);
+    g.addColorStop(0, c1); g.addColorStop(1, c2); return g;
+  }
+  return c1;
+}
+function render(now) {
+  const W = cv.width, H = cv.height;
+  const trail = +$('trail').value / 100;
+  const mirror = $('mirror').checked;
+  const vw = video.videoWidth || W, vh = video.videoHeight || H;
+  const sc = $('fit').value === 'cover' ? Math.max(W / vw, H / vh) : Math.min(W / vw, H / vh);
+  const rect = { x: (W - vw * sc) / 2, y: (H - vh * sc) / 2, w: vw * sc, h: vh * sc };
+
+  // 背景（残像のときは半透明で重ねる）
+  ctx.globalAlpha = 1 - trail; ctx.fillStyle = $('bgc').value; ctx.fillRect(0, 0, W, H);
+  if ($('bg').value === 'video' && video.readyState >= 2) {
+    ctx.globalAlpha = (1 - trail) * (+$('bright').value / 100);
+    ctx.save(); if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(video, rect.x, rect.y, rect.w, rect.h); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  if (!hasMask) return;
+
+  // 人物マスク（必要なら動きで絞る）
+  maskTX.globalCompositeOperation = 'source-over'; maskTX.clearRect(0, 0, maskW, maskH);
+  maskTX.drawImage(maskC, 0, 0);
+  if ($('motion').checked) {
+    maskTX.globalCompositeOperation = 'destination-in';
+    maskTX.filter = 'blur(2px)'; maskTX.drawImage(moC, 0, 0, maskW, maskH); maskTX.filter = 'none';
+    maskTX.globalCompositeOperation = 'source-over';
+  }
+  sx.clearRect(0, 0, W, H); sx.save();
+  if (mirror) { sx.translate(W, 0); sx.scale(-1, 1); }
+  sx.imageSmoothingQuality = 'high';
+  sx.drawImage(maskT, rect.x, rect.y, rect.w, rect.h); sx.restore();
+
+  const beatOn = $('bpmOn').checked, bpm = Math.max(40, +$('bpm').value || 120);
+  const beats = now / 1000 * bpm / 60, phase = beats % 1;
+  const pulse = beatOn ? 1 + 0.7 * Math.exp(-phase * 5) : 1;
+  const hue = beatOn ? Math.floor(beats) * 47 : (now / 20) % 360;
+  const mode = $('mode').value, kind = $('fillStyle').value;
+  const c1 = $('c1').value, c2 = $('c2').value, oc = $('oc').value;
+  const glow = +$('glow').value * (beatOn ? (0.6 + 0.8 * Math.exp(-phase * 5)) : 1);
+  const thick = +$('thick').value * pulse;
+  const glowCol = kind === 'rainbow' ? `hsl(${hue},100%,60%)` : (mode === 'line' ? oc : c1);
+
+  if (mode !== 'line') {                                       // 塗り
+    tx.globalCompositeOperation = 'source-over'; tx.clearRect(0, 0, W, H); tx.drawImage(S, 0, 0);
+    tx.globalCompositeOperation = 'source-in'; tx.fillStyle = styleFor(tx, kind, c1, c2, hue, rect); tx.fillRect(0, 0, W, H);
+    ctx.shadowColor = glowCol; ctx.shadowBlur = glow; ctx.drawImage(T, 0, 0); ctx.shadowBlur = 0;
+  }
+  if (mode !== 'fill' && thick >= 0.5) {                       // 輪郭（外側のリング）
+    ox.globalCompositeOperation = 'source-over'; ox.clearRect(0, 0, W, H);
+    for (const r of [thick, thick * 0.5]) for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2; ox.drawImage(S, Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ox.globalCompositeOperation = 'source-in';
+    ox.fillStyle = $('ocRainbow').checked ? styleFor(ox, 'rainbow', '', '', hue, rect) : oc; ox.fillRect(0, 0, W, H);
+    ox.globalCompositeOperation = 'destination-out'; ox.drawImage(S, 0, 0);
+    ctx.shadowColor = $('ocRainbow').checked ? `hsl(${hue},100%,60%)` : oc; ctx.shadowBlur = glow;
+    ctx.drawImage(O, 0, 0); ctx.shadowBlur = 0;
+  }
+}
+
+/* ---------- ループ ---------- */
+let raf = 0;
+function startLoop() { if (!raf) raf = requestAnimationFrame(tick); }
+function tick(now) {
+  raf = requestAnimationFrame(tick);
+  if (!srcKind) return;
+  if (seg && !segLoading && video.readyState >= 2 && (srcKind === 'cam' || video.currentTime !== lastVT)) {
+    lastVT = video.currentTime;
+    if ($('motion').checked) updateMotion();
+    segment();
+  }
+  render(now);
+  if (srcKind === 'file' && video.duration) $('prog').style.width = (video.currentTime / video.duration * 100) + '%';
+}
+
+/* ---------- 録画 ---------- */
+function setupAudio() {
+  if (audio) return;
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const src = ac.createMediaElementSource(video);
+  const dest = ac.createMediaStreamDestination();
+  const mon = ac.createGain(); mon.gain.value = $('sound').checked ? 1 : 0;
+  src.connect(dest); src.connect(mon); mon.connect(ac.destination);
+  audio = { ac, dest, mon };
+}
+async function startRecording() {
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const stream = cv.captureStream(30);
+  if (srcKind === 'file') {
+    try {
+      setupAudio(); await audio.ac.resume();
+      video.muted = false;
+      audio.dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    } catch (e) { console.warn('音声の取り込みに失敗', e); }
+  }
+  const chunks = [];
+  const rc = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  recorder = rc;
+  rc.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rc.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `${srcName}_silhouette.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden');
+    $('rec').textContent = '⏺ 動画として保存'; $('rec').classList.remove('on');
+    setStatus('録画が完了しました。');
+    recorder = null;
+    if (srcKind === 'file') { video.loop = true; playVideo(); }
+  };
+  $('result').classList.add('hidden');
+  $('rec').textContent = '■ 録画を止めて保存'; $('rec').classList.add('on');
+  if (srcKind === 'file') {
+    video.loop = false;
+    await new Promise(res => { const t = setTimeout(res, 800); video.onseeked = () => { clearTimeout(t); res(); }; video.currentTime = 0; });
+    video.onseeked = null;
+    ctx.fillStyle = $('bgc').value; ctx.fillRect(0, 0, cv.width, cv.height);
+    playVideo();
+    setStatus(`録画中…（約 ${Math.round(video.duration)} 秒。タブを切り替えないでください）`);
+  } else setStatus('録画中…（止めるときはボタンを押してください）');
+  rc.start();
+}
+function stopRecording() {
+  if (recorder && recorder.state !== 'inactive') setTimeout(() => { if (recorder && recorder.state !== 'inactive') recorder.stop(); }, 300);
+}
+$('rec').onclick = () => { if (recorder) stopRecording(); else startRecording(); };
+video.onended = () => { if (recorder) stopRecording(); };
+
+/* ---------- UI ---------- */
+['thick', 'glow', 'trail', 'bright', 'th', 'sens'].forEach(i => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; }));
+$('aspect').addEventListener('change', applySize);
+})();
+</script>
+</body>
+</html>
