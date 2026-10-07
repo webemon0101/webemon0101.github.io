@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>バイノーラルビートShortsメーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#7fa8ff;--acc2:#6690f0;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text],textarea{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  textarea{resize:vertical;min-height:110px}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:14px}
+  button,a.btn{background:var(--acc);color:#0b1a40;font-weight:600;border:0;border-radius:8px;padding:10px 18px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:78vh;margin:0 auto}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .warn{background:#2a2412;border:1px solid #5a4a1a;color:#ffe9a8;border-radius:8px;padding:10px 12px;font-size:.85rem;margin-top:12px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>バイノーラルビートShortsメーカー</h1>
+  <p class="lead">左右の耳に少しだけ違う周波数の音を流し、その差が「うなり」として聞こえるバイノーラルビートを作って、煽り文句つきの縦型動画（YouTube Shorts 向け）にします。音の合成も動画の書き出しもブラウザ内で行われ、何もアップロードされません。</p>
+
+  <section class="panel">
+    <h2>1. テーマと煽り文句</h2>
+    <div class="grid">
+      <div><label>テーマ（周波数の目安も入ります）</label>
+        <select id="theme"></select></div>
+      <div><label>煽りの強さ</label>
+        <select id="level">
+          <option value="soft">控えめ（やさしい誘い文句）</option>
+          <option value="strong">強め（ひきつける問いかけ）</option>
+        </select></div>
+      <div style="align-self:end"><button id="gen" type="button">🎲 煽り文句をランダム生成</button></div>
+    </div>
+    <div class="grid">
+      <div><label>冒頭の煽り文句（上に大きく出ます）</label><input id="hook" type="text"></div>
+      <div><label>最後の呼びかけ</label><input id="cta" type="text"></div>
+    </div>
+    <div class="grid">
+      <div><label>効果の箇条書き（1行1項目・最大6つ。順番に出てきます）</label><textarea id="effects"></textarea></div>
+      <div>
+        <label>メインの名前</label><input id="label" type="text">
+        <label style="margin-top:10px">サブの名前</label><input id="sub" type="text">
+      </div>
+    </div>
+    <label class="chk" style="margin-top:14px"><input id="disc" type="checkbox" checked> 注意書きを入れる（「効果には個人差があり、医学的効果を保証するものではありません」）</label>
+    <div class="warn">効果には個人差があり、科学的な裏づけも限定的です。「治る」「必ず効く」などの断定的な表現は、YouTube の医療に関するポリシーに触れるおそれがあるため、文句は控えめな言い回しにして、注意書きは入れたままにするのをおすすめします。</div>
+  </section>
+
+  <section class="panel">
+    <h2>2. 音</h2>
+    <div class="grid">
+      <div><label>ビート周波数: <span id="beatV">10</span> Hz（左右の差）</label><input id="beat" type="range" min="0.5" max="40" step="0.5" value="10"></div>
+      <div><label>基準周波数（左耳）: <span id="carV">200</span> Hz</label><input id="car" type="range" min="80" max="500" step="5" value="200"></div>
+      <div><label>長さ: <span id="durV">60</span> 秒（Shorts は 180 秒以内）</label><input id="dur" type="range" min="15" max="180" step="5" value="60"></div>
+      <div><label>音量: <span id="volV">20</span>%（小さめから）</label><input id="vol" type="range" min="5" max="60" step="1" value="20"></div>
+    </div>
+    <div class="grid">
+      <div><label>環境音（左右の差とは別に、両耳へ同じように流します）</label>
+        <select id="noise">
+          <option value="none">なし</option>
+          <option value="pink">ピンクノイズ（雨のようなやわらかい音）</option>
+          <option value="brown">ブラウンノイズ（低めのやさしい音）</option>
+          <option value="wave">波（ゆっくり寄せては返す）</option>
+        </select></div>
+      <div><label>環境音の量: <span id="nvolV">40</span>%</label><input id="nvol" type="range" min="5" max="100" step="1" value="40"></div>
+      <div><label>フェードイン／アウト: <span id="fadeV">3</span> 秒</label><input id="fade" type="range" min="0" max="8" step="0.5" value="3"></div>
+    </div>
+    <div class="info">必ず左右が別々に聞こえるイヤホン／ヘッドホンで確認してください（スピーカーだと左右の音が混ざってしまい、うなりは発生しません）。基準周波数は 500Hz 以下が目安です。</div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 見た目と書き出し</h2>
+    <div class="grid">
+      <div><label>背景</label>
+        <select id="pal">
+          <option value="night">夜空（紺）</option>
+          <option value="aurora">オーロラ（青緑）</option>
+          <option value="sunset">夕焼け（紫）</option>
+          <option value="deep">深海（藍）</option>
+        </select></div>
+      <div><label class="chk" style="margin-top:22px"><input id="breath" type="checkbox" checked> 呼吸ガイド（ゆっくりふくらむ輪）を出す</label></div>
+    </div>
+    <div class="info">画面は光の点滅を使いません（ゆっくり動くだけ）。音のビートに合わせて画面を点滅させると、光に敏感な人の負担になるおそれがあるためです。</div>
+    <div class="row top">
+      <button id="play" type="button">▶ 音つきプレビュー</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+    <div style="margin-top:12px"><canvas id="cv" width="720" height="1280"></canvas></div>
+    <div id="result" class="row top hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="binaural-short.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにして、音量はそのままにしてください。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), cx = cv.getContext('2d');
+const W = 720, H = 1280;
+
+/* ---------- テーマと文句 ---------- */
+const THEMES = {
+  relax: { name: 'リラックス（アルファ波）', beat: 10, car: 200, label: 'アルファ波', sub: 'リラックス',
+    soft: ['頭のざわざわを静かにしたい人へ', 'ちょっと一息つきたいときの音', '深呼吸のかわりに、この音を'],
+    strong: ['この音を聴くと、肩の力が抜けるかも？', '1分聴いたら、呼吸が深くなっていませんか？', 'スマホを置いて、30秒だけ目を閉じて'],
+    effects: ['心が落ち着く', '呼吸がゆっくりになる', '肩の力が抜ける', 'ストレスをやわらげる', '気持ちの切り替えに', 'リラックスタイムのお供に', '頭のモヤモヤをしずめる', '休憩を上質に'] },
+  sleep: { name: '睡眠（デルタ波）', beat: 2.5, car: 100, label: 'デルタ波', sub: '深い眠り',
+    soft: ['眠れない夜のお供に', '寝る前の5分、この音で', '布団の中で聴いてみて'],
+    strong: ['最後まで起きていられたらすごい', 'これを聴いたら、まぶたが重くなるかも？', '寝落ち注意。運転中は絶対に聴かないで'],
+    effects: ['寝つきをサポート', '深い眠りのイメージ', '心と体をおやすみモードに', '1日の疲れをリセット', '朝までぐっすり…を目指して', '考えごとをストップ', '穏やかな夜に', '眠りの儀式に'] },
+  meditate: { name: '瞑想（シータ波）', beat: 6, car: 200, label: 'シータ波', sub: '瞑想・ひらめき',
+    soft: ['瞑想の入り口に', '静かに自分と向き合う時間', '目を閉じて、3分だけ'],
+    strong: ['ぼーっとしてきたら、それが合図', '1分後、頭の中がしんとするかも', '思考を止めたい人、集まれ'],
+    effects: ['瞑想の深まりをサポート', '雑念がすっと遠のく', '内側の静けさに意識が向く', 'ひらめきの余白をつくる', '自分と向き合う時間に', '呼吸に集中しやすい', '心のノイズをオフに', '感情が落ち着く'] },
+  focus: { name: '集中・作業（ベータ波）', beat: 15, car: 200, label: 'ベータ波', sub: '集中・作業用',
+    soft: ['作業のおともに', '集中したい日のBGMに', '勉強の前にこの音を'],
+    strong: ['この音で、あと1時間がんばれるかも', '気が散るあなたへ。イヤホンをつけて', 'スイッチ、入れる？'],
+    effects: ['集中モードに入りやすい', '作業のリズムづくりに', '勉強・仕事のお供に', 'やる気のスイッチを後押し', '気が散りにくい環境づくり', 'ポモドーロにぴったり', 'タスクに没頭しやすい', '朝のエンジンに'] },
+  idea: { name: 'ひらめき・発想', beat: 7, car: 200, label: 'ひらめき', sub: '発想・気分転換',
+    soft: ['アイデアに詰まったときに', '発想の気分転換に', 'ぼんやりタイムのお供に'],
+    strong: ['ひらめきが降りてくるまで、あと30秒', 'この音の中で、答えが浮かぶかも？', '詰まったときは、頭を休ませよう'],
+    effects: ['発想の余白が生まれる', 'ぼんやり思考をサポート', 'ひらめきのきっかけに', 'クリエイティブな時間に', '頭の切り替えに', 'リフレッシュ', '新しい視点が浮かぶかも', '作業の合間のブレイクに'] },
+  gamma: { name: '目覚め・冴え（ガンマ波）', beat: 40, car: 200, label: 'ガンマ波', sub: '高い集中',
+    soft: ['頭をシャキッとさせたい日に', '40Hzという不思議な周波数', 'ここぞの集中が欲しい日に'],
+    strong: ['頭が冴える…気がする？', '眠気と戦うあなたへ', 'ここ一番の前に、1分だけ'],
+    effects: ['頭をシャキッと目覚めさせたい', '高い集中を求める作業に', '眠気覚ましのお供に', '冴えた感覚を目指して', '勉強の追い込みに', 'ここ一番の前に', '集中の切り替えスイッチ', '気合いを入れたいとき'] }
+};
+const CTAS = ['イヤホンで聴いてね。保存してあとで使ってね', '最後まで聴けた人はコメントで教えて！', 'フォローして、毎日のリラックスタイムに', '高評価＆保存で、また聴きにきてね'];
+Object.entries(THEMES).forEach(([k, t]) => { const o = document.createElement('option'); o.value = k; o.textContent = t.name; $('theme').appendChild(o); });
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function setv(id, v) { $(id).value = v; const s = $(id + 'V'); if (s) s.textContent = v; }
+function generate() {
+  const T = THEMES[$('theme').value];
+  $('hook').value = pick(T[$('level').value]);
+  $('effects').value = shuffle(T.effects).slice(0, 4).join('\n');
+  $('cta').value = pick(CTAS);
+  idle();
+}
+function applyTheme() {
+  const T = THEMES[$('theme').value];
+  setv('beat', T.beat); setv('car', T.car); $('label').value = T.label; $('sub').value = T.sub;
+  generate();
+}
+$('theme').onchange = applyTheme;
+$('level').onchange = generate;
+$('gen').onclick = generate;
+
+/* ---------- 描画 ---------- */
+const PALS = {
+  night:  { top: '#080c26', bot: '#241d5a', acc: '#9db8ff' },
+  aurora: { top: '#03202a', bot: '#0f4a66', acc: '#7dffd0' },
+  sunset: { top: '#241038', bot: '#7a2b52', acc: '#ffb48a' },
+  deep:   { top: '#021622', bot: '#05465e', acc: '#7fe3ff' }
+};
+const CL = '#7fd4ff', CR = '#ff8fc7';
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = u => u * u * (3 - 2 * u);
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const STARS = Array.from({ length: 70 }, () => ({ x: rnd() * W, y: rnd() * H, r: 0.8 + rnd() * 2, s: 0.2 + rnd() * 0.5, p: rnd() * 6.28, v: 4 + rnd() * 10 }));
+
+function wrapLines(c, text, maxW) {
+  const lines = []; let cur = '';
+  for (const ch of text) { if (c.measureText(cur + ch).width > maxW && cur) { lines.push(cur); cur = ch; } else cur += ch; }
+  if (cur) lines.push(cur); return lines;
+}
+function fitText(c, text, cxm, top, boxW, boxH, color, maxFs, alpha) {
+  if (!text) return;
+  c.save(); c.globalAlpha = alpha; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  let fs = maxFs, lines;
+  for (; fs > 18; fs -= 2) {
+    c.font = `bold ${fs}px system-ui,"Hiragino Sans","Yu Gothic",sans-serif`;
+    lines = wrapLines(c, text, boxW);
+    if (lines.length * fs * 1.3 <= boxH) break;
+  }
+  const y0 = top + boxH / 2 - (lines.length - 1) * fs * 1.3 / 2;
+  lines.forEach((l, k) => {
+    const y = y0 + k * fs * 1.3;
+    c.lineWidth = fs * 0.18; c.strokeStyle = 'rgba(0,0,0,.7)'; c.strokeText(l, cxm, y);
+    c.fillStyle = color; c.fillText(l, cxm, y);
+  });
+  c.restore();
+}
+function params() {
+  return {
+    beat: +$('beat').value, car: +$('car').value, dur: +$('dur').value, pal: PALS[$('pal').value],
+    hook: $('hook').value.trim(), cta: $('cta').value.trim(), label: $('label').value.trim(), sub: $('sub').value.trim(),
+    items: $('effects').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 6),
+    disc: $('disc').checked, breath: $('breath').checked
+  };
+}
+const fmt = n => (Math.round(n * 10) / 10).toString();
+function frame(c, t, P) {
+  const D = P.dur, acc = P.pal.acc;
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, P.pal.top); g.addColorStop(1, P.pal.bot);
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  for (const s of STARS) {                                   // ゆっくり流れる星（点滅しない）
+    const y = (s.y + t * s.v) % H;
+    c.globalAlpha = 0.25 + 0.2 * Math.sin(t * 0.4 + s.p); c.fillStyle = '#fff';
+    c.beginPath(); c.arc(s.x, y, s.r, 0, 7); c.fill();
+  }
+  c.globalAlpha = 1;
+  const fadeIn = a => clamp((t - a) / 0.8);
+
+  // バッジ
+  c.save(); c.globalAlpha = 0.85; c.fillStyle = '#cfd8ff'; c.font = 'bold 26px system-ui,"Yu Gothic",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('イヤホン・ヘッドホン推奨', W / 2, 44); c.restore();
+
+  // 煽り文句
+  fitText(c, P.hook, W / 2, 80, W - 70, 230, '#ffffff', 64, ease(fadeIn(0.1)));
+
+  // Hz
+  const cy = 395, a1 = ease(fadeIn(0.5));
+  if (P.breath) {
+    const p = t % 10, sc = p < 4 ? ease(p / 4) : 1 - ease((p - 4) / 6);
+    c.save(); c.globalAlpha = 0.35 * a1; c.strokeStyle = acc; c.lineWidth = 3;
+    c.beginPath(); c.arc(W / 2, cy, 150 + 38 * sc, 0, 7); c.stroke();
+    c.globalAlpha = 0.12 * a1; c.fillStyle = acc; c.beginPath(); c.arc(W / 2, cy, 150 + 38 * sc, 0, 7); c.fill(); c.restore();
+    c.save(); c.globalAlpha = 0.8 * a1; c.fillStyle = '#d8e2ff'; c.font = '28px system-ui,"Yu Gothic",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(p < 4 ? '吸って…' : 'ゆっくり吐いて…', W / 2, cy + 190); c.restore();
+  }
+  c.save(); c.globalAlpha = a1; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = 'bold 130px system-ui,"Yu Gothic",sans-serif'; c.fillStyle = acc; c.shadowColor = acc; c.shadowBlur = 24;
+  c.fillText(`${fmt(P.beat)}Hz`, W / 2, cy - 20); c.shadowBlur = 0;
+  c.font = 'bold 48px system-ui,"Yu Gothic",sans-serif'; c.fillStyle = '#fff'; c.fillText(P.label, W / 2, cy + 62);
+  c.font = '32px system-ui,"Yu Gothic",sans-serif'; c.fillStyle = '#cfd8ff'; c.fillText(P.sub, W / 2, cy + 112);
+  c.restore();
+
+  // 波形（左・右・合成のうなり）
+  const nL = 6, diff = clamp(P.beat / 4, 0.5, 6), rows = [650, 725, 800], A = 26, sp = 0.15;
+  c.save(); c.globalAlpha = ease(fadeIn(0.9)); c.lineJoin = 'round';
+  const defs = [
+    { y: rows[0], col: CL, f: x => Math.sin(2 * Math.PI * (nL * x / W - sp * t)), txt: `L ${fmt(P.car)}Hz` },
+    { y: rows[1], col: CR, f: x => Math.sin(2 * Math.PI * ((nL + diff) * x / W - sp * (1 + diff / nL) * t)), txt: `R ${fmt(P.car + P.beat)}Hz` },
+    { y: rows[2], col: '#ffffff', f: x => 0.5 * (Math.sin(2 * Math.PI * (nL * x / W - sp * t)) + Math.sin(2 * Math.PI * ((nL + diff) * x / W - sp * (1 + diff / nL) * t))), txt: `合成 → ${fmt(P.beat)}Hzのうなり`, w: 5 }
+  ];
+  for (const d of defs) {
+    c.strokeStyle = d.col; c.lineWidth = d.w || 3.5; c.shadowColor = d.col; c.shadowBlur = 10;
+    c.beginPath();
+    for (let x = 0; x <= W; x += 4) { const y = d.y - A * d.f(x); x ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.stroke(); c.shadowBlur = 0;
+    c.fillStyle = d.col; c.font = 'bold 22px system-ui,"Yu Gothic",sans-serif'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    c.fillText(d.txt, 22, d.y - A - 8);
+  }
+  c.restore();
+
+  // 効果リスト
+  const ctaDur = Math.min(7, D * 0.2), listA = Math.min(5, D * 0.12), listB = Math.max(listA + 1, D - ctaDur - 1);
+  P.items.forEach((it, i) => {
+    const ta = listA + i * (listB - listA) / P.items.length, a = ease(clamp((t - ta) / 0.6));
+    if (a <= 0) return;
+    const y = 895 + i * 52;
+    c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    const x = 70 - (1 - a) * 40;
+    c.font = 'bold 40px system-ui,"Yu Gothic",sans-serif'; c.fillStyle = acc; c.fillText('✓', x, y);
+    let fs = 40; c.font = `bold ${fs}px system-ui,"Hiragino Sans","Yu Gothic",sans-serif`;
+    while (c.measureText(it).width > W - x - 90 - 40 && fs > 20) { fs -= 2; c.font = `bold ${fs}px system-ui,"Hiragino Sans","Yu Gothic",sans-serif`; }
+    c.lineWidth = fs * 0.16; c.strokeStyle = 'rgba(0,0,0,.7)'; c.strokeText(it, x + 50, y);
+    c.fillStyle = '#fff'; c.fillText(it, x + 50, y);
+    c.restore();
+  });
+
+  // 最後の呼びかけ
+  const ca = ease(clamp((t - (D - ctaDur)) / 0.8));
+  if (ca > 0 && P.cta) {
+    c.save(); c.globalAlpha = ca * 0.9; c.fillStyle = 'rgba(255,255,255,.14)';
+    const bx = 40, bw = W - 80, by = 1060, bh = 110, r = 30;
+    c.beginPath(); c.moveTo(bx + r, by); c.arcTo(bx + bw, by, bx + bw, by + bh, r); c.arcTo(bx + bw, by + bh, bx, by + bh, r); c.arcTo(bx, by + bh, bx, by, r); c.arcTo(bx, by, bx + bw, by, r); c.fill(); c.restore();
+    fitText(c, P.cta, W / 2, by + 6, bw - 40, bh - 12, '#ffe45c', 38, ca);
+  }
+  // 注意書き
+  if (P.disc) {
+    c.save(); c.globalAlpha = 0.6; c.fillStyle = '#fff'; c.font = '20px system-ui,"Yu Gothic",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('※効果には個人差があり、医学的効果を保証するものではありません。', W / 2, 1205);
+    c.fillText('運転中・作業中は聴かないでください。音量は小さめに。', W / 2, 1235); c.restore();
+  }
+}
+function idle() { if (!playing) { const P = params(); frame(cx, Math.max(0, P.dur * 0.8), P); } }
+
+/* ---------- 音 ---------- */
+let ac = null, nodes = [], dest = null;
+function makeNoise(kind) {
+  const len = ac.sampleRate * 6, buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    if (kind === 'pink') {
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < len; i++) {
+        const w = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+        b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+      }
+    } else {
+      let last = 0;
+      for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.2; }
+    }
+    // 継ぎ目をなじませる
+    const f = 2000; for (let i = 0; i < f; i++) { const a = i / f; d[i] *= a; d[len - 1 - i] *= a; }
+  }
+  return buf;
+}
+function startAudio(P, withDest) {
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  const now = ac.currentTime + 0.1, vol = +$('vol').value / 100, fade = Math.min(+$('fade').value, P.dur / 3);
+  const master = ac.createGain(); master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(vol, now + Math.max(0.01, fade));
+  master.gain.setValueAtTime(vol, now + P.dur - Math.max(0.01, fade));
+  master.gain.linearRampToValueAtTime(0, now + P.dur);
+  master.connect(ac.destination);
+  if (withDest) { dest = ac.createMediaStreamDestination(); dest.channelCount = 2; master.connect(dest); }
+  const merger = ac.createChannelMerger(2);
+  const oL = ac.createOscillator(), oR = ac.createOscillator();
+  oL.frequency.value = P.car; oR.frequency.value = P.car + P.beat;
+  oL.connect(merger, 0, 0); oR.connect(merger, 0, 1);
+  const tone = ac.createGain(); tone.gain.value = 0.9; merger.connect(tone); tone.connect(master);
+  oL.start(now); oR.start(now); oL.stop(now + P.dur + 0.2); oR.stop(now + P.dur + 0.2);
+  nodes = [oL, oR];
+  const nk = $('noise').value;
+  if (nk !== 'none') {
+    const src = ac.createBufferSource(); src.buffer = makeNoise(nk === 'wave' ? 'brown' : nk); src.loop = true;
+    const ng = ac.createGain(); const nv = +$('nvol').value / 100 * 0.9;
+    ng.gain.value = nv;
+    if (nk === 'wave') {                                       // ゆっくり寄せては返す
+      const lfo = ac.createOscillator(), lg = ac.createGain();
+      lfo.frequency.value = 0.12; lg.gain.value = nv * 0.6; lfo.connect(lg); lg.connect(ng.gain); lfo.start(now); lfo.stop(now + P.dur + 0.2); nodes.push(lfo);
+    }
+    src.connect(ng); ng.connect(master); src.start(now); src.stop(now + P.dur + 0.2); nodes.push(src);
+  }
+  return ac.resume();
+}
+function stopAudio() {
+  try { nodes.forEach(n => { try { n.stop(); } catch {} }); } catch {}
+  nodes = [];
+  if (ac) { const a = ac; ac = null; setTimeout(() => a.close().catch(() => {}), 400); }
+  dest = null;
+}
+
+/* ---------- 再生・録画 ---------- */
+let playing = false, raf = 0, startAt = 0, curP = null, onEnd = null, recorder = null, outUrl = null;
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+function loop(now) {
+  const t = (now - startAt) / 1000;
+  frame(cx, Math.min(t, curP.dur), curP);
+  $('prog').style.width = Math.min(100, t / curP.dur * 100) + '%';
+  if (t >= curP.dur) { const f = onEnd; finish(); if (f) f(); return; }
+  raf = requestAnimationFrame(loop);
+}
+async function start(withDest, end) {
+  finish(); curP = params(); onEnd = end || null;
+  await startAudio(curP, withDest);
+  playing = true; $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now() + 100; raf = requestAnimationFrame(loop);
+}
+function finish() {
+  if (raf) cancelAnimationFrame(raf); raf = 0; playing = false; onEnd = null;
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('prog').style.width = '0';
+  if (!recorder) stopAudio();
+}
+$('play').onclick = () => start(false);
+$('stop').onclick = () => { if (recorder && recorder !== true) { const r = recorder; finish(); r.stop(); } else if (!recorder) { finish(); idle(); } };
+$('rec').onclick = async () => {
+  finish();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  recorder = true;                                             // start() 内の stopAudio を抑止
+  await start(true, () => { if (recorder && recorder !== true) setTimeout(() => recorder && recorder.state !== 'inactive' && recorder.stop(), 400); });
+  const stream = cv.captureStream(30);
+  dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+  const rc = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 6e6, audioBitsPerSecond: 192e3 });
+  rc.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rc.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `binaural-short_${fmt(curP.beat)}Hz.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden'); $('rec').disabled = false;
+    setStatus('録画が完了しました。'); recorder = null; stopAudio(); idle();
+  };
+  recorder = rc; rc.start();
+  setStatus(`録画中…（約 ${Math.round(curP.dur)} 秒。タブを切り替えないでください）`);
+};
+
+/* ---------- UI ---------- */
+['beat', 'car', 'dur', 'vol', 'nvol', 'fade'].forEach(i => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
+['hook', 'cta', 'effects', 'label', 'sub', 'disc', 'pal', 'breath'].forEach(i => $(i).addEventListener('input', idle));
+applyTheme();
+})();
+</script>
+</body>
+</html>
