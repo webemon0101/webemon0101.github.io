@@ -130,6 +130,8 @@
           <option value="h">横揺れ</option>
           <option value="d">斜め揺れ</option>
           <option value="c">円を描いて揺れる</option>
+          <option value="vr">縦揺れ（ランダム）</option>
+          <option value="hr">横揺れ（ランダム）</option>
         </select></div>
       <div><label>揺れの幅: <span id="ampV">6</span>px</label><input id="amp" type="range" min="1" max="30" step="1" value="6"></div>
       <div><label>揺れの速さ: <span id="freqV">3</span>回/秒</label><input id="freq" type="range" min="1" max="8" step="0.5" value="3"></div>
@@ -377,8 +379,9 @@ function frame(c, W, H, t) {
     u = (k + ease(Math.min(1, (u * n - k) / 0.3))) / n;
   }
   const A = +$('amp').value, ph = 2 * Math.PI * (+$('freq').value) * t, m = $('shake').value;
-  const dx = m === 'h' || m === 'd' ? A * Math.sin(ph) : m === 'c' ? A * Math.cos(ph) : 0;
-  const dy = m === 'v' || m === 'd' ? A * Math.sin(ph) : m === 'c' ? A * Math.sin(ph) : 0;
+  const rnd = seed => { const x = t * (+$('freq').value), k = Math.floor(x); return (hash(k, seed) + (hash(k + 1, seed) - hash(k, seed)) * ease(x - k)) * 2 - 1; };
+  const dx = m === 'h' || m === 'd' ? A * Math.sin(ph) : m === 'c' ? A * Math.cos(ph) : m === 'hr' ? A * rnd(11) : 0;
+  const dy = m === 'v' || m === 'd' ? A * Math.sin(ph) : m === 'c' ? A * Math.sin(ph) : m === 'vr' ? A * rnd(23) : 0;
   c.save(); c.translate(dx, dy);
   drawBoard(c, x0, y0, S, (i, j) => ease(Math.max(0, Math.min(1, u * (1 + sp) - delay(i, j) * sp))));
   c.restore();
