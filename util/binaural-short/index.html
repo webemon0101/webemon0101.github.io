@@ -119,6 +119,18 @@
     </div>
     <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中はこのタブを表示したままにして、音量はそのままにしてください。</div>
   </section>
+
+  <section class="panel">
+    <h2>4. 投稿用の文章（YouTube のタイトルと説明欄）</h2>
+    <div class="info" style="margin-top:0">上の設定（周波数・テーマ・環境音）から自動で作ります。自分で書き換えると、その欄は自動で上書きされなくなります（「設定から作り直す」で戻せます）。</div>
+    <div style="margin-top:12px"><label>タイトル案</label><input id="ytTitle" type="text"></div>
+    <div style="margin-top:12px"><label>説明欄</label><textarea id="ytDesc" style="min-height:360px"></textarea></div>
+    <div class="row top">
+      <button id="copyTitle" type="button" class="sec">タイトルをコピー</button>
+      <button id="copyDesc" type="button">説明欄をコピー</button>
+      <button id="regen" type="button" class="sec">設定から作り直す</button>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -308,7 +320,63 @@ function frame(c, t, P) {
     c.fillText('運転中・作業中は聴かないでください。音量は小さめに。', W / 2, 1242); c.restore();
   }
 }
-function idle() { if (!playing) { const P = params(); frame(cx, Math.max(0, P.dur * 0.8), P); } }
+function idle() { refreshText(); if (!playing) { const P = params(); frame(cx, Math.max(0, P.dur * 0.8), P); } }
+
+/* ---------- 投稿用の文章 ---------- */
+const CUES = { relax: 'ひと休み', sleep: '今日はおしまい', meditate: '3分だけ目を閉じる', focus: '集中モード', idea: 'ぼんやりタイム', gamma: 'スイッチオン' };
+const TAGS = { relax: '#リラックス', sleep: '#睡眠導入', meditate: '#瞑想', focus: '#作業用BGM', idea: '#気分転換', gamma: '#集中' };
+const NOISE_TXT = { pink: 'ピンクノイズ（雨のようなやわらかい音）', brown: 'ブラウンノイズ（低めのやさしい音）', wave: '波の音（ゆっくり寄せては返す）' };
+let titleDirty = false, descDirty = false;
+function buildTitle() {
+  const label = $('label').value.trim(), sub = $('sub').value.trim();
+  return `【${fmt(+$('beat').value)}Hz】${label} バイノーラルビート｜${sub}`;
+}
+function buildDesc() {
+  const beat = +$('beat').value, car = +$('car').value, label = $('label').value.trim(), sub = $('sub').value.trim();
+  const cue = CUES[$('theme').value] || '集中モード';
+  const noise = NOISE_TXT[$('noise').value];
+  return [
+    '🎧 イヤホン・ヘッドホンで聴いてください（スピーカーでは左右の音が混ざり、うなりは発生しません）',
+    '',
+    '左右の耳に、少しだけ違う周波数の音を流す「バイノーラルビート」です。',
+    `この動画は【${fmt(beat)}Hz／${label}】。${sub}、ご自由にお使いください。`,
+    '',
+    '▼ おすすめの使い方',
+    '・使う場面の10分ほど前から流しておく',
+    `・「この音が流れたら、${cue}」と、毎日の合図（ルーティン）にする`,
+    '・音量は小さめに。環境音（雨や波の音）と一緒に聴くと、より心地よく感じる方もいます',
+    '',
+    '▼ 注意',
+    '・効果には個人差があり、医学的な効果を保証するものではありません。',
+    '・この動画は、脳波が変わることを示すものではありません。',
+    '・運転中や、集中力が必要な危険な作業中は聴かないでください。',
+    '・体調が悪くなったら、すぐに再生を止めてください。',
+    '・音量にご注意ください。',
+    '',
+    '▼ 音の内容',
+    `・左：${fmt(car)}Hz ／ 右：${fmt(car + beat)}Hz（差は ${fmt(beat)}Hz）`,
+    ...(noise ? [`・環境音：${noise}`] : []),
+    '',
+    'また聴きたくなったら、保存・フォローしてもらえるとうれしいです。',
+    '',
+    `#バイノーラルビート ${TAGS[$('theme').value] || '#作業用BGM'} #Shorts`
+  ].join('\n');
+}
+function refreshText() {
+  if (!titleDirty) $('ytTitle').value = buildTitle();
+  if (!descDirty) $('ytDesc').value = buildDesc();
+}
+async function copyFrom(el, btn) {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(el.value); }
+  catch { el.select(); document.execCommand('copy'); }
+  btn.textContent = 'コピーしました'; setTimeout(() => btn.textContent = old, 1500);
+}
+$('ytTitle').addEventListener('input', () => { titleDirty = true; });
+$('ytDesc').addEventListener('input', () => { descDirty = true; });
+$('regen').onclick = () => { titleDirty = descDirty = false; refreshText(); };
+$('copyTitle').onclick = () => copyFrom($('ytTitle'), $('copyTitle'));
+$('copyDesc').onclick = () => copyFrom($('ytDesc'), $('copyDesc'));
 
 /* ---------- 音 ---------- */
 let ac = null, nodes = [], dest = null;
@@ -427,7 +495,7 @@ $('rec').onclick = async () => {
 
 /* ---------- UI ---------- */
 ['beat', 'car', 'dur', 'vol', 'nvol', 'fade'].forEach(i => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
-['hook', 'cta', 'effects', 'label', 'sub', 'disc', 'pal', 'breath'].forEach(i => $(i).addEventListener('input', idle));
+['hook', 'cta', 'effects', 'label', 'sub', 'disc', 'pal', 'breath', 'noise'].forEach(i => $(i).addEventListener('input', idle));
 applyTheme();
 })();
 </script>
