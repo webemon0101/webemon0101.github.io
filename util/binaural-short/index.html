@@ -67,8 +67,8 @@
         <label style="margin-top:10px">サブの名前</label><input id="sub" type="text">
       </div>
     </div>
-    <label class="chk" style="margin-top:14px"><input id="disc" type="checkbox" checked> 注意書きを入れる（「効果には個人差があり、医学的効果を保証するものではありません」）</label>
-    <div class="warn">効果には個人差があり、科学的な裏づけも限定的です。「治る」「必ず効く」などの断定的な表現は、YouTube の医療に関するポリシーに触れるおそれがあるため、文句は控えめな言い回しにして、注意書きは入れたままにするのをおすすめします。</div>
+    <label class="chk" style="margin-top:14px"><input id="disc" type="checkbox" checked> 注意書きを入れる（「効果には個人差があり、医学的効果を保証しない」「脳波が変わることを示す動画ではない」など）</label>
+    <div class="warn">「脳波がこの周波数に同調する」という説は、研究でも根拠がはっきりしていません。リラックスや集中に役立つ可能性は、「音そのものの心地よさ」や「合図・習慣にする効果」が大きいとも言われます。そのため文句は『効く』ではなく『合図・習慣・時間づくり』の言い回しにしてあります。「治る」「必ず効く」などの断定は YouTube の医療ポリシーに触れるおそれもあるので、注意書きは入れたままにするのをおすすめします。</div>
   </section>
 
   <section class="panel">
@@ -130,32 +130,32 @@ const W = 720, H = 1280;
 
 /* ---------- テーマと文句 ---------- */
 const THEMES = {
-  relax: { name: 'リラックス（アルファ波）', beat: 10, car: 200, label: 'アルファ波', sub: 'リラックス',
-    soft: ['頭のざわざわを静かにしたい人へ', 'ちょっと一息つきたいときの音', '深呼吸のかわりに、この音を'],
-    strong: ['この音を聴くと、肩の力が抜けるかも？', '1分聴いたら、呼吸が深くなっていませんか？', 'スマホを置いて、30秒だけ目を閉じて'],
-    effects: ['心が落ち着く', '呼吸がゆっくりになる', '肩の力が抜ける', 'ストレスをやわらげる', '気持ちの切り替えに', 'リラックスタイムのお供に', '頭のモヤモヤをしずめる', '休憩を上質に'] },
-  sleep: { name: '睡眠（デルタ波）', beat: 2.5, car: 100, label: 'デルタ波', sub: '深い眠り',
-    soft: ['眠れない夜のお供に', '寝る前の5分、この音で', '布団の中で聴いてみて'],
-    strong: ['最後まで起きていられたらすごい', 'これを聴いたら、まぶたが重くなるかも？', '寝落ち注意。運転中は絶対に聴かないで'],
-    effects: ['寝つきをサポート', '深い眠りのイメージ', '心と体をおやすみモードに', '1日の疲れをリセット', '朝までぐっすり…を目指して', '考えごとをストップ', '穏やかな夜に', '眠りの儀式に'] },
-  meditate: { name: '瞑想（シータ波）', beat: 6, car: 200, label: 'シータ波', sub: '瞑想・ひらめき',
-    soft: ['瞑想の入り口に', '静かに自分と向き合う時間', '目を閉じて、3分だけ'],
-    strong: ['ぼーっとしてきたら、それが合図', '1分後、頭の中がしんとするかも', '思考を止めたい人、集まれ'],
-    effects: ['瞑想の深まりをサポート', '雑念がすっと遠のく', '内側の静けさに意識が向く', 'ひらめきの余白をつくる', '自分と向き合う時間に', '呼吸に集中しやすい', '心のノイズをオフに', '感情が落ち着く'] },
-  focus: { name: '集中・作業（ベータ波）', beat: 15, car: 200, label: 'ベータ波', sub: '集中・作業用',
-    soft: ['作業のおともに', '集中したい日のBGMに', '勉強の前にこの音を'],
-    strong: ['この音で、あと1時間がんばれるかも', '気が散るあなたへ。イヤホンをつけて', 'スイッチ、入れる？'],
-    effects: ['集中モードに入りやすい', '作業のリズムづくりに', '勉強・仕事のお供に', 'やる気のスイッチを後押し', '気が散りにくい環境づくり', 'ポモドーロにぴったり', 'タスクに没頭しやすい', '朝のエンジンに'] },
-  idea: { name: 'ひらめき・発想', beat: 7, car: 200, label: 'ひらめき', sub: '発想・気分転換',
-    soft: ['アイデアに詰まったときに', '発想の気分転換に', 'ぼんやりタイムのお供に'],
-    strong: ['ひらめきが降りてくるまで、あと30秒', 'この音の中で、答えが浮かぶかも？', '詰まったときは、頭を休ませよう'],
-    effects: ['発想の余白が生まれる', 'ぼんやり思考をサポート', 'ひらめきのきっかけに', 'クリエイティブな時間に', '頭の切り替えに', 'リフレッシュ', '新しい視点が浮かぶかも', '作業の合間のブレイクに'] },
-  gamma: { name: '目覚め・冴え（ガンマ波）', beat: 40, car: 200, label: 'ガンマ波', sub: '高い集中',
-    soft: ['頭をシャキッとさせたい日に', '40Hzという不思議な周波数', 'ここぞの集中が欲しい日に'],
-    strong: ['頭が冴える…気がする？', '眠気と戦うあなたへ', 'ここ一番の前に、1分だけ'],
-    effects: ['頭をシャキッと目覚めさせたい', '高い集中を求める作業に', '眠気覚ましのお供に', '冴えた感覚を目指して', '勉強の追い込みに', 'ここ一番の前に', '集中の切り替えスイッチ', '気合いを入れたいとき'] }
+  relax: { name: 'リラックス用（10Hz前後）', beat: 10, car: 200, label: 'リラックス用', sub: 'ひと息つく合図に',
+    soft: ['ひと息つきたいときの、合図の音', '頭のざわざわを手放す時間に', '深呼吸のかわりに、この音を'],
+    strong: ['この音を聴いたら、ひと休みの合図', '1分だけ、スマホを置いてみない？', '肩の力、抜けそうなら抜いてみて'],
+    effects: ['ひと息つく合図に', 'ゆっくり呼吸する時間に', '肩の力を抜くきっかけに', '気持ちを切り替えるスイッチに', '休憩を丁寧に過ごす時間に', '心地よい音に身をまかせる', '頭を空っぽにする習慣に', '短い休憩のお供に'] },
+  sleep: { name: '眠る前用（2〜3Hz）', beat: 2.5, car: 100, label: '眠る前用', sub: '寝る前の合図に',
+    soft: ['眠る前の、静かな合図の音', '寝る前の5分、この音を合図に', '布団の中で聴いてみて'],
+    strong: ['この音が流れたら、今日はおしまい', '寝る10分前から流してみて', '運転中は絶対に聴かないで'],
+    effects: ['おやすみ前の合図に', '1日をしめくくる習慣に', 'スマホを置くきっかけに', '静かな夜の時間づくりに', '寝る前のルーティンに', '考えごとを手放す時間に', '穏やかな気分で過ごす', 'ゆっくり目を閉じる合図に'] },
+  meditate: { name: '静かな時間用（6Hz前後）', beat: 6, car: 200, label: '静かな時間用', sub: '目を閉じる合図に',
+    soft: ['静かに目を閉じる時間に', '3分だけ、自分と向き合う音', '瞑想の入り口に'],
+    strong: ['この音を聴いたら、3分だけ目を閉じて', '雑念が浮かんだら、そのまま流して', '何も考えない時間を、3分だけ'],
+    effects: ['目を閉じる合図に', '呼吸に意識を向ける時間に', '雑念を眺める練習に', '静かな時間をつくる習慣に', '自分と向き合う3分に', '心のノイズを下げるきっかけに', 'ゆっくり吐く呼吸のお供に', '毎日の小さな儀式に'] },
+  focus: { name: '作業・勉強用（15Hz前後）', beat: 15, car: 200, label: '作業・勉強用', sub: '集中モードの合図に',
+    soft: ['作業のおともに', '勉強を始める前の、スイッチの音', '集中したい日のBGMに'],
+    strong: ['この音を聴いたら、集中モード', '作業を始める10分前から流してみて', 'スイッチ、入れる？'],
+    effects: ['集中モードに入る合図に', '作業のリズムづくりに', '勉強・仕事のお供に', 'いつもの儀式にして習慣化', '気が散りにくい環境づくりに', 'ポモドーロのお供に', '朝のスタートの合図に', 'タスクに向かうきっかけに'] },
+  idea: { name: '気分転換用（7Hz前後）', beat: 7, car: 200, label: '気分転換用', sub: '発想の休憩に',
+    soft: ['アイデアに詰まったときの、休憩の音', '発想の気分転換に', 'ぼんやりタイムのお供に'],
+    strong: ['詰まったら、頭を休ませよう', '3分だけ、考えるのをやめてみて', '歩きながら、ぼんやり聴いてみて'],
+    effects: ['気分転換の合図に', 'ぼんやりする時間づくりに', '頭を休ませるきっかけに', '作業の合間のブレイクに', '視点を変える休憩に', 'リフレッシュのお供に', '散歩のお供に', 'クリエイティブな時間の前に'] },
+  gamma: { name: '気合い入れ用（40Hz）', beat: 40, car: 200, label: '気合い入れ用', sub: 'スイッチを入れる合図に',
+    soft: ['気合いを入れたい日の、合図の音', '40Hzという不思議な周波数', 'ここぞの前に、ひと呼吸'],
+    strong: ['この音を聴いたら、スイッチオン', 'ここ一番の前に、1分だけ', '眠気と戦うあなたへ'],
+    effects: ['気合いを入れる合図に', 'ここ一番の前の習慣に', '眠気に負けない作業のお供に', '勉強の追い込みのお供に', '気持ちを切り替えるきっかけに', '集中の儀式として', '朝のスタートの合図に', '勢いをつけたいときに'] }
 };
-const CTAS = ['イヤホンで聴いてね。保存してあとで使ってね', '最後まで聴けた人はコメントで教えて！', 'フォローして、毎日のリラックスタイムに', '高評価＆保存で、また聴きにきてね'];
+const CTAS = ['イヤホンで聴いてね。保存してあとで使ってね', '最後まで聴けた人はコメントで教えて！', '毎日の合図にして、ルーティンにしてみてね', '作業や寝る前の、少し前から流してみてね'];
 Object.entries(THEMES).forEach(([k, t]) => { const o = document.createElement('option'); o.value = k; o.textContent = t.name; $('theme').appendChild(o); });
 const pick = a => a[Math.floor(Math.random() * a.length)];
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -201,7 +201,7 @@ function fitText(c, text, cxm, top, boxW, boxH, color, maxFs, alpha) {
   for (; fs > 18; fs -= 2) {
     c.font = `bold ${fs}px system-ui,"Hiragino Sans","Yu Gothic",sans-serif`;
     lines = wrapLines(c, text, boxW);
-    if (lines.length * fs * 1.3 <= boxH) break;
+    if (lines.length * fs * 1.3 <= boxH && !(lines.length > 1 && lines[lines.length - 1].length <= 2)) break;
   }
   const y0 = top + boxH / 2 - (lines.length - 1) * fs * 1.3 / 2;
   lines.forEach((l, k) => {
@@ -276,8 +276,9 @@ function frame(c, t, P) {
 
   // 効果リスト
   const ctaDur = Math.min(7, D * 0.2), listA = Math.min(5, D * 0.12), listB = Math.max(listA + 1, D - ctaDur - 1);
+  const ctaA = ease(clamp((t - (D - ctaDur)) / 0.8));
   P.items.forEach((it, i) => {
-    const ta = listA + i * (listB - listA) / P.items.length, a = ease(clamp((t - ta) / 0.6));
+    const ta = listA + i * (listB - listA) / P.items.length, a = ease(clamp((t - ta) / 0.6)) * (1 - ctaA);
     if (a <= 0) return;
     const y = 895 + i * 52;
     c.save(); c.globalAlpha = a; c.textAlign = 'left'; c.textBaseline = 'middle'; c.lineJoin = 'round';
@@ -294,15 +295,17 @@ function frame(c, t, P) {
   const ca = ease(clamp((t - (D - ctaDur)) / 0.8));
   if (ca > 0 && P.cta) {
     c.save(); c.globalAlpha = ca * 0.9; c.fillStyle = 'rgba(255,255,255,.14)';
-    const bx = 40, bw = W - 80, by = 1060, bh = 110, r = 30;
+    const bx = 40, bw = W - 80, by = 900, bh = 170, r = 36;
     c.beginPath(); c.moveTo(bx + r, by); c.arcTo(bx + bw, by, bx + bw, by + bh, r); c.arcTo(bx + bw, by + bh, bx, by + bh, r); c.arcTo(bx, by + bh, bx, by, r); c.arcTo(bx, by, bx + bw, by, r); c.fill(); c.restore();
-    fitText(c, P.cta, W / 2, by + 6, bw - 40, bh - 12, '#ffe45c', 38, ca);
+    fitText(c, P.cta, W / 2, by + 8, bw - 50, bh - 16, '#ffe45c', 50, ca);
   }
   // 注意書き
   if (P.disc) {
     c.save(); c.globalAlpha = 0.6; c.fillStyle = '#fff'; c.font = '20px system-ui,"Yu Gothic",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('※効果には個人差があり、医学的効果を保証するものではありません。', W / 2, 1205);
-    c.fillText('運転中・作業中は聴かないでください。音量は小さめに。', W / 2, 1235); c.restore();
+    c.font = '19px system-ui,"Yu Gothic",sans-serif';
+    c.fillText('※効果には個人差があり、医学的効果を保証するものではありません。', W / 2, 1186);
+    c.fillText('※脳波が変わることを示す動画ではありません。', W / 2, 1214);
+    c.fillText('運転中・作業中は聴かないでください。音量は小さめに。', W / 2, 1242); c.restore();
   }
 }
 function idle() { if (!playing) { const P = params(); frame(cx, Math.max(0, P.dur * 0.8), P); } }
@@ -310,9 +313,11 @@ function idle() { if (!playing) { const P = params(); frame(cx, Math.max(0, P.du
 /* ---------- 音 ---------- */
 let ac = null, nodes = [], dest = null;
 function makeNoise(kind) {
-  const len = ac.sampleRate * 6, buf = ac.createBuffer(2, len, ac.sampleRate);
+  // 継ぎ目なしのループ: 余分に作った末尾を、先頭へ等電力でクロスフェードして重ねる
+  const N = Math.floor(ac.sampleRate * 12), F = Math.floor(ac.sampleRate * 1.5), len = N + F;
+  const buf = ac.createBuffer(2, N, ac.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
-    const d = buf.getChannelData(ch);
+    const d = new Float32Array(len);
     if (kind === 'pink') {
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
       for (let i = 0; i < len; i++) {
@@ -325,8 +330,12 @@ function makeNoise(kind) {
       let last = 0;
       for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.2; }
     }
-    // 継ぎ目をなじませる
-    const f = 2000; for (let i = 0; i < f; i++) { const a = i / f; d[i] *= a; d[len - 1 - i] *= a; }
+    const out = buf.getChannelData(ch);
+    for (let i = 0; i < N; i++) out[i] = d[i];
+    for (let i = 0; i < F; i++) {                              // 先頭F個 ← 先頭×sin ＋ 余分な末尾×cos
+      const a = i / F * Math.PI / 2;
+      out[i] = d[i] * Math.sin(a) + d[N + i] * Math.cos(a);
+    }
   }
   return buf;
 }
