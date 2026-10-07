@@ -93,6 +93,11 @@
   <section class="panel">
     <h2>3. 種明かし動画</h2>
     <div class="grid">
+      <div><label>動画のスタイル（選ぶと下の設定が入ります）</label>
+        <select id="style">
+          <option value="std">標準（十字を消して種明かし）</option>
+          <option value="shake">ゆがみ揺れ煽り（揺らしながら十字を減らす）</option>
+        </select></div>
       <div><label>画面の比率</label>
         <select id="aspect">
           <option value="9:16">縦長 9:16（Shorts / TikTok）720×1280</option>
@@ -100,6 +105,7 @@
           <option value="1:1">正方形 1:1　900×900</option>
         </select></div>
       <div><label>上の問いかけ</label><input id="title" type="text" value="どこが膨らんで見える？"></div>
+      <div><label>十字を減らしている間の言葉</label><input id="capRemove" type="text" value="十字を取り除くと…"></div>
       <div><label>種明かしの言葉</label><input id="reveal" type="text" value="実は、ただの正方形のマス目だけ！"></div>
       <div><label>十字の消え方</label>
         <select id="order">
@@ -112,10 +118,29 @@
     </div>
     <div class="grid">
       <div><label>最初に見せる: <span id="d1V">3</span>秒</label><input id="d1" type="range" min="1" max="8" step="0.5" value="3"></div>
-      <div><label>十字が消える: <span id="d2V">4</span>秒</label><input id="d2" type="range" min="1" max="10" step="0.5" value="4"></div>
+      <div><label>十字が消える: <span id="d2V">4</span>秒</label><input id="d2" type="range" min="1" max="20" step="0.5" value="4"></div>
       <div><label>種明かしを見せる: <span id="d3V">3</span>秒</label><input id="d3" type="range" min="1" max="8" step="0.5" value="3"></div>
       <div><label class="chk" style="margin-top:22px"><input id="restore" type="checkbox" checked> 最後に十字を戻す</label></div>
     </div>
+    <div class="grid">
+      <div><label>画面の揺らし方</label>
+        <select id="shake">
+          <option value="none">揺らさない</option>
+          <option value="v">縦揺れ</option>
+          <option value="h">横揺れ</option>
+          <option value="d">斜め揺れ</option>
+          <option value="c">円を描いて揺れる</option>
+        </select></div>
+      <div><label>揺れの幅: <span id="ampV">6</span>px</label><input id="amp" type="range" min="1" max="30" step="1" value="6"></div>
+      <div><label>揺れの速さ: <span id="freqV">3</span>回/秒</label><input id="freq" type="range" min="1" max="8" step="0.5" value="3"></div>
+      <div><label>十字の減らし方</label>
+        <select id="reduce">
+          <option value="smooth">なめらかに減らす</option>
+          <option value="steps">少しずつ段階的に減らす</option>
+        </select></div>
+      <div><label>段階の数: <span id="stepsV">8</span>段</label><input id="steps" type="range" min="2" max="20" step="1" value="8"></div>
+    </div>
+    <div class="info">揺れの効果：静止画なのに、画面を揺らすと十字のゆがみがぐにゅぐにゅ動いて見えることがあります（見え方には個人差があります）。</div>
     <div class="row top">
       <button id="play" type="button">▶ プレビュー再生</button>
       <button id="stop" type="button" class="sec hidden">■ 停止</button>
@@ -282,16 +307,29 @@ $('n').addEventListener('input', () => {
   const v = +$('n').value; $('nV').textContent = v; $('nV2').textContent = v;
   resample(v); afterEdit();
 });
-['size', 'brush', 'd1', 'd2', 'd3'].forEach(i => $(i).addEventListener('input', () => { $(i + 'V').textContent = i === 'size' ? Math.round($(i).value) : $(i).value; afterEdit(); }));
-['mode', 'tA', 'tB', 'cA', 'cB', 'showR', 'title', 'reveal', 'order', 'restore'].forEach(i => $(i).addEventListener('input', afterEdit));
+['size', 'brush', 'd1', 'd2', 'd3', 'amp', 'freq', 'steps'].forEach(i => $(i).addEventListener('input', () => { $(i + 'V').textContent = i === 'size' ? Math.round($(i).value) : $(i).value; afterEdit(); }));
+['mode', 'tA', 'tB', 'cA', 'cB', 'showR', 'title', 'reveal', 'capRemove', 'order', 'restore', 'shake', 'reduce'].forEach(i => $(i).addEventListener('input', afterEdit));
 $('scheme').onchange = () => { const s = SCHEMES[$('scheme').value]; ['tA', 'tB', 'cA', 'cB'].forEach((id, k) => $(id).value = s[k]); afterEdit(); };
+const STYLES = {
+  std: { title: 'どこが膨らんで見える？', capRemove: '十字を取り除くと…', shake: 'none', reduce: 'smooth', steps: 8, d1: 3, d2: 4, d3: 3, order: 'center', restore: true },
+  shake: { title: 'この絵のゆがみが動いているように見えますか？', capRemove: '最後までぐにゅぐにゅが続いて見えたら…今日いいことあるかも？', shake: 'v', reduce: 'steps', steps: 10, d1: 4, d2: 12, d3: 3, order: 'random', restore: false }
+};
+$('style').onchange = () => {
+  const st = STYLES[$('style').value];
+  for (const k in st) {
+    const e = $(k); if (!e) continue;
+    if (e.type === 'checkbox') e.checked = st[k]; else e.value = st[k];
+    const v = $(k + 'V'); if (v) v.textContent = st[k];
+  }
+  afterEdit();
+};
 $('aspect').onchange = () => { const [w, h] = SIZES[$('aspect').value]; cv.width = w; cv.height = h; drawIdle(); };
 
 /* ---------- 動画 ---------- */
 function durs() { return { d1: +$('d1').value, d2: +$('d2').value, d3: +$('d3').value, d4: $('restore').checked ? 2.5 : 0, d5: $('restore').checked ? 2 : 0 }; }
 function total() { const d = durs(); return d.d1 + d.d2 + d.d3 + d.d4 + d.d5; }
 const ease = u => u * u * (3 - 2 * u);
-function hash(i, j) { let h = (i * 73856093) ^ (j * 19349663); h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) % 1000 / 1000; }
+function hash(i, j) { let h = Math.imul(i, 73856093) ^ Math.imul(j, 19349663); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) % 1000 / 1000; }
 function delay(i, j) {
   const o = $('order').value;
   if (o === 'all') return 0;
@@ -325,7 +363,7 @@ function frame(c, W, H, t) {
   const d = durs(), tot = total();
   let u = 0, cap = '';
   if (t < d.d1) { u = 0; }
-  else if (t < d.d1 + d.d2) { u = (t - d.d1) / d.d2; cap = '十字を取り除くと…'; }
+  else if (t < d.d1 + d.d2) { u = (t - d.d1) / d.d2; cap = $('capRemove').value; }
   else if (t < d.d1 + d.d2 + d.d3) { u = 1; cap = $('reveal').value; }
   else if (t < d.d1 + d.d2 + d.d3 + d.d4) { u = 1 - (t - d.d1 - d.d2 - d.d3) / d.d4; cap = '十字を戻すと…'; }
   else { u = 0; cap = 'また膨らんで見える！'; }
@@ -334,7 +372,16 @@ function frame(c, W, H, t) {
   const x0 = Math.round((W - S) / 2), y0 = Math.round((H - S) / 2);
   c.fillStyle = '#0d0f14'; c.fillRect(0, 0, W, H);
   const sp = $('order').value === 'all' ? 0 : 0.7;
+  if ($('reduce').value === 'steps' && u > 0 && u < 1) {
+    const n = +$('steps').value, k = Math.floor(u * n);
+    u = (k + ease(Math.min(1, (u * n - k) / 0.3))) / n;
+  }
+  const A = +$('amp').value, ph = 2 * Math.PI * (+$('freq').value) * t, m = $('shake').value;
+  const dx = m === 'h' || m === 'd' ? A * Math.sin(ph) : m === 'c' ? A * Math.cos(ph) : 0;
+  const dy = m === 'v' || m === 'd' ? A * Math.sin(ph) : m === 'c' ? A * Math.sin(ph) : 0;
+  c.save(); c.translate(dx, dy);
   drawBoard(c, x0, y0, S, (i, j) => ease(Math.max(0, Math.min(1, u * (1 + sp) - delay(i, j) * sp))));
+  c.restore();
   drawText(c, $('title').value, W / 2, 0, W - 50, y0 > th * 0.9 ? y0 : th, '#ffffff');
   drawText(c, cap, W / 2, y0 + S, W - 50, H - (y0 + S) > th * 0.9 ? H - (y0 + S) : th, u >= 1 ? '#ffe45c' : '#ffffff');
   return t / tot;
