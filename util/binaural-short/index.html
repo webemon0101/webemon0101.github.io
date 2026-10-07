@@ -446,21 +446,33 @@ function stopAudio() {
 /* ---------- 再生・録画 ---------- */
 let playing = false, raf = 0, startAt = 0, curP = null, onEnd = null, recorder = null, outUrl = null;
 function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+// 録画中は requestAnimationFrame ではなく Worker のタイマーで描く。
+// 別のタブ／窓に切り替えたり、窓が隠れたりしても rAF のように止まらず、動画の動きが固まらない。
+let stopTick = null;
+function makeTicker(cb) {
+  const w = new Worker(URL.createObjectURL(new Blob(['let id;onmessage=e=>{if(e.data==="start")id=setInterval(()=>postMessage(0),1000/60);else clearInterval(id)}'], { type: 'text/javascript' })));
+  w.onmessage = () => cb(performance.now());
+  w.postMessage('start');
+  return () => { w.postMessage('stop'); w.terminate(); };
+}
 function loop(now) {
+  if (!playing) return;
   const t = (now - startAt) / 1000;
-  frame(cx, Math.min(t, curP.dur), curP);
-  $('prog').style.width = Math.min(100, t / curP.dur * 100) + '%';
+  frame(cx, Math.min(Math.max(t, 0), curP.dur), curP);
+  $('prog').style.width = Math.min(100, Math.max(0, t) / curP.dur * 100) + '%';
   if (t >= curP.dur) { const f = onEnd; finish(); if (f) f(); return; }
-  raf = requestAnimationFrame(loop);
+  if (!stopTick) raf = requestAnimationFrame(loop);
 }
 async function start(withDest, end) {
   finish(); curP = params(); onEnd = end || null;
   await startAudio(curP, withDest);
   playing = true; $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
-  startAt = performance.now() + 100; raf = requestAnimationFrame(loop);
+  startAt = performance.now() + 100;
+  if (withDest) stopTick = makeTicker(loop); else raf = requestAnimationFrame(loop);
 }
 function finish() {
   if (raf) cancelAnimationFrame(raf); raf = 0; playing = false; onEnd = null;
+  if (stopTick) { stopTick(); stopTick = null; }
   $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('prog').style.width = '0';
   if (!recorder) stopAudio();
 }
@@ -490,7 +502,7 @@ $('rec').onclick = async () => {
     setStatus('録画が完了しました。'); recorder = null; stopAudio(); idle();
   };
   recorder = rc; rc.start();
-  setStatus(`録画中…（約 ${Math.round(curP.dur)} 秒。タブを切り替えないでください）`);
+  setStatus(`録画中…（約 ${Math.round(curP.dur)} 秒。別の窓に移っても動画が止まらないようにしてありますが、念のため、このタブを表示したままにしてください）`);
 };
 
 /* ---------- UI ---------- */
