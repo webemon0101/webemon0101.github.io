@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>タイトル募集Shortsメーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#ffc94d;--acc2:#e8b236;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text],input[type=file],textarea{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  textarea{resize:vertical;min-height:100px}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:14px}
+  button,a.btn{background:var(--acc);color:#2a1d00;font-weight:600;border:0;border-radius:8px;padding:10px 18px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:78vh;margin:0 auto}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>タイトル募集Shortsメーカー</h1>
+  <p class="lead">「こんな本を書きました。タイトルが決まらないので、案をコメント欄で募集します」という縦型動画（YouTube Shorts 向け）を作ります。本の紹介文を入れて、表紙画像を選ぶだけ。処理はすべてブラウザ内で行われ、何もアップロードされません。</p>
+
+  <section class="panel">
+    <h2>1. 本の紹介</h2>
+    <div class="grid">
+      <div><label>最初の一言</label><input id="hook" type="text" value="こんな本、書きました。"></div>
+      <div><label>表紙画像（任意。なければ仮の表紙を作ります）</label><input id="cover" type="file" accept="image/*"></div>
+    </div>
+    <div class="grid">
+      <div><label>本の紹介（1行1項目・最大5つ。順番にカードで出ます）</label>
+        <textarea id="pitch" style="min-height:130px">数式なし！AIの相方とのツッコミ対話形式
+「AIはなぜしゃべれるのか」を解き明かす
+話は脳や物理にまで脱線（妄想警察つき）
+イラスト豊富・約300ページ</textarea></div>
+      <div>
+        <label>仮の表紙：上の小さな文字</label><input id="coverSub" type="text" value="AIはなぜしゃべれるのか">
+        <label style="margin-top:10px">仮の表紙：真ん中の大きな文字</label><input id="coverTitle" type="text" value="？？？">
+        <label style="margin-top:10px">仮の表紙：下の小さな文字</label><input id="coverTag" type="text" value="数式なし・対話形式">
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>2. 募集のしかた</h2>
+    <div class="grid">
+      <div><label>悩みの言葉（2行。1行目 → 2行目の順に出ます）</label>
+        <textarea id="dilemma" style="min-height:70px">でも…
+タイトルが決まりません！</textarea></div>
+      <div><label>募集の呼びかけ（大きく出ます）</label><input id="ctaMain" type="text" value="タイトル案、コメント欄へ！"></div>
+      <div><label>補足（小さく出ます）</label><input id="ctaSub" type="text" value="Amazon KDPで出版予定です"></div>
+      <div><label>お礼・特典など（任意。約束できることだけ書いてください）</label><input id="bonus" type="text" value=""></div>
+    </div>
+    <div class="grid">
+      <div><label>いまの仮タイトル候補（任意・1行1つ・最大5つ。「どれがいい？」と見せます）</label>
+        <textarea id="cands" placeholder="例）&#10;AIはなぜしゃべれるのか&#10;AIに使われるか、手なずけるか"></textarea></div>
+      <div>
+        <label>背景</label>
+        <select id="pal">
+          <option value="night">夜の紺</option>
+          <option value="warm">あたたかい橙</option>
+          <option value="paper">紙のクリーム色</option>
+        </select>
+        <label style="margin-top:10px">テンポ: <span id="speedV">1.0</span> 倍</label>
+        <input id="speed" type="range" min="0.7" max="1.5" step="0.1" value="1">
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 確認と書き出し</h2>
+    <div class="row">
+      <div style="flex:1;min-width:220px"><label>プレビュー位置（止めた状態で確認）: <span id="scrubV">0</span>秒 / <span id="totV">0</span>秒</label><input id="scrub" type="range" min="0" max="1000" step="1" value="0"></div>
+    </div>
+    <div class="row top">
+      <button id="play" type="button">▶ プレビュー再生</button>
+      <button id="stop" type="button" class="sec hidden">■ 停止</button>
+      <button id="rec" type="button" class="sec">⏺ 動画として保存</button>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+    <div style="margin-top:12px"><canvas id="cv" width="720" height="1280"></canvas></div>
+    <div id="result" class="row top hidden" style="justify-content:center">
+      <a id="dl" class="btn" download="title-contest.webm">動画をダウンロード</a>
+    </div>
+    <div class="info">動画の保存はリアルタイムで録画します（動画の長さ＝保存にかかる時間）。録画中は別の窓に移っても動画は止まりにくいようにしてありますが、念のためこのタブを表示したままにしてください。音は入りません。BGM は YouTube Shorts の編集画面で足せます。</div>
+  </section>
+
+  <section class="panel">
+    <h2>4. 投稿用の文章（タイトル・説明欄・固定コメント）</h2>
+    <div class="info" style="margin-top:0">上の入力から自動で作ります。自分で書き換えた欄は、自動では上書きされなくなります（「入力から作り直す」で戻せます）。</div>
+    <label class="chk" style="margin-top:12px"><input id="note" type="checkbox" checked> 「いただいた案は参考にさせていただきます」の注意書きを入れる（案の扱いを先に決めておくと、後でもめにくくなります）</label>
+    <div style="margin-top:12px"><label>動画のタイトル案</label><input id="ytTitle" type="text"></div>
+    <div style="margin-top:12px"><label>説明欄</label><textarea id="ytDesc" style="min-height:260px"></textarea></div>
+    <div style="margin-top:12px"><label>固定コメント案</label><textarea id="ytPin" style="min-height:120px"></textarea></div>
+    <div class="row top">
+      <button id="copyTitle" type="button" class="sec">タイトルをコピー</button>
+      <button id="copyDesc" type="button">説明欄をコピー</button>
+      <button id="copyPin" type="button" class="sec">固定コメントをコピー</button>
+      <button id="regen" type="button" class="sec">入力から作り直す</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), cx = cv.getContext('2d');
+const W = 720, H = 1280;
+const PALS = {
+  night: { top: '#0c1233', bot: '#2a2461', txt: '#ffffff', acc: '#ffd34d', card: 'rgba(255,255,255,.12)', sub: '#cdd6ff', dot: 'rgba(255,255,255,.10)' },
+  warm:  { top: '#4a1a08', bot: '#d9622b', txt: '#ffffff', acc: '#fff08a', card: 'rgba(0,0,0,.22)', sub: '#ffe2c8', dot: 'rgba(255,255,255,.12)' },
+  paper: { top: '#fbf3dc', bot: '#f1dfb0', txt: '#2b2418', acc: '#d9432b', card: 'rgba(255,255,255,.7)', sub: '#6b5a3a', dot: 'rgba(120,90,30,.10)' }
+};
+let coverImg = null;
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = u => u * u * (3 - 2 * u);
+const backOut = u => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); };
+const lines = id => $(id).value.split('\n').map(s => s.trim()).filter(Boolean);
+
+function params() {
+  return {
+    hook: $('hook').value.trim(), pitch: lines('pitch').slice(0, 5), dil: lines('dilemma').slice(0, 2),
+    cands: lines('cands').slice(0, 5), ctaMain: $('ctaMain').value.trim(), ctaSub: $('ctaSub').value.trim(), bonus: $('bonus').value.trim(),
+    cSub: $('coverSub').value.trim(), cTitle: $('coverTitle').value.trim(), cTag: $('coverTag').value.trim(),
+    pal: PALS[$('pal').value], speed: +$('speed').value
+  };
+}
+function timeline(P) {
+  const sp = P.speed, sc = [];
+  let t = 0; const add = (id, d) => { if (d > 0) { sc.push({ id, start: t, end: t + d / sp, dur: d / sp }); t += d / sp; } };
+  add('hook', 3.0);
+  add('pitch', P.pitch.length ? 0.9 + 1.9 * P.pitch.length : 0);
+  add('dil', 4.0);
+  add('cand', P.cands.length ? 1.2 + 1.1 * P.cands.length + 1.6 : 0);
+  add('cta', 6.5);
+  return { sc, total: t };
+}
+
+/* ---------- 描画ヘルパー ---------- */
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+const FONT = 'system-ui,"Hiragino Sans","Yu Gothic",sans-serif';
+function wrapLines(c, text, maxW) {
+  const out = []; let cur = '';
+  for (const ch of text) { if (c.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch; } else cur += ch; }
+  if (cur) out.push(cur); return out;
+}
+// ぽんと弾んで出る文字ブロック。t0 に出現
+function block(c, text, cxm, top, boxW, boxH, color, maxFs, t0, t, P, opt = {}) {
+  if (!text || t < t0) return;
+  const u = clamp((t - t0) / 0.45), s = backOut(u), a = clamp((t - t0) / 0.2);
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  let fs = maxFs, ls;
+  for (; fs > 18; fs -= 2) {
+    c.font = `bold ${fs}px ${FONT}`; ls = wrapLines(c, text, boxW);
+    if (ls.length * fs * 1.3 <= boxH && !(ls.length > 1 && ls[ls.length - 1].length <= 2)) break;
+  }
+  const cy = top + boxH / 2;
+  c.translate(cxm + (opt.dx || 0), cy + (opt.dy || 0)); c.scale(s, s);
+  const y0 = -(ls.length - 1) * fs * 1.3 / 2;
+  ls.forEach((l, k) => {
+    const y = y0 + k * fs * 1.3;
+    c.lineWidth = fs * 0.2; c.strokeStyle = P.pal === PALS.paper ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.6)'; c.strokeText(l, 0, y);
+    c.fillStyle = color; c.fillText(l, 0, y);
+  });
+  c.restore();
+}
+function drawBook(c, cxm, cym, s, t, P, q) {
+  const w = 340 * s, h = 510 * s;
+  c.save(); c.translate(cxm, cym); c.rotate(0.025 * Math.sin(t * 1.3));
+  c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 30 * s; c.shadowOffsetY = 14 * s;
+  rr(c, -w / 2, -h / 2, w, h, 10 * s); c.fillStyle = '#222'; c.fill(); c.shadowColor = 'transparent';
+  c.save(); rr(c, -w / 2, -h / 2, w, h, 10 * s); c.clip();
+  if (coverImg) {
+    const k = Math.max(w / coverImg.width, h / coverImg.height), iw = coverImg.width * k, ih = coverImg.height * k;
+    c.drawImage(coverImg, -iw / 2, -ih / 2, iw, ih);
+    if (q) {
+      c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(-w / 2, -50 * s, w, 100 * s);
+      c.fillStyle = '#ffd34d'; c.font = `bold ${54 * s}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('タイトル未定', 0, 0);
+    }
+  } else {
+    const g = c.createLinearGradient(0, -h / 2, 0, h / 2); g.addColorStop(0, '#1d3b8b'); g.addColorStop(1, '#7a2bbd');
+    c.fillStyle = g; c.fillRect(-w / 2, -h / 2, w, h);
+    c.globalAlpha = 0.14; c.fillStyle = '#fff';
+    for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(-w / 2 + (i * 97 % w), -h / 2 + (i * 151 % h), 40 * s, 0, 7); c.fill(); }
+    c.globalAlpha = 1; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff';
+    const sub = wrapLines((c.font = `bold ${26 * s}px ${FONT}`, c), P.cSub, w - 50 * s);
+    sub.slice(0, 3).forEach((l, i) => c.fillText(l, 0, -h / 2 + 70 * s + i * 34 * s));
+    c.fillStyle = '#ffd34d'; let fs = 120 * s; c.font = `bold ${fs}px ${FONT}`;
+    while (c.measureText(P.cTitle).width > w - 40 * s && fs > 20) { fs -= 4; c.font = `bold ${fs}px ${FONT}`; }
+    c.fillText(P.cTitle, 0, 0);
+    c.fillStyle = '#cfd8ff'; c.font = `${24 * s}px ${FONT}`; c.fillText(P.cTag, 0, h / 2 - 60 * s);
+  }
+  c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-w / 2, -h / 2, 14 * s, h);   // 背表紙
+  c.restore(); c.restore();
+}
+const DOTS = Array.from({ length: 22 }, (_, i) => ({ x: (i * 193) % W, y: (i * 389) % H, r: 20 + (i * 37) % 60, v: 6 + (i * 13) % 14 }));
+
+/* ---------- 1コマ ---------- */
+const BOOK_A = { y: 790, s: 1 }, BOOK_B = { y: 330, s: 0.55 };
+const BOOK_OF = { hook: BOOK_A, pitch: BOOK_B, dil: BOOK_A, cand: BOOK_B, cta: BOOK_B };
+function frame(c, t, P) {
+  const { sc, total } = timeline(P), pal = P.pal;
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, pal.top); g.addColorStop(1, pal.bot);
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = pal.dot;
+  for (const d of DOTS) { c.beginPath(); c.arc(d.x, (d.y - t * d.v + H * 4) % H, d.r, 0, 7); c.fill(); }
+  t = clamp(t, 0, total - 0.001);
+  let k = sc.findIndex(s => t >= s.start && t < s.end); if (k < 0) k = sc.length - 1;
+  const S = sc[k], lt = t - S.start;
+
+  // 本（シーンごとの位置へなめらかに移動）
+  const prevT = k > 0 ? BOOK_OF[sc[k - 1].id] : { y: BOOK_A.y + 420, s: 1 };
+  const nowT = BOOK_OF[S.id], p = ease(clamp(lt / 0.6));
+  const by = prevT.y + (nowT.y - prevT.y) * p, bs = prevT.s + (nowT.s - prevT.s) * p;
+  const showQ = S.id === 'dil' && lt > 1.2;
+  drawBook(c, W / 2, by, bs, t, P, showQ);
+
+  if (S.id === 'hook') {
+    block(c, P.hook, W / 2, 100, W - 90, 340, pal.txt, 92, 0.2, lt, P);
+  } else if (S.id === 'pitch') {
+    block(c, 'どんな本？', W / 2, 60, W - 100, 80, pal.sub, 44, 0.1, lt, P);
+    P.pitch.forEach((it, i) => {
+      const t0 = 0.9 + i * 1.9, a = clamp((lt - t0) / 0.4); if (a <= 0) return;
+      const slide = (1 - ease(a)) * 300, y = 520 + i * 100;
+      c.save(); c.globalAlpha = a; c.translate(slide, 0);
+      rr(c, 40, y, W - 80, 86, 22); c.fillStyle = pal.card; c.fill();
+      c.fillStyle = pal.acc; rr(c, 40, y, 12, 86, 6); c.fill();
+      c.textAlign = 'left'; c.textBaseline = 'middle'; let fs = 34; c.font = `bold ${fs}px ${FONT}`;
+      while (c.measureText(it).width > W - 150 && fs > 18) { fs -= 2; c.font = `bold ${fs}px ${FONT}`; }
+      c.fillStyle = pal.txt; c.fillText(it, 76, y + 43); c.restore();
+    });
+  } else if (S.id === 'dil') {
+    if (P.dil[0]) block(c, P.dil[0], W / 2, 90, W - 90, 150, pal.sub, 80, 0.3, lt, P);
+    if (P.dil[1]) block(c, P.dil[1], W / 2, 250, W - 80, 200, pal.acc, 80, 1.4, lt, P, { dx: lt > 1.9 ? 6 * Math.sin(lt * 40) * Math.exp(-(lt - 1.9) * 2) : 0 });
+  } else if (S.id === 'cand') {
+    block(c, 'いまの候補はこれ…どれがいい？', W / 2, 60, W - 100, 100, pal.sub, 40, 0.1, lt, P);
+    P.cands.forEach((it, i) => {
+      const t0 = 1.2 + i * 1.1, a = clamp((lt - t0) / 0.4); if (a <= 0) return;
+      const y = 500 + i * 96; c.save(); c.globalAlpha = a; c.translate((1 - ease(a)) * -300, 0);
+      rr(c, 40, y, W - 80, 82, 22); c.fillStyle = pal.card; c.fill();
+      c.fillStyle = pal.acc; c.beginPath(); c.arc(86, y + 41, 24, 0, 7); c.fill();
+      c.fillStyle = '#2a1d00'; c.font = `bold 30px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(i + 1), 86, y + 42);
+      c.textAlign = 'left'; let fs = 32; c.font = `bold ${fs}px ${FONT}`;
+      while (c.measureText(it).width > W - 190 && fs > 16) { fs -= 2; c.font = `bold ${fs}px ${FONT}`; }
+      c.fillStyle = pal.txt; c.fillText(it, 128, y + 42); c.restore();
+    });
+    block(c, '番号でも、新しい案でも OK！', W / 2, 500 + P.cands.length * 96 + 10, W - 100, 90, pal.acc, 40, 1.2 + P.cands.length * 1.1, lt, P);
+  } else if (S.id === 'cta') {
+    block(c, P.ctaMain, W / 2, 500, W - 70, 220, pal.acc, 84, 0.2, lt, P);
+    const a = clamp((lt - 0.9) / 0.4);
+    if (a > 0) {                                                // 下向きの矢印（上下にゆれる）
+      const by2 = 770 + 14 * Math.sin(lt * 5);
+      c.save(); c.globalAlpha = a; c.fillStyle = pal.acc; c.beginPath();
+      c.moveTo(W / 2 - 46, by2); c.lineTo(W / 2 + 46, by2); c.lineTo(W / 2, by2 + 62); c.closePath(); c.fill(); c.restore();
+    }
+    block(c, P.ctaSub, W / 2, 860, W - 90, 90, pal.txt, 40, 1.4, lt, P);
+    block(c, P.bonus, W / 2, 955, W - 90, 90, pal.sub, 32, 2.0, lt, P);
+  }
+  return total;
+}
+
+/* ---------- 再生・録画 ---------- */
+let playing = false, raf = 0, startAt = 0, curP = null, curTotal = 0, onEnd = null, recorder = null, outUrl = null, stopTick = null;
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+function makeTicker(cb) {
+  const w = new Worker(URL.createObjectURL(new Blob(['let id;onmessage=e=>{if(e.data==="start")id=setInterval(()=>postMessage(0),1000/60);else clearInterval(id)}'], { type: 'text/javascript' })));
+  w.onmessage = () => cb(performance.now());
+  w.postMessage('start');
+  return () => { w.postMessage('stop'); w.terminate(); };
+}
+function loop(now) {
+  if (!playing) return;
+  const t = Math.max(0, (now - startAt) / 1000);
+  frame(cx, t, curP);
+  $('prog').style.width = Math.min(100, t / curTotal * 100) + '%';
+  if (t >= curTotal) { const f = onEnd; finish(); if (f) f(); return; }
+  if (!stopTick) raf = requestAnimationFrame(loop);
+}
+function start(record, end) {
+  finish(); curP = params(); curTotal = timeline(curP).total; onEnd = end || null; playing = true;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden');
+  startAt = performance.now() + 100;
+  if (record) stopTick = makeTicker(loop); else raf = requestAnimationFrame(loop);
+}
+function finish() {
+  if (raf) cancelAnimationFrame(raf); raf = 0; playing = false; onEnd = null;
+  if (stopTick) { stopTick(); stopTick = null; }
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('prog').style.width = '0';
+}
+$('play').onclick = () => start(false);
+$('stop').onclick = () => { if (recorder) { const r = recorder; finish(); r.stop(); } else { finish(); idle(); } };
+$('rec').onclick = () => {
+  finish();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  const rc = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 6e6 });
+  rc.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rc.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob);
+    $('dl').href = outUrl; $('dl').download = `title-contest.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden'); $('rec').disabled = false;
+    setStatus('録画が完了しました。'); recorder = null; idle();
+  };
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  recorder = rc; rc.start();
+  start(true, () => { setTimeout(() => rc.state !== 'inactive' && rc.stop(), 400); });
+  setStatus(`録画中…（約 ${Math.round(curTotal)} 秒。念のため、このタブを表示したままにしてください）`);
+};
+
+/* ---------- 投稿用の文章 ---------- */
+let dirty = { ytTitle: false, ytDesc: false, ytPin: false };
+function buildTitle() { return '【タイトル募集】本を書きました。魅力的なタイトルを考えてください！'; }
+function buildDesc() {
+  const P = params(), note = $('note').checked;
+  return [
+    '【タイトル募集】',
+    P.hook ? P.hook + 'でも、タイトルが決まらずに困っています…' : 'タイトルが決まらずに困っています…',
+    '',
+    '▼ こんな本です',
+    ...P.pitch.map(s => '・' + s),
+    '',
+    `▼ お願い`,
+    'この本にぴったりのタイトル案を、コメント欄で教えてください！',
+    ...(P.ctaSub ? [P.ctaSub] : []),
+    ...(P.bonus ? [P.bonus] : []),
+    ...(note ? ['※いただいた案は参考にさせていただきます。そのまま採用するとは限りません。採用や参考にした場合は、動画やコメントでお知らせします。'] : []),
+    '',
+    '#タイトル募集 #AI #Amazonkdp #Shorts'
+  ].join('\n');
+}
+function buildPin() {
+  const note = $('note').checked;
+  return ['📚 タイトル案、ここで大募集中です！', 'この本にぴったりだと思うタイトルを、ぜひこのコメントへの返信で教えてください。', ...(note ? ['いただいた案は参考にさせていただきます。'] : [])].join('\n');
+}
+function refreshText() {
+  if (!dirty.ytTitle) $('ytTitle').value = buildTitle();
+  if (!dirty.ytDesc) $('ytDesc').value = buildDesc();
+  if (!dirty.ytPin) $('ytPin').value = buildPin();
+}
+async function copyFrom(el, btn) {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(el.value); } catch { el.select(); document.execCommand('copy'); }
+  btn.textContent = 'コピーしました'; setTimeout(() => btn.textContent = old, 1500);
+}
+['ytTitle', 'ytDesc', 'ytPin'].forEach(id => $(id).addEventListener('input', () => { dirty[id] = true; }));
+$('regen').onclick = () => { dirty = { ytTitle: false, ytDesc: false, ytPin: false }; refreshText(); };
+$('copyTitle').onclick = () => copyFrom($('ytTitle'), $('copyTitle'));
+$('copyDesc').onclick = () => copyFrom($('ytDesc'), $('copyDesc'));
+$('copyPin').onclick = () => copyFrom($('ytPin'), $('copyPin'));
+
+/* ---------- UI ---------- */
+function idle() {
+  refreshText();
+  if (playing) return;
+  const P = params(), tot = timeline(P).total, t = +$('scrub').value / 1000 * tot;
+  $('scrubV').textContent = t.toFixed(1); $('totV').textContent = tot.toFixed(1);
+  frame(cx, t, P);
+}
+['hook', 'pitch', 'coverSub', 'coverTitle', 'coverTag', 'dilemma', 'ctaMain', 'ctaSub', 'bonus', 'cands', 'pal', 'scrub', 'note'].forEach(i => $(i).addEventListener('input', idle));
+$('speed').addEventListener('input', () => { $('speedV').textContent = (+$('speed').value).toFixed(1); idle(); });
+$('cover').addEventListener('change', () => {
+  const f = $('cover').files[0];
+  if (!f) { coverImg = null; idle(); return; }
+  const im = new Image(); im.onload = () => { coverImg = im; idle(); }; im.onerror = () => setStatus('画像を読み込めませんでした。', true);
+  im.src = URL.createObjectURL(f);
+});
+idle();
+})();
+</script>
+</body>
+</html>
