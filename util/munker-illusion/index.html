@@ -39,7 +39,7 @@
 <main>
   <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
   <h1>ムンカー錯視メーカー</h1>
-  <p class="lead">背景は左右とも同じ2色の縞。中の形だけ、左は片方の色の縞を、右はもう片方の色の縞を「同じ色」に置き換えます。すると同じ色の形が、左右で違う色に見えます。問いかけ → 縞を消す → 並べて種明かしの動画にします。</p>
+  <p class="lead">背景は2つの画面（横長・正方形は左右、縦長は上下）とも同じ2色の縞。中の形だけ、左（上）は片方の色の縞を、右（下）はもう片方の色の縞を「同じ色」に置き換えます。すると同じ色の形が、2つの画面で違う色に見えます。問いかけ → 縞を消す → 並べて種明かしの動画にします。</p>
 
   <section class="panel">
     <h2>色</h2>
@@ -55,7 +55,7 @@
         </select></div>
       <div><label>背景の縞の色A（左の形に残る色）</label><input id="c1" type="color" value="#0b4d90"></div>
       <div><label>背景の縞の色B（右の形に残る色）</label><input id="c2" type="color" value="#ffe81a"></div>
-      <div><label>中央の形の色（左右共通）</label><input id="c0" type="color" value="#d71e24"></div>
+      <div><label>中央の形の色（2つの画面で共通）</label><input id="c0" type="color" value="#d71e24"></div>
     </div>
     <div class="row" style="margin-top:12px"><button id="rand" type="button" class="sec">🎲 ランダム配色</button></div>
 
@@ -379,7 +379,7 @@ function rebuild() {
   applyShape();
   L.focus = L.focusPt;   // zoom target: a shape boundary near the centre, identical in both panels
   const noun = $('shape').value === 'skull' ? 'ガイコツ' : '形';
-  const q = { dur: 6, f: () => ({ cap: `左右の${noun}は\n同じ色？ 違う色？\n（少し離れて見てみて）`, lines: 1, merge: 0, z: 1 }) };
+  const q = { dur: 6, f: () => ({ cap: `${vertical ? '上と下' : '左右'}の${noun}は\n同じ色？ 違う色？\n（少し離れて見てみて）`, lines: 1, merge: 0, z: 1 }) };
   const think = { dur: 2, f: () => ({ cap: '答えは…', lines: 1, merge: 0, z: 1 }) };
   const end = [
     { dur: 2.5, f: (t, p) => ({ cap: '並べてみると…', lines: 0, merge: ease(p), z: 1 }) },
