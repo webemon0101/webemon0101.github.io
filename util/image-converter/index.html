@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>画像の容量・形式かえるくん</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#4fd1c5;--acc2:#38b2a7;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text],input[type=color]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  input[type=color]{height:38px;padding:2px}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button,a.btn{background:var(--acc);color:#04201d;font-weight:600;border:0;border-radius:8px;padding:9px 16px;font-size:.95rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec,a.btn.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover,a.btn.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  #drop{border:2px dashed var(--line);text-align:center;color:var(--sub);cursor:pointer;padding:34px 16px;transition:.15s}
+  #drop.over,#drop:hover{border-color:var(--acc);color:var(--fg);background:#13282a}
+  #drop b{color:var(--fg)}
+  .item{display:grid;grid-template-columns:84px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+  .item:first-child{border-top:0}
+  .thumb{width:84px;height:64px;object-fit:contain;background:#0b0c10;border-radius:6px}
+  .nm{font-size:.92rem;word-break:break-all}
+  .meta{font-size:.82rem;color:var(--sub)}
+  .good{color:#7ee2a8}.bad{color:#ffb86b}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+  #status{color:var(--sub);font-size:.88rem;min-height:1.3em;margin-top:8px}
+  @media(max-width:560px){.item{grid-template-columns:64px 1fr}.item .act{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>画像の容量・形式かえるくん</h1>
+  <p class="lead">写真や画像の「ファイルサイズ（容量）」「形式（JPEG / PNG / WebP など）」「大きさ（ピクセル）」をまとめて変えます。処理はすべてブラウザ内で行われ、画像はアップロードされません。</p>
+
+  <section id="drop" class="panel">
+    <p style="margin:0"><b>ここに画像をドラッグ＆ドロップ</b>（複数OK）<br>クリックして選ぶ、または Ctrl+V で貼り付け<br>
+    <small>JPEG / PNG / WebP / GIF（1コマ目）/ BMP / SVG など、ブラウザで開ける画像</small></p>
+    <input id="file" type="file" accept="image/*" multiple class="hidden">
+  </section>
+
+  <section class="panel">
+    <h2>変換の設定（変えると、読み込み済みの画像をすぐ作り直します）</h2>
+    <div class="grid">
+      <div><label>出力の形式</label>
+        <select id="fmt">
+          <option value="keep">元と同じ形式</option>
+          <option value="image/jpeg">JPEG（写真向き・軽い）</option>
+          <option value="image/png">PNG（透明OK・劣化なし・重め）</option>
+          <option value="image/webp">WebP（軽くてきれい）</option>
+          <option value="image/avif" id="avifOpt">AVIF（さらに軽い）</option>
+        </select></div>
+      <div><label>画質: <span id="qV">80</span>（高いほどきれいで重い。PNGでは無効）</label><input id="q" type="range" min="5" max="100" step="1" value="80"></div>
+      <div><label>透明部分の色（JPEG にするとき）</label><input id="bg" type="color" value="#ffffff"></div>
+    </div>
+    <div class="grid">
+      <div><label>大きさの変え方</label>
+        <select id="rmode">
+          <option value="none">そのまま</option>
+          <option value="long">長いほうの辺を指定（px）</option>
+          <option value="w">幅を指定（px）</option>
+          <option value="h">高さを指定（px）</option>
+          <option value="pct">倍率で指定（%）</option>
+        </select></div>
+      <div><label>指定の値 <span id="runit">px</span></label><input id="rval" type="number" min="1" max="20000" value="1920"></div>
+      <div><label class="chk" style="margin-top:22px"><input id="noup" type="checkbox" checked> 元より大きくしない</label></div>
+    </div>
+    <div class="grid">
+      <div><label class="chk"><input id="tsOn" type="checkbox"> 容量の目標を決める（自動で画質を調整）</label>
+        <div style="margin-top:6px"><label>目標サイズ（KB 以下）</label><input id="tsKB" type="number" min="5" max="50000" value="500"></div></div>
+      <div><label class="chk" style="margin-top:0"><input id="tsShrink" type="checkbox" checked> 画質を下げても届かないときは、少しずつ縮小する</label>
+        <div class="info" style="margin-top:6px">目標サイズは JPEG / WebP / AVIF で画質を自動調整します。PNG は画質を変えられないので、縮小で近づけます。</div></div>
+      <div><label>ファイル名の末尾</label><input id="suffix" type="text" value="_min"></div>
+    </div>
+    <div class="info">出力すると、撮影場所・日時などのメタデータ（EXIF）は消えます。スマホ写真の向きは、正しい向きに直してから保存します。</div>
+  </section>
+
+  <section class="panel">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">結果</h2>
+      <div class="row">
+        <button id="zip" type="button" disabled>まとめて ZIP で保存</button>
+        <button id="clear" type="button" class="sec" disabled>全部クリア</button>
+      </div>
+    </div>
+    <div id="status"></div>
+    <div id="list" style="margin-top:8px"></div>
+    <div id="empty" class="info">まだ画像がありません。</div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+let items = [], gen = 0, nextId = 1;
+
+const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : b >= 1024 ? (b / 1024).toFixed(1) + ' KB' : b + ' B';
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif' };
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+
+/* ---------- AVIF が使えるか ---------- */
+(() => { const c = document.createElement('canvas'); c.width = c.height = 2; c.toBlob(b => { if (!b || b.type !== 'image/avif') $('avifOpt').remove(); }, 'image/avif', 0.5); })();
+
+/* ---------- 読み込み ---------- */
+const drop = $('drop'), fileIn = $('file');
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files]); });
+fileIn.addEventListener('change', () => { addFiles([...fileIn.files]); fileIn.value = ''; });
+window.addEventListener('paste', e => { const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/')); if (fs.length) addFiles(fs); });
+
+async function loadBitmap(file) {
+  try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch {
+    return await new Promise((res, rej) => {
+      const im = new Image(); const u = URL.createObjectURL(file);
+      im.onload = () => { res(im); }; im.onerror = () => rej(new Error('読み込めません'));
+      im.src = u;
+    });
+  }
+}
+async function addFiles(files) {
+  files = files.filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|svg|avif)$/i.test(f.name));
+  if (!files.length) { setStatus('画像ファイルが見つかりませんでした。', true); return; }
+  for (const f of files) {
+    const it = { id: nextId++, file: f, name: f.name, origSize: f.size, type: f.type, bmp: null, w: 0, h: 0, out: null, error: '' };
+    try {
+      it.bmp = await loadBitmap(f); it.w = it.bmp.width || it.bmp.naturalWidth; it.h = it.bmp.height || it.bmp.naturalHeight;
+      if (!it.w) throw new Error('サイズ不明');
+    } catch (e) {
+      it.error = (f.type === 'image/heic' || /\.hei[cf]$/i.test(f.name)) ? 'HEIC/HEIF はこのブラウザでは開けません（iPhone の設定で「互換性優先」にすると JPEG で撮れます）' : '読み込めませんでした';
+    }
+    items.push(it);
+  }
+  render(); process();
+}
+
+/* ---------- 変換 ---------- */
+function settings() {
+  return { fmt: $('fmt').value, q: +$('q').value / 100, bg: $('bg').value, rmode: $('rmode').value, rval: +$('rval').value || 1, noup: $('noup').checked,
+    ts: $('tsOn').checked, kb: Math.max(1, +$('tsKB').value || 500), shrink: $('tsShrink').checked, suffix: $('suffix').value };
+}
+function calcDims(w, h, s) {
+  let k = 1;
+  if (s.rmode === 'long') k = s.rval / Math.max(w, h);
+  else if (s.rmode === 'w') k = s.rval / w;
+  else if (s.rmode === 'h') k = s.rval / h;
+  else if (s.rmode === 'pct') k = s.rval / 100;
+  if (s.noup && k > 1) k = 1;
+  return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k))];
+}
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+// 大きく縮めるときは半分ずつ縮めると、ギザギザしにくい
+function draw(src, sw, sh, tw, th, fillBg) {
+  let cur = src, cw = sw, ch = sh;
+  while (cw / 2 >= tw && ch / 2 >= th) {
+    const nw = Math.max(tw, Math.floor(cw / 2)), nh = Math.max(th, Math.floor(ch / 2));
+    const c = mkCanvas(nw, nh), g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(cur, 0, 0, nw, nh);
+    cur = c; cw = nw; ch = nh;
+  }
+  const out = mkCanvas(tw, th), g = out.getContext('2d');
+  if (fillBg) { g.fillStyle = fillBg; g.fillRect(0, 0, tw, th); }
+  g.imageSmoothingQuality = 'high'; g.drawImage(cur, 0, 0, tw, th);
+  return out;
+}
+const toBlob = (c, type, q) => new Promise(res => c.toBlob(b => res(b), type, q));
+function outType(it, s) {
+  if (s.fmt !== 'keep') return s.fmt;
+  return ['image/jpeg', 'image/png', 'image/webp'].includes(it.type) ? it.type : 'image/png';
+}
+async function convert(it, s) {
+  const type = outType(it, s), lossy = type !== 'image/png';
+  let [tw, th] = calcDims(it.w, it.h, s);
+  const bg = type === 'image/jpeg' ? s.bg : null, limit = s.kb * 1024;
+  let canvas = draw(it.bmp, it.w, it.h, tw, th, bg), blob;
+  if (!s.ts) {
+    blob = await toBlob(canvas, type, s.q);
+  } else {
+    for (let round = 0; round < 12; round++) {
+      if (lossy) {                                            // 画質を二分探索
+        let lo = 0.05, hi = 0.95, best = null;
+        const top = await toBlob(canvas, type, hi);
+        if (top && top.size <= limit) { best = top; }
+        else {
+          for (let i = 0; i < 7; i++) {
+            const mid = (lo + hi) / 2, b = await toBlob(canvas, type, mid);
+            if (b && b.size <= limit) { best = b; lo = mid; } else hi = mid;
+          }
+        }
+        if (best) { blob = best; break; }
+        blob = await toBlob(canvas, type, 0.05);
+      } else { blob = await toBlob(canvas, type); if (blob && blob.size <= limit) break; }
+      if (!s.shrink) break;
+      tw = Math.max(1, Math.round(tw * 0.85)); th = Math.max(1, Math.round(th * 0.85));
+      if (tw < 16 || th < 16) break;
+      canvas = draw(it.bmp, it.w, it.h, tw, th, bg);
+    }
+  }
+  if (!blob) throw new Error('書き出せませんでした');
+  const realType = blob.type || type, base = it.name.replace(/\.[^.]+$/, '');
+  return { blob, w: tw, h: th, size: blob.size, type: realType, name: `${base}${s.suffix}.${EXT[realType] || 'png'}`, url: URL.createObjectURL(blob), overLimit: s.ts && blob.size > limit, fellBack: realType !== type };
+}
+let timer = 0;
+function schedule() { clearTimeout(timer); timer = setTimeout(process, 250); }
+async function process() {
+  const my = ++gen, s = settings();
+  const todo = items.filter(i => i.bmp);
+  let n = 0;
+  for (const it of todo) {
+    if (my !== gen) return;
+    setStatus(`変換中… ${++n} / ${todo.length}`);
+    try {
+      const o = await convert(it, s);
+      if (my !== gen) { URL.revokeObjectURL(o.url); return; }
+      if (it.out) URL.revokeObjectURL(it.out.url);
+      it.out = o; it.error = '';
+    } catch (e) { it.out = null; it.error = '変換できませんでした：' + (e.message || e); }
+    render();
+  }
+  if (my === gen) {
+    const ok = items.filter(i => i.out), a = ok.reduce((t, i) => t + i.origSize, 0), b = ok.reduce((t, i) => t + i.out.size, 0);
+    setStatus(ok.length ? `完了：${ok.length}枚　合計 ${fmtSize(a)} → ${fmtSize(b)}` : '');
+    render();
+  }
+}
+
+/* ---------- 画面 ---------- */
+function render() {
+  const list = $('list'); list.textContent = '';
+  $('empty').classList.toggle('hidden', items.length > 0);
+  $('zip').disabled = !items.some(i => i.out); $('clear').disabled = !items.length;
+  for (const it of items) {
+    const row = document.createElement('div'); row.className = 'item';
+    const img = document.createElement('img'); img.className = 'thumb'; img.alt = '';
+    if (it.out) img.src = it.out.url; else if (it.bmp) { if (!it.thumb) it.thumb = URL.createObjectURL(it.file); img.src = it.thumb; }
+    const mid = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.out ? it.out.name : it.name;
+    const meta = document.createElement('div'); meta.className = 'meta';
+    if (it.error) { meta.textContent = it.error; meta.classList.add('err'); }
+    else if (it.out) {
+      const r = Math.round((1 - it.out.size / it.origSize) * 100);
+      meta.innerHTML = '';
+      const a = document.createElement('div'); a.textContent = `元：${it.w}×${it.h}px　${fmtSize(it.origSize)}`;
+      const b = document.createElement('div'); b.textContent = `後：${it.out.w}×${it.out.h}px　${fmtSize(it.out.size)}　`;
+      const tag = document.createElement('span'); tag.className = r >= 0 ? 'good' : 'bad'; tag.textContent = r >= 0 ? `${r}% 小さくなりました` : `${-r}% 大きくなりました`;
+      b.appendChild(tag);
+      meta.append(a, b);
+      if (it.out.overLimit) { const w = document.createElement('div'); w.className = 'bad'; w.textContent = '目標サイズに届きませんでした（縮小を許可すると近づけます）'; meta.appendChild(w); }
+      if (it.out.fellBack) { const w = document.createElement('div'); w.className = 'bad'; w.textContent = '選んだ形式に対応していないため、別の形式で保存しました'; meta.appendChild(w); }
+    } else meta.textContent = '変換待ち…';
+    mid.append(nm, meta);
+    const act = document.createElement('div'); act.className = 'act row';
+    if (it.out) { const a = document.createElement('a'); a.className = 'btn'; a.href = it.out.url; a.download = it.out.name; a.textContent = '保存'; act.appendChild(a); }
+    const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'sec'; rm.textContent = '外す';
+    rm.onclick = () => { if (it.out) URL.revokeObjectURL(it.out.url); items = items.filter(x => x !== it); render(); };
+    act.appendChild(rm);
+    row.append(img, mid, act); list.appendChild(row);
+  }
+}
+$('clear').onclick = () => { gen++; items.forEach(i => i.out && URL.revokeObjectURL(i.out.url)); items = []; setStatus(''); render(); };
+
+/* ---------- ZIP（無圧縮・自作） ---------- */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function makeZip(files) {                              // files: [{name, blob}]
+  const enc = new TextEncoder(), parts = [], cent = []; let off = 0;
+  const d = new Date(), dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)), dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate());
+  const used = new Set();
+  for (const f of files) {
+    let name = f.name, k = 1; while (used.has(name)) { name = f.name.replace(/(\.[^.]+)?$/, `_${++k}$1`); } used.add(name);
+    const data = new Uint8Array(await f.blob.arrayBuffer()), nb = enc.encode(name), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, nb.length, true); lh.setUint16(28, 0, true);
+    parts.push(lh.buffer, nb, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
+    cent.push(ch.buffer, nb);
+    off += 30 + nb.length + data.length;
+  }
+  let csize = 0; for (const p of cent) csize += p.byteLength || p.length;
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...cent, end.buffer], { type: 'application/zip' });
+}
+$('zip').onclick = async () => {
+  const fs = items.filter(i => i.out).map(i => ({ name: i.out.name, blob: i.out.blob }));
+  if (!fs.length) return;
+  $('zip').disabled = true; setStatus('ZIP を作っています…');
+  try {
+    const z = await makeZip(fs), u = URL.createObjectURL(z), a = document.createElement('a');
+    a.href = u; a.download = 'images.zip'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 10000); setStatus('ZIP を保存しました。');
+  } catch (e) { setStatus('ZIP を作れませんでした：' + (e.message || e), true); }
+  $('zip').disabled = false;
+};
+
+/* ---------- 設定の変更 ---------- */
+function syncUI() {
+  const m = $('rmode').value; $('rval').disabled = m === 'none';
+  $('runit').textContent = m === 'pct' ? '%' : 'px'; if (m === 'pct' && +$('rval').value > 400) $('rval').value = 50;
+  $('qV').textContent = $('q').value;
+  $('q').disabled = $('tsOn').checked; $('tsKB').disabled = !$('tsOn').checked; $('tsShrink').disabled = !$('tsOn').checked;
+}
+['fmt', 'q', 'bg', 'rmode', 'rval', 'noup', 'tsOn', 'tsKB', 'tsShrink', 'suffix'].forEach(i => $(i).addEventListener('input', () => { syncUI(); schedule(); }));
+syncUI(); render();
+})();
+</script>
+</body>
+</html>
