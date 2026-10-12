@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>HAMZWORKERZ MOVIE MAKER</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; }
+  :root { --bg:#0d1220; --panel:#161d2f; --panel-line:#2a3550; --text:#e8ecf7; --muted:#8f9ac0; --accent:#56c7ff; }
+  html, body { min-height: 100%; }
+  body {
+    background: radial-gradient(1000px 520px at 50% -10%, #1c2a4a 0, transparent 60%), var(--bg);
+    color: var(--text);
+    font-family: "Courier New", ui-monospace, monospace;
+    padding: 7vh 20px 60px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  header { text-align: center; margin-bottom: 44px; }
+  h1 { font-size: clamp(24px, 7vw, 48px); letter-spacing: .1em; color: #fff;
+       text-shadow: 0 0 12px rgba(86,199,255,.55), 0 0 30px rgba(86,199,255,.25); }
+  header p { margin-top: 12px; color: var(--muted); font-size: 13px; letter-spacing: .22em; }
+  .grid { width: 100%; max-width: 760px; display: grid; gap: 18px;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .card { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--panel-line);
+          border-radius: 16px; padding: 22px 22px 20px; text-decoration: none; color: inherit;
+          transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease; }
+  .card:hover, .card:focus-visible { transform: translateY(-4px); border-color: var(--card-accent, var(--accent));
+          box-shadow: 0 12px 32px rgba(0,0,0,.45); outline: none; }
+  .icon { width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center; font-size: 30px;
+          background: rgba(86,199,255,.12); border: 1px solid var(--card-accent, var(--accent)); }
+  .card h2 { margin-top: 16px; font-size: 20px; letter-spacing: .06em; color: var(--card-accent, var(--accent)); }
+  .card .desc { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.6; flex: 1; }
+  .card .play { margin-top: 18px; font-size: 13px; letter-spacing: .18em; }
+  .card .play::after { content: " \25B6"; color: var(--card-accent, var(--accent)); }
+  footer { margin-top: 44px; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>HAMZWORKERZ MOVIE MAKER</h1>
+    <p>SELECT A MAKER</p>
+  </header>
+
+  <main class="grid">
+    <a class="card" style="--card-accent:#ff7ac6" href="illusion-maker/">
+      <div class="icon">👁️</div>
+      <h2>錯視動画メーカー</h2>
+      <p class="desc">写真をドロップするだけで、カラーネガ錯視や格子の着色錯視の「見つめる→種明かし」動画を自動生成。動画として保存もできます。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#ffb347" href="body-illusion/">
+      <div class="icon">🧍</div>
+      <h2>体型錯視メーカー</h2>
+      <p class="desc">人物Aの写真1枚から、太い人／細い人に挟まれたAを並べ、周りを消して重ねる「実は同じ！」動画を自動生成。Shorts向け。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#6fe0c5" href="scanimation-maker/">
+      <div class="icon">🎞️</div>
+      <h2>モアレ錯視メーカー</h2>
+      <p class="desc">連番画像・動画・写真1枚から縞状の静止画を作り、黒い縞をスライドさせると動き出す「スキャニメーション」動画を自動生成。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#7ab8ff" href="motion-aftereffect/">
+      <div class="icon">🌀</div>
+      <h2>運動残効メーカー</h2>
+      <p class="desc">写真を拡大・縮小し続けて10秒見つめた後、静止した写真が逆向きに動いて見える「滝の錯視」動画を自動生成。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#ffd84d" href="illusion-bait/">
+      <div class="icon">😵</div>
+      <h2>動く錯視 動画メーカー</h2>
+      <p class="desc">動いて見える錯視パターンを自動生成し、「動いて見えたら疲れてる？」風の煽りテキストと合わせて動画に。テンプレート・文面の編集つき。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#ff7ac6" href="munker-illusion/">
+      <div class="icon">🎨</div>
+      <h2>ムンカー錯視メーカー</h2>
+      <p class="desc">同じ灰色なのに、重なる縞の色で違う色に見えるムンカー錯視を自動生成。縞を消して並べる種明かし動画つき。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#ffc94d" href="title-contest/">
+      <div class="icon">📚</div>
+      <h2>タイトル募集Shortsメーカー</h2>
+      <p class="desc">書いた本を紹介して「タイトル案をコメント欄へ」と呼びかける縦型動画を作ります。投稿用の文章つき。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#7fa8ff" href="binaural-short/">
+      <div class="icon">🎧</div>
+      <h2>バイノーラルビートShortsメーカー</h2>
+      <p class="desc">左右の耳に違う周波数を流すバイノーラルビートを作り、煽り文句つきの縦型動画（音つき）に書き出します。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#9be000" href="cross-illusion/">
+      <div class="icon">✚</div>
+      <h2>十字の膨らみ錯視メーカー</h2>
+      <p class="desc">市松模様の交点に色違いの十字を置くと、マス目が膨らんで見える錯視。絵を描いて、十字を取り除く種明かし動画を作れます。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#ff4fd8" href="dance-silhouette/">
+      <div class="icon">💃</div>
+      <h2>ダンス・シルエットメーカー</h2>
+      <p class="desc">ダンス動画やウェブカメラから人物だけを切り出し、輪郭線と塗りつぶしの光るシルエットに。残像・ビート連動つき。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#c9a0ff" href="silhouette-illusion/">
+      <div class="icon">🌀</div>
+      <h2>SILHOUETTE ILLUSION</h2>
+      <p class="desc">シルエットの錯視を3Dで見せるツール。</p>
+      <span class="play">OPEN</span>
+    </a>
+
+    <a class="card" style="--card-accent:#4da3ff" href="../util/">
+      <div class="icon">🧰</div>
+      <h2>UTIL（道具）</h2>
+      <p class="desc">動画・画像の変換や切り取り、読み上げなど、動画づくりの下ごしらえに使う道具集はこちら。</p>
+      <span class="play">OPEN</span>
+    </a>
+  </main>
+
+  <footer><a href="../util/" style="color:inherit">UTIL 一覧</a> ・ <a href="../" style="color:inherit">← HAMZWORKERZ GAMES</a></footer>
+</body>
+</html>
