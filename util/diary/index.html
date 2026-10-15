@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#d9822b">
+<title>ひとこと日記</title>
+<style>
+  :root{--bg:#faf6f0;--panel:#fff;--line:#eadfce;--fg:#2c241b;--sub:#8a7a68;--acc:#d9822b;--acc2:#bd6d1e;--accbg:#fbeedd;--bad:#d64545;--sh:0 1px 3px rgba(60,40,10,.08)}
+  @media (prefers-color-scheme:dark){:root{--bg:#171310;--panel:#221c17;--line:#3a3027;--fg:#f0e7dc;--sub:#a89885;--acc:#eea05a;--acc2:#e08d42;--accbg:#3a2a1a;--sh:none}}
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 14px}
+  h1{font-size:20px;margin:0}
+  h1 small{display:block;font-size:12px;font-weight:400;color:var(--sub)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--sh);margin-bottom:16px}
+  button{font:inherit;color:inherit;cursor:pointer}
+  .ib{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 10px;font-size:14px}
+  .pb{border:0;background:var(--acc);color:#fff;border-radius:10px;padding:10px 20px;font-weight:700}
+  .pb:active{background:var(--acc2)}
+  .pb:disabled{opacity:.45;cursor:default}
+  .gb{border:1px solid var(--line);background:transparent;border-radius:10px;padding:10px 16px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  label.lbl{font-size:12px;color:var(--sub);display:block;margin:0 0 4px}
+  input[type=date],input[type=text],input[type=search],textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  input[type=date]{width:auto}
+  textarea{resize:vertical;min-height:130px;line-height:1.7}
+  .edwrap{position:relative}
+  .mic{position:absolute;right:8px;bottom:10px;width:48px;height:48px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:22px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .mic.on{background:var(--bad);animation:pulse 1.1s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 10px rgba(214,69,69,.18)}}
+  textarea.pad{padding-right:64px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-size:14px;white-space:nowrap}
+  .chip.on{background:var(--accbg);border-color:var(--acc);color:var(--acc2);font-weight:700}
+  .chip .n{font-size:11px;color:var(--sub);margin-left:3px}
+  .sec{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+  .sec b{font-size:13px;color:var(--sub);font-weight:600}
+  .link{background:none;border:0;color:var(--acc2);font-size:13px;padding:2px 4px;text-decoration:underline}
+  .day{font-size:13px;color:var(--sub);font-weight:700;margin:18px 2px 6px}
+  .ent{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--sh)}
+  .ent .meta{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12px;color:var(--sub);margin-bottom:4px}
+  .tag{background:var(--accbg);color:var(--acc2);border-radius:999px;padding:1px 8px;font-size:12px}
+  .ent .tx{white-space:pre-wrap;word-break:break-word}
+  .ent .ops{display:flex;gap:4px;justify-content:flex-end;margin-top:2px}
+  .empty{text-align:center;color:var(--sub);padding:30px 10px}
+  .tb{display:flex;gap:8px;margin:10px 0 8px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+  .sheet{background:var(--panel);width:100%;max-width:720px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+  .sheet h3{margin:0 0 8px;font-size:17px}
+  .crow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .crow .nm{flex:1}
+  .crow .cu{font-size:11px;color:var(--sub)}
+  .emo{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+  .emo button{border:1px solid var(--line);background:var(--bg);border-radius:8px;font-size:20px;width:38px;height:38px;padding:0}
+  .emo button.on{border-color:var(--acc);background:var(--accbg)}
+  .note{font-size:12px;color:var(--sub);margin-top:10px}
+  #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,25,20,.92);color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;z-index:99;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .2s}
+  #toast.on{opacity:1}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📔 ひとこと日記<small>今日あったことを、声でも書けます</small></h1>
+    <button class="ib" id="menuBtn">⚙ 設定・バックアップ</button>
+  </header>
+
+  <section class="panel" id="composer">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <div><label class="lbl" for="dt">日付</label><input type="date" id="dt"></div>
+      <div id="editBadge" class="hide tag">編集中</div>
+    </div>
+    <div class="edwrap">
+      <textarea id="text" class="pad" placeholder="今日あったことを書く（🎤を押すと声で入力できます）" aria-label="日記の本文"></textarea>
+      <button class="mic" id="micBtn" type="button" aria-label="声で入力" title="声で入力">🎤</button>
+    </div>
+    <div class="sec" style="margin-top:12px"><b>カテゴリー（いくつでも選べます）</b><button class="link" id="catMgr">追加・編集</button></div>
+    <div class="chips" id="catChips"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="gb hide" id="cancelEdit">やめる</button>
+      <button class="pb" id="saveBtn" disabled>記録する</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec"><b>これまでの記録 <span id="count"></span></b></div>
+    <div class="chips" id="filterChips"></div>
+    <div class="tb"><input type="search" id="q" placeholder="ことばで探す" aria-label="検索"></div>
+    <div id="list"></div>
+  </section>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+/* ---------- カテゴリー（プリセット） ---------- */
+const PRESETS = [
+  ['family','👨‍👩‍👧','家族'],['work','💼','仕事'],['meal','🍽️','食事'],['friend','🧑‍🤝‍🧑','友人'],
+  ['play','🎮','遊び'],['trip','✈️','旅行'],['hobby','🎨','趣味'],['exercise','🏃','運動'],
+  ['study','📚','学習'],['health','🩺','健康'],['chores','🧹','家事'],['lazy','🛋️','だらだら'],
+  ['love','💕','恋人・パートナー'],['kids','🍼','育児'],['pet','🐾','ペット'],['shopping','🛍️','買い物'],
+  ['outing','🚶','お出かけ'],['media','🎬','映画・本・音楽'],['sleep','😴','睡眠'],['money','💰','お金'],
+  ['nature','🌿','天気・自然'],['happy','😊','嬉しいこと'],['worry','😟','悩み'],['thanks','🙏','感謝'],['idea','💡','気づき']
+].map(([id, e, n]) => ({ id, e, n, preset: true }));
+const EMOJIS = ['⭐','❤️','🏠','🚗','🎵','📷','🍺','☕','🎂','🌸','🔥','🌙','🧘','💻','🎯','🏥'];
+
+/* ---------- 保存 ---------- */
+const KEY = 'diaryapp.v1', DKEY = 'diaryapp.draft';
+const blank = () => ({ entries: [], custom: [], hidden: [] });
+let S = load();
+function load() {
+  try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && Array.isArray(j.entries)) return Object.assign(blank(), j); } catch {}
+  return blank();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); return true; } catch { toast('保存できませんでした（ブラウザの設定を確認してください）'); return false; } }
+
+/* ---------- 小道具 ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2600); }
+const pad2 = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+function dayLabel(s) { const [y, m, d] = s.split('-').map(Number); return `${y}年${m}月${d}日（${WD[new Date(y, m - 1, d).getDay()]}）`; }
+const allCats = () => PRESETS.concat(S.custom);
+const catById = id => allCats().find(c => c.id === id);
+const visibleCats = () => allCats().filter(c => !S.hidden.includes(c.id));
+
+/* ---------- 入力欄 ---------- */
+let selCats = new Set(), editingId = null;
+$('dt').value = ymd(new Date());
+try { $('text').value = localStorage.getItem(DKEY) || ''; } catch {}
+syncSave();
+
+function syncSave() { $('saveBtn').disabled = !$('text').value.trim(); }
+$('text').addEventListener('input', () => {
+  syncSave();
+  if (editingId == null) { try { localStorage.setItem(DKEY, $('text').value); } catch {} }
+});
+
+function renderCatChips() {
+  const box = $('catChips');
+  box.innerHTML = visibleCats().map(c => `<button type="button" class="chip${selCats.has(c.id) ? ' on' : ''}" data-id="${c.id}">${esc(c.e)} ${esc(c.n)}</button>`).join('');
+  box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+    const id = b.dataset.id; selCats.has(id) ? selCats.delete(id) : selCats.add(id); b.classList.toggle('on');
+  });
+}
+
+$('saveBtn').onclick = () => {
+  const text = $('text').value.trim(); if (!text) return;
+  const date = $('dt').value || ymd(new Date());
+  const cats = [...selCats];
+  if (editingId != null) {
+    const e = S.entries.find(x => x.id === editingId);
+    if (e) { e.text = text; e.date = date; e.cats = cats; e.edited = Date.now(); }
+  } else {
+    S.entries.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, ts: Date.now(), text, cats });
+  }
+  if (!save()) return;
+  toast(editingId != null ? '更新しました' : '記録しました');
+  resetComposer(); renderAll();
+};
+$('cancelEdit').onclick = () => { resetComposer(); };
+function resetComposer() {
+  editingId = null; selCats = new Set();
+  $('text').value = ''; $('dt').value = ymd(new Date());
+  try { localStorage.removeItem(DKEY); } catch {}
+  $('editBadge').classList.add('hide'); $('cancelEdit').classList.add('hide'); $('saveBtn').textContent = '記録する';
+  syncSave(); renderCatChips();
+}
+function startEdit(id) {
+  const e = S.entries.find(x => x.id === id); if (!e) return;
+  editingId = id; selCats = new Set(e.cats.filter(c => catById(c)));
+  e.cats.forEach(c => { if (catById(c) && S.hidden.includes(c)) S.hidden = S.hidden.filter(h => h !== c); });
+  $('text').value = e.text; $('dt').value = e.date;
+  $('editBadge').classList.remove('hide'); $('cancelEdit').classList.remove('hide'); $('saveBtn').textContent = '更新する';
+  syncSave(); renderCatChips();
+  $('composer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ---------- 声で入力 ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function stopMic() { $('micBtn').classList.remove('on'); }
+$('micBtn').onclick = () => {
+  if (!SR) { toast('このブラウザは声の入力に対応していません（Chrome・Edge・Safari で使えます）'); return; }
+  if (rec) { try { rec.stop(); } catch {} return; }              // もう一度押すと止める
+  try {
+    if (!localStorage.getItem('diaryapp.voiceOK')) {
+      if (!confirm('声の入力は、話した声をブラウザの音声認識サービス（Chrome・Edge では Google など）に送って文字にします。使いますか？')) return;
+      localStorage.setItem('diaryapp.voiceOK', '1');
+    }
+  } catch {}
+  const ta = $('text'), r = new SR(); rec = r;
+  r.lang = 'ja-JP'; r.continuous = true; r.interimResults = true;
+  const base = ta.value, sep = base && !base.endsWith('\n') ? '\n' : '';
+  $('micBtn').classList.add('on'); toast('聞いています… 話してください（もう一度押すと止まります）');
+  r.onresult = e => {
+    let fin = '', tmp = '';
+    for (let i = 0; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) fin += t + (/[。．.！!？?、，,]$/.test(t) ? '' : '。'); else tmp += t;
+    }
+    ta.value = base + sep + fin + tmp; syncSave();
+  };
+  r.onerror = e => {
+    const m = { 'not-allowed': 'マイクの使用が許可されていません（ブラウザの設定を確認してください）', 'service-not-allowed': 'マイクの使用が許可されていません', 'no-speech': '声が聞き取れませんでした', 'audio-capture': 'マイクが見つかりません', 'network': '音声認識の通信に失敗しました' };
+    toast(m[e.error] || ('音声認識のエラー：' + e.error));
+  };
+  r.onend = () => {
+    stopMic(); if (rec === r) rec = null;
+    syncSave();
+    if (editingId == null) { try { localStorage.setItem(DKEY, ta.value); } catch {} }
+  };
+  try { r.start(); } catch { stopMic(); rec = null; toast('音声認識を始められませんでした'); }
+};
+if (!SR) { $('micBtn').title = 'このブラウザは声の入力に対応していません'; $('micBtn').style.opacity = .45; }
+
+/* ---------- 一覧 ---------- */
+let filterCat = null;
+function renderFilter() {
+  const counts = {}; S.entries.forEach(e => e.cats.forEach(c => counts[c] = (counts[c] || 0) + 1));
+  const used = allCats().filter(c => counts[c.id]);
+  if (filterCat && !counts[filterCat]) filterCat = null;
+  $('filterChips').innerHTML = S.entries.length
+    ? `<button class="chip${filterCat ? '' : ' on'}" data-id="">すべて<span class="n">${S.entries.length}</span></button>` +
+      used.map(c => `<button class="chip${filterCat === c.id ? ' on' : ''}" data-id="${c.id}">${esc(c.e)} ${esc(c.n)}<span class="n">${counts[c.id]}</span></button>`).join('')
+    : '';
+  $('filterChips').querySelectorAll('.chip').forEach(b => b.onclick = () => { filterCat = b.dataset.id || null; renderFilter(); renderList(); });
+}
+function renderList() {
+  const q = $('q').value.trim().toLowerCase();
+  let es = S.entries.slice();
+  if (filterCat) es = es.filter(e => e.cats.includes(filterCat));
+  if (q) es = es.filter(e => (e.text + ' ' + e.cats.map(c => (catById(c) || {}).n || '').join(' ')).toLowerCase().includes(q));
+  es.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.ts - a.ts);
+  $('count').textContent = S.entries.length ? `（${es.length}件）` : '';
+  if (!es.length) {
+    $('list').innerHTML = `<div class="empty">${S.entries.length ? '見つかりませんでした' : 'まだ記録がありません。<br>上の欄に、今日あったことをひとこと書いてみましょう。'}</div>`;
+    return;
+  }
+  let html = '', cur = '';
+  for (const e of es) {
+    if (e.date !== cur) { cur = e.date; html += `<div class="day">${dayLabel(cur)}</div>`; }
+    const d = new Date(e.ts), tags = e.cats.map(catById).filter(Boolean).map(c => `<span class="tag">${esc(c.e)} ${esc(c.n)}</span>`).join('');
+    html += `<div class="ent"><div class="meta"><span>${pad2(d.getHours())}:${pad2(d.getMinutes())}</span>${tags}</div>
+      <div class="tx">${esc(e.text)}</div>
+      <div class="ops"><button class="link" data-ed="${e.id}">編集</button><button class="link" data-del="${e.id}" style="color:var(--bad)">削除</button></div></div>`;
+  }
+  $('list').innerHTML = html;
+  $('list').querySelectorAll('[data-ed]').forEach(b => b.onclick = () => startEdit(b.dataset.ed));
+  $('list').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('この記録を削除しますか？')) return;
+    S.entries = S.entries.filter(x => x.id !== b.dataset.del);
+    if (editingId === b.dataset.del) resetComposer();
+    save(); renderAll();
+  });
+}
+$('q').addEventListener('input', renderList);
+function renderAll() { renderFilter(); renderList(); }
+
+/* ---------- モーダル ---------- */
+function openModal(html) {
+  const ov = document.createElement('div'); ov.className = 'ov';
+  ov.innerHTML = `<div class="sheet">${html}</div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov); return ov;
+}
+
+/* カテゴリーの追加・編集 */
+$('catMgr').onclick = openCatMgr;
+function openCatMgr() {
+  let emo = EMOJIS[0];
+  const ov = openModal(`<h3>カテゴリーの追加・編集</h3>
+    <div class="note" style="margin-top:0">自分用のカテゴリーを作れます。チェックを外すと、選ぶ欄から隠せます（過去の記録は消えません）。</div>
+    <div id="cl" style="margin:8px 0"></div>
+    <h3 style="margin-top:16px">自分のカテゴリーを作る</h3>
+    <div class="emo" id="emoBox"></div>
+    <div class="row"><input type="text" id="cn" maxlength="12" placeholder="カテゴリー名（例：推し活）" style="flex:1"><button class="pb" id="ca">追加</button></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="gb" id="cc">閉じる</button></div>`);
+  const list = ov.querySelector('#cl');
+  function draw() {
+    list.innerHTML = allCats().map(c => {
+      const isC = !c.preset;
+      return `<div class="crow"><input type="checkbox" data-v="${c.id}" ${S.hidden.includes(c.id) ? '' : 'checked'} aria-label="表示"><span class="nm">${esc(c.e)} ${esc(c.n)} ${isC ? '<span class="cu">自分用</span>' : ''}</span>${isC ? `<button class="link" data-x="${c.id}" style="color:var(--bad)">削除</button>` : ''}</div>`;
+    }).join('');
+    list.querySelectorAll('[data-v]').forEach(cb => cb.onchange = () => {
+      const id = cb.dataset.v; S.hidden = cb.checked ? S.hidden.filter(h => h !== id) : S.hidden.concat(id);
+      if (!cb.checked) selCats.delete(id);
+      save(); renderCatChips();
+    });
+    list.querySelectorAll('[data-x]').forEach(b => b.onclick = () => {
+      const id = b.dataset.x, c = catById(id), n = S.entries.filter(e => e.cats.includes(id)).length;
+      if (!confirm(`「${c.n}」を削除しますか？` + (n ? `\n${n}件の記録からこのカテゴリーが外れます（本文は消えません）。` : ''))) return;
+      S.custom = S.custom.filter(x => x.id !== id); S.hidden = S.hidden.filter(h => h !== id);
+      S.entries.forEach(e => e.cats = e.cats.filter(x => x !== id)); selCats.delete(id);
+      save(); draw(); renderCatChips(); renderAll();
+    });
+  }
+  const eb = ov.querySelector('#emoBox');
+  function drawEmo() {
+    eb.innerHTML = EMOJIS.map(x => `<button type="button" class="${x === emo ? 'on' : ''}" data-e="${x}">${x}</button>`).join('');
+    eb.querySelectorAll('button').forEach(b => b.onclick = () => { emo = b.dataset.e; drawEmo(); });
+  }
+  ov.querySelector('#ca').onclick = () => {
+    const nm = ov.querySelector('#cn').value.trim();
+    if (!nm) { toast('名前を入れてください'); return; }
+    if (allCats().some(c => c.n === nm)) { toast('同じ名前のカテゴリーがあります'); return; }
+    const id = 'c' + Date.now().toString(36);
+    S.custom.push({ id, e: emo, n: nm }); selCats.add(id);
+    save(); ov.querySelector('#cn').value = ''; draw(); renderCatChips(); toast('追加しました');
+  };
+  ov.querySelector('#cc').onclick = () => ov.remove();
+  draw(); drawEmo();
+}
+
+/* 設定・バックアップ */
+$('menuBtn').onclick = () => {
+  const ov = openModal(`<h3>バックアップ</h3>
+    <div class="note" style="margin-top:0">記録はこの端末のブラウザの中だけに保存されています。ブラウザのデータを消したり、機種変更をすると見られなくなるので、ときどき保存しておくと安心です。</div>
+    <div class="row" style="margin-top:12px">
+      <button class="pb" id="exJ">バックアップを保存（JSON）</button>
+      <button class="gb" id="exT">文章で書き出す（テキスト）</button>
+      <button class="gb" id="im">バックアップから戻す</button>
+      <input type="file" id="imf" accept=".json,application/json" class="hide">
+    </div>
+    <div class="note">「戻す」は、いま入っている記録に足し合わせます（同じ記録は重複しません）。</div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="gb" id="cc">閉じる</button></div>`);
+  const dl = (name, type, body) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  ov.querySelector('#exJ').onclick = () => dl('diary-backup-' + ymd(new Date()) + '.json', 'application/json', JSON.stringify(S));
+  ov.querySelector('#exT').onclick = () => {
+    const es = S.entries.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts);
+    dl('diary-' + ymd(new Date()) + '.txt', 'text/plain', es.map(e => `■ ${dayLabel(e.date)}　${e.cats.map(catById).filter(Boolean).map(c => '#' + c.n).join(' ')}\n${e.text}\n`).join('\n'));
+  };
+  const f = ov.querySelector('#imf');
+  ov.querySelector('#im').onclick = () => f.click();
+  f.onchange = () => {
+    const file = f.files[0]; if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const j = JSON.parse(rd.result); if (!j || !Array.isArray(j.entries)) throw 0;
+        const ids = new Set(S.entries.map(e => e.id)); let add = 0;
+        j.entries.forEach(e => { if (e && e.id && typeof e.text === 'string' && /^\d{4}-\d\d-\d\d$/.test(e.date) && !ids.has(e.id)) { S.entries.push({ id: String(e.id), date: e.date, ts: +e.ts || Date.now(), text: e.text, cats: Array.isArray(e.cats) ? e.cats.map(String) : [] }); add++; } });
+        (j.custom || []).forEach(c => { if (c && c.id && c.n && !S.custom.some(x => x.id === c.id)) S.custom.push({ id: String(c.id), e: String(c.e || '⭐'), n: String(c.n) }); });
+        save(); renderCatChips(); renderAll(); toast(add + '件を戻しました'); ov.remove();
+      } catch { toast('このファイルは読み込めませんでした'); }
+    };
+    rd.readAsText(file);
+  };
+  ov.querySelector('#cc').onclick = () => ov.remove();
+};
+
+renderCatChips(); renderAll();
+</script>
+</body>
+</html>
