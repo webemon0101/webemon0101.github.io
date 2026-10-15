@@ -99,6 +99,8 @@
   .diet .dl{font-size:.85rem;color:var(--sub)}
   .diet .dn{font-size:1.9rem;font-weight:800;line-height:1.2}
   .diet .ds{font-size:.78rem;color:var(--sub)}
+  .mic.on{background:var(--bad);border-color:var(--bad);color:#fff;animation:mp 1s infinite}
+  @keyframes mp{50%{opacity:.55}}
   .multi .mi{border-top:1px solid var(--line);padding:10px 0}
   .multi .mi:first-child{border-top:0}
   .multi .mi .q{font-size:.8rem;color:var(--sub)}
@@ -132,6 +134,7 @@
           <div class="addrow">
             <select id="mealSel" aria-label="食事の区分"></select>
             <input id="q" type="search" placeholder="例：らーめん、ごはん、からあげ" autocomplete="off" enterkeyhint="search">
+            <button class="ib mic" id="micBtn" type="button" aria-label="声で入力" title="声で入力">🎤</button>
           </div>
           <div id="results"></div>
           <div class="row" style="margin-top:10px">
@@ -206,7 +209,8 @@
       <div class="note" style="margin-top:0">
         食品のカロリー・栄養素は、文部科学省「日本食品標準成分表（八訂）増補2023年」から引用しています（食品100gあたり）。<br>
         「料理」の数値は、標準的なレシピ（1人前の材料の量）をもとに、成分表の食品から計算した<b>概算値</b>です。お店や家庭によって大きく変わるので、目安として使ってください。<br>
-        ここで表示する数値は医療上の助言ではありません。
+        ここで表示する数値は医療上の助言ではありません。<br>
+        声での入力（🎤）を使うと、話した声がブラウザの音声認識サービス（Chrome・Edge では Google など）に送られて文字になります。使わなければ、何も送られません。
       </div>
       <div class="row" style="margin-top:12px"><button class="db" id="wipeBtn">すべての記録を消す</button></div>
     </div>
@@ -464,18 +468,73 @@ let qTimer = 0;
 $('q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(renderResults, 90); });
 $('q').addEventListener('keydown', e => { if (e.key === 'Enter') { const f = document.querySelector('#results .it'); if (f) f.click(); } });
 
+/* ---------- 声で入力 ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function listen(onText, btn) {
+  if (!SR) { toast('このブラウザは声の入力に対応していません（Chrome・Edge・Safari で使えます）'); return; }
+  if (rec) { try { rec.stop(); } catch {} return; }                       // もう一度押すと止める
+  try {
+    if (!localStorage.getItem('calapp.voiceOK')) {
+      if (!confirm('声の入力は、話した声をブラウザの音声認識サービス（Chrome・Edge では Google など）に送って文字にします。使いますか？')) return;
+      localStorage.setItem('calapp.voiceOK', '1');
+    }
+  } catch {}
+  const r = new SR(); rec = r; r.lang = 'ja-JP'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+  let text = '';
+  btn.classList.add('on'); toast('聞いています… 話してください');
+  r.onresult = e => { text = Array.from(e.results).map(x => x[0].transcript).join(''); onText(text, false); };
+  r.onerror = e => { const m = { 'not-allowed': 'マイクの使用が許可されていません（ブラウザの設定を確認してください）', 'service-not-allowed': 'マイクの使用が許可されていません', 'no-speech': '声が聞き取れませんでした', 'audio-capture': 'マイクが見つかりません', 'network': '音声認識の通信に失敗しました' }; toast(m[e.error] || ('音声認識のエラー：' + e.error)); };
+  r.onend = () => { btn.classList.remove('on'); if (rec === r) rec = null; if (text.trim()) onText(text.trim(), true); };
+  try { r.start(); } catch (e) { btn.classList.remove('on'); rec = null; toast('音声認識を始められませんでした'); }
+}
+function topScore(q) {
+  const toks = expand(q).split(/[\s　]+/).map(norm).filter(Boolean);
+  if (!toks.length) return 0;
+  let best = 0;
+  for (const it of ITEMS) { let sc = 0, ok = true; for (const t of toks) { const m = matchScore(it, t); if (m <= 0) { ok = false; break; } sc += m; } if (ok) best = Math.max(best, sc / toks.length); }
+  return Math.min(best, 100);
+}
+// 「ごはんと味噌汁と納豆」のようにつなげて話された文を、品目ごとに分ける
+function splitSpoken(text) {
+  const t = text.replace(/[。．.!！?？]/g, '').trim();
+  const chunks = t.split(/[、，,\s　]+|それから|あとは|あと|プラス|＋|\+/).map(x => x.trim()).filter(Boolean);
+  const out = [];
+  for (const c of chunks) {
+    const pos = []; for (let i = 0; i < c.length; i++) if (c[i] === 'と') pos.push(i);
+    if (!pos.length || pos.length > 7) { out.push(...(pos.length > 7 ? c.split('と').filter(Boolean) : [c])); continue; }
+    let best = null;
+    for (let mask = 0; mask < (1 << pos.length); mask++) {                 // どの「と」で切るかを全部試して、いちばん合う切り方を選ぶ
+      const cuts = pos.filter((_, k) => mask & (1 << k)), pieces = []; let from = 0;
+      for (const ct of cuts) { pieces.push(c.slice(from, ct)); from = ct + 1; }
+      pieces.push(c.slice(from));
+      let sc = 0; for (const pc of pieces) sc += pc ? topScore(parseToken(pc).q || pc) : -60;
+      if (!best || sc > best.sc) best = { sc, pieces };
+    }
+    out.push(...best.pieces.filter(Boolean));
+  }
+  return out;
+}
+$('micBtn').onclick = () => listen((t, fin) => {
+  if (!fin) { $('q').value = t; return; }
+  const parts = splitSpoken(t);
+  if (parts.length >= 2) { $('q').value = ''; $('results').textContent = ''; openMulti(parts.join('、')); }
+  else { $('q').value = t; renderResults(); }
+}, $('micBtn'));
+if (!SR) { $('micBtn').title = 'このブラウザは声の入力に対応していません'; $('micBtn').style.opacity = .45; }
+
 /* ---------- まとめて入力 ---------- */
 function parseToken(tok) {
-  let t = tok.trim(), grams = null, serv = null;
+  let t = tok.trim().replace(/[一二三四五六七八九]/g, c => '一二三四五六七八九'.indexOf(c) + 1), grams = null, serv = null;
   let m = t.match(/(\d+(?:\.\d+)?)\s*(?:g|ｇ|グラム)\s*$/i);
   if (m) { grams = +m[1]; t = t.slice(0, m.index); }
   else if ((m = t.match(/[x×＊*]\s*(\d+(?:\.\d+)?)\s*$/i)) || (m = t.match(/(\d+(?:\.\d+)?)\s*(?:人前|杯|個|枚|本|皿|切れ|つ|パック|貫|食|玉|袋|缶)\s*$/))) { serv = +m[1]; t = t.slice(0, m.index); }
   return { q: t.trim(), grams, serv };
 }
-function openMulti() {
+function openMulti(prefill) {
   const sheet = openModal(`<h3>まとめて入力</h3><div class="note" style="margin-top:0">食べたものを「、」や改行で区切って入れてください。量は「200g」「2個」「×2」のように後ろに書けます。<br>例：ごはん、味噌汁、納豆、卵2個、からあげ</div>
     <textarea id="mText" rows="3" placeholder="ごはん、味噌汁、納豆"></textarea>
-    <div class="row" style="margin-top:8px"><button class="sb" id="mGo">候補を出す</button></div>
+    <div class="row" style="margin-top:8px"><button class="sb" id="mGo">候補を出す</button><button class="ib mic" id="mMic" type="button" aria-label="声で入力" title="声で入力">🎤</button></div>
     <div class="multi" id="mList"></div>
     <div class="row" style="margin-top:12px;justify-content:space-between"><button class="gb" id="mCancel">閉じる</button><button class="pb hide" id="mAdd">ぜんぶ追加</button></div>`);
   let rows = [];
@@ -501,14 +560,15 @@ function openMulti() {
     closeModal(); toast(`${n}件を追加しました`);
   };
   $('mCancel').onclick = closeModal;
-  $('mText').focus();
+  $('mMic').onclick = () => listen((t, fin) => { if (fin) { const ta = $('mText'); ta.value = (ta.value.trim() ? ta.value.trim() + '、' : '') + splitSpoken(t).join('、'); $('mGo').click(); } else toast('聞き取り中：' + t); }, $('mMic'));
+  if (prefill) { $('mText').value = prefill; $('mGo').click(); } else $('mText').focus();
 }
 function defaultAmt(c, p) {
   if (c.t === 'food') return p.grams || (p.serv ? p.serv * (({ '12004': 50 })[c.id] || 100) : (S.last[c.key] || 100));
   if (p.grams && c.g) return Math.round(p.grams / c.g * 10) / 10 || 1;
   return p.serv || S.last[c.key] || 1;
 }
-$('multiBtn').onclick = openMulti;
+$('multiBtn').onclick = () => openMulti();
 
 /* ---------- 自分の食品 ---------- */
 function openCustom(existing) {
