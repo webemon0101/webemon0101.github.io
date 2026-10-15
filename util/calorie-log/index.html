@@ -92,6 +92,13 @@
   td,th{padding:7px 6px;border-top:1px solid var(--line);text-align:right}
   th{color:var(--sub);font-weight:600;font-size:.78rem}
   td:first-child,th:first-child{text-align:left}
+  .dietin{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .diet{border-radius:12px;padding:12px;margin-top:10px;text-align:center;background:var(--accbg)}
+  .diet.plus{background:#fbeede}
+  @media (prefers-color-scheme:dark){.diet.plus{background:#43341c}}
+  .diet .dl{font-size:.85rem;color:var(--sub)}
+  .diet .dn{font-size:1.9rem;font-weight:800;line-height:1.2}
+  .diet .ds{font-size:.78rem;color:var(--sub)}
   .multi .mi{border-top:1px solid var(--line);padding:10px 0}
   .multi .mi:first-child{border-top:0}
   .multi .mi .q{font-size:.8rem;color:var(--sub)}
@@ -140,6 +147,8 @@
 
   <!-- ===== グラフ・履歴 ===== -->
   <div id="vStat" class="hide">
+    <div class="card"><h2>ダイエットの成果（体脂肪に換算した目安）</h2><div id="dietStat"></div></div>
+    <div class="card hide" id="wCard"><h2>体重の記録</h2><div id="wChart"></div></div>
     <div class="card"><h2>この7日間のカロリー</h2><div id="chart7"></div><div id="avg" class="note"></div></div>
     <div class="card"><h2>この30日間のカロリー</h2><div id="chart30"></div></div>
     <div class="card"><h2>最近の記録</h2><div id="histTable"></div></div>
@@ -147,6 +156,28 @@
 
   <!-- ===== 設定 ===== -->
   <div id="vSet" class="hide">
+    <div class="card">
+      <h2>あなたのこと（ダイエットの成果の計算に使います）</h2>
+      <div class="row">
+        <div style="flex:1"><label>性別</label><select id="pSex"><option value="">選んでください</option><option value="f">女性</option><option value="m">男性</option></select></div>
+        <div style="flex:1"><label>年齢（歳）</label><input id="pAge" type="number" inputmode="numeric" min="10" max="110"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>身長（cm）</label><input id="pH" type="number" inputmode="decimal" step="0.1"></div>
+        <div style="flex:1"><label>体重（kg）</label><input id="pW" type="number" inputmode="decimal" step="0.1"></div>
+      </div>
+      <label>ふだんの活動量</label><select id="pPal"></select>
+      <div id="pInfo" class="note"></div>
+      <div class="note" style="margin-top:12px;color:var(--fg)">この情報をもとに、1日の目標カロリーを自動で決められます：</div>
+      <div class="row" style="margin-top:6px">
+        <button class="sb" id="tgMaint">体重を維持</button>
+        <button class="sb" id="tgSlow">ゆるやかに減らす（−250）</button>
+        <button class="sb" id="tgMid">しっかり減らす（−500）</button>
+      </div>
+      <div class="note">消費カロリーは、基礎代謝（ミフリン・セントジョール式）に活動量をかけて、運動で追加した分を足した<b>目安</b>です。体脂肪1kgは約7,200kcalとして、「消費 − 摂取」を体脂肪のグラム数に換算します。実際の体重は、水分や食事の量・時間でも毎日変わります。<br>
+      記録が抜けた日は、実際より多く減ったように見えてしまいます。食べたものを全部入れた日だけ「記録は完了」にしてください。<br>
+      成長期（18歳未満）、妊娠中・授乳中、持病のある方は、減量の計算を目安にしないでください。極端な食事制限はせず、気になるときは医師や管理栄養士に相談してください。</div>
+    </div>
     <div class="card">
       <h2>目標</h2>
       <label>1日の目標カロリー（kcal）</label><input id="setTarget" type="number" min="800" max="6000" step="50">
@@ -196,7 +227,7 @@ const MEALS = [['b', '朝食'], ['l', '昼食'], ['d', '夕食'], ['s', '間食'
 const MEALNAME = Object.fromEntries(MEALS);
 
 /* ---------- 保存 ---------- */
-function blank() { return { settings: { target: 2000, salt: 7.5 }, entries: {}, customs: [], usage: {}, last: {} }; }
+function blank() { return { settings: { target: 2000, salt: 7.5 }, entries: {}, customs: [], usage: {}, last: {}, profile: null, days: {} }; }
 function load() {
   try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.entries) return Object.assign(blank(), j, { settings: Object.assign(blank().settings, j.settings || {}) }); } catch {}
   return blank();
@@ -311,7 +342,9 @@ function renderLog() {
       <div><b>${t.c.toFixed(0)}g</b>炭水化物<small>${Math.round(kC / kT * 100)}%</small></div>
       <div><b style="${t.s > S.settings.salt ? 'color:var(--bad)' : ''}">${t.s.toFixed(1)}g</b>食塩<small>目安 ${S.settings.salt}g</small></div>
     </div>
-    <div class="pfcbar" title="エネルギーの割合（たんぱく質・脂質・炭水化物）"><i style="width:${kP / kT * 100}%;background:var(--p)"></i><i style="width:${kF / kT * 100}%;background:var(--f)"></i><i style="width:${kC / kT * 100}%;background:var(--c)"></i></div>`;
+    <div class="pfcbar" title="エネルギーの割合（たんぱく質・脂質・炭水化物）"><i style="width:${kP / kT * 100}%;background:var(--p)"></i><i style="width:${kF / kT * 100}%;background:var(--f)"></i><i style="width:${kC / kT * 100}%;background:var(--c)"></i></div>
+    <div id="dietBox"></div>`;
+  renderDiet();
   const box = $('meals'); box.textContent = '';
   for (const [mk, mn] of MEALS) {
     const es = list.filter(e => e.meal === mk), mt = totals(es);
@@ -530,6 +563,7 @@ function barChart(days, tg) {
 }
 function lastDays(n) { const o = []; for (let i = n - 1; i >= 0; i--) o.push(addDays(ymd(new Date()), -i)); return o; }
 function renderStat() {
+  renderDietStat(); renderWeightChart();
   const d7 = lastDays(7), d30 = lastDays(30), tg = S.settings.target;
   $('chart7').innerHTML = barChart(d7, tg); $('chart30').innerHTML = barChart(d30, tg);
   const rec = d7.filter(d => dayEntries(d).length), avg = rec.length ? rec.reduce((t, d) => t + totals(dayEntries(d)).kcal, 0) / rec.length : 0;
@@ -541,8 +575,131 @@ function renderStat() {
   $('histTable').querySelectorAll('tr[data-d]').forEach(tr => tr.onclick = () => { cur = tr.dataset.d; show('Log'); renderLog(); window.scrollTo(0, 0); });
 }
 
+/* ---------- ダイエット計算 ---------- */
+const PALS = [[1.2, 'ほとんど動かない（座り仕事が中心）'], [1.375, '軽く動く（立ち仕事・たまに運動）'], [1.55, 'ふつう（週3〜5回の運動）'], [1.725, 'よく動く（毎日運動・肉体労働）']];
+const KCAL_PER_G = 7.2;                                              // 体脂肪1gあたり（約7,200kcal/kg）
+function prof() { const p = S.profile; return p && (p.sex === 'm' || p.sex === 'f') && p.age >= 10 && p.h > 0 && p.w > 0 ? p : null; }
+const dayInfo = d => S.days[d] || {};
+function weightAt(d) { let best = null; for (const k in S.days) if (S.days[k].w && k <= d && (best === null || k > best)) best = k; return best ? S.days[best].w : (prof() ? prof().w : 0); }
+function bmrOf(p, w) { return 10 * w + 6.25 * p.h - 5 * p.age + (p.sex === 'm' ? 5 : -161); }
+function expendOf(d) { const p = prof(); return p ? Math.round(bmrOf(p, weightAt(d)) * p.pal + (dayInfo(d).ex || 0)) : null; }
+function balanceOf(d) { const e = expendOf(d); return e === null ? null : e - Math.round(totals(dayEntries(d)).kcal); }   // 正＝体脂肪が減る方向
+const fatG = bal => Math.round(bal / KCAL_PER_G);
+function fmtG(g) { const a = Math.abs(g); return a >= 1000 ? (a / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' : a.toLocaleString() + ' g'; }
+function setDay(patch) { S.days[cur] = Object.assign({}, S.days[cur], patch); save(); updDiet(); renderStat(); }
+function renderDiet() {
+  const box = $('dietBox'); if (!box) return;
+  const p = prof();
+  if (!p) {
+    box.innerHTML = '<div class="note" style="margin-top:12px">身長・体重などを設定に入れると、「体脂肪でいうと何グラム減ったか」が出ます。<button class="sb" id="goProf" style="margin-left:6px">入力する</button></div>';
+    $('goProf').onclick = () => show('Set'); return;
+  }
+  const di = dayInfo(cur);
+  box.innerHTML = `
+    <div class="dietin">
+      <div><label>今日の体重（kg）</label><input id="dW" type="number" inputmode="decimal" step="0.1"></div>
+      <div><label>運動などの追加消費（kcal）</label><input id="dEx" type="number" inputmode="numeric" min="0" step="10"></div>
+    </div>
+    <label class="chk" style="margin-top:10px"><input id="dDone" type="checkbox"> この日の記録は完了（食べたものを全部入れた）</label>
+    <div id="dietRes"></div>`;
+  $('dW').value = di.w || ''; $('dW').placeholder = weightAt(cur) || ''; $('dEx').value = di.ex || ''; $('dDone').checked = !!di.done;
+  $('dW').oninput = () => { const v = parseFloat($('dW').value); setDay({ w: v > 20 && v < 300 ? v : null }); };
+  $('dEx').oninput = () => setDay({ ex: Math.max(0, parseFloat($('dEx').value) || 0) });
+  $('dDone').onchange = () => setDay({ done: $('dDone').checked });
+  updDiet();
+}
+function updDiet() {
+  const res = $('dietRes'); if (!res) return;
+  const p = prof(); if (!p) return;
+  const exp = expendOf(cur), intake = Math.round(totals(dayEntries(cur)).kcal), di = dayInfo(cur);
+  if (p.age < 18) { res.innerHTML = '<div class="note">18歳未満は成長に必要なエネルギーが大きいため、減量の計算は表示しません。</div>'; return; }
+  if (!intake) { res.innerHTML = `<div class="note">消費カロリーの目安：<b>${exp.toLocaleString()} kcal</b>（食べたものを入れると、収支が出ます）</div>`; return; }
+  const bal = exp - intake, g = fatG(bal), bmr = Math.round(bmrOf(p, weightAt(cur)));
+  res.innerHTML = `
+    <div class="diet ${g >= 0 ? '' : 'plus'}">
+      <div class="dl">消費の目安 ${exp.toLocaleString()} − 摂取 ${intake.toLocaleString()} ＝ ${bal >= 0 ? '−' : '＋'}${Math.abs(bal).toLocaleString()} kcal</div>
+      <div class="dn">${g >= 0 ? '▼' : '▲'} ${fmtG(g)}</div>
+      <div class="ds">体脂肪に換算すると${g >= 0 ? '減る' : '増える'}計算です${di.done ? '' : '（暫定：まだ食べるかもしれません）'}</div>
+    </div>
+    ${di.done && intake < bmr * 0.85 ? `<div class="note" style="color:var(--bad)">摂取が基礎代謝（約${bmr} kcal）を大きく下回っています。無理な食事制限は体に負担がかかります。</div>` : ''}`;
+}
+function dietBars(days) {
+  const W = 640, H = 170, L = 8, B = 22, T = 14, n = days.length, bw = (W - L - 8) / n;
+  const vals = days.map(d => { const b = balanceOf(d); return !dayEntries(d).length || b === null ? null : fatG(b); });
+  const mx = Math.max(50, ...vals.map(v => Math.abs(v || 0))), mid = T + (H - T - B) / 2, sc = (H - T - B) / 2 / mx;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="日ごとの体脂肪換算"><line x1="${L}" x2="${W - 4}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>`;
+  days.forEach((d, i) => {
+    const v = vals[i], x = L + i * bw + bw * 0.15, w = bw * 0.7, dt = parseYmd(d);
+    if (v !== null) {
+      const h = Math.max(1, Math.abs(v) * sc), done = dayInfo(d).done;
+      s += `<rect x="${x}" y="${v >= 0 ? mid - h : mid}" width="${w}" height="${h}" rx="3" fill="${v >= 0 ? 'var(--acc)' : 'var(--bad)'}" opacity="${done ? 1 : 0.35}"/>`;
+      s += `<text x="${x + w / 2}" y="${v >= 0 ? mid - h - 3 : mid + h + 10}" font-size="9" text-anchor="middle" fill="var(--fg)">${v}</text>`;
+    }
+    if (n <= 16 || i % 2 === 0) s += `<text x="${x + w / 2}" y="${H - 6}" font-size="9" text-anchor="middle" fill="var(--sub)">${dt.getMonth() + 1}/${dt.getDate()}</text>`;
+  });
+  return s + '</svg>';
+}
+function renderDietStat() {
+  const box = $('dietStat'), p = prof();
+  if (!p) { box.innerHTML = '<div class="note" style="margin-top:0">「設定」で性別・年齢・身長・体重を入れると、ここに成果が出ます。<button class="sb" id="goProf2" style="margin-left:6px">入力する</button></div>'; $('goProf2').onclick = () => show('Set'); return; }
+  if (p.age < 18) { box.innerHTML = '<div class="note" style="margin-top:0">18歳未満は成長に必要なエネルギーが大きいため、減量の計算は表示しません。</div>'; return; }
+  const today = ymd(new Date());
+  const done = Object.keys(S.days).filter(d => S.days[d].done && dayEntries(d).length).sort();
+  const sum = done.reduce((t, d) => t + balanceOf(d), 0), g = fatG(sum);
+  const pend = Object.keys(S.entries).filter(d => S.entries[d].length && !(S.days[d] && S.days[d].done) && d < today);
+  const per = done.length ? Math.round(g / done.length) : 0;
+  let h = `<div style="text-align:center"><div class="dl" style="color:var(--sub);font-size:.85rem">記録を完了にした${done.length}日間の合計</div>
+    <div class="big" style="margin:4px 0;color:${g >= 0 ? 'var(--acc)' : 'var(--bad)'}">${g >= 0 ? '▼' : '▲'} ${fmtG(g)}</div>
+    <div class="note" style="margin-top:0">体脂肪に換算すると${g >= 0 ? '減った' : '増えた'}計算です${done.length ? `（1日あたり約${fmtG(per)}）` : ''}${g >= 200 ? `<br>バター（200g）${(g / 200).toFixed(1)}個ぶん！` : ''}</div></div>`;
+  if (pend.length) h += `<div class="note">記録はあるのに「完了」にしていない日が${pend.length}日あります（完了にした日だけ集計されます）。<button class="sb" id="doneAll" style="margin-left:6px">すべて完了にする</button></div>`;
+  h += '<div style="margin-top:10px">' + dietBars(lastDays(14)) + '</div><div class="note">グラフ：1日ごとの体脂肪換算（g）。うすい色は、まだ「完了」にしていない日です。</div>';
+  box.innerHTML = h;
+  if (pend.length) $('doneAll').onclick = () => { for (const d of pend) S.days[d] = Object.assign({}, S.days[d], { done: true }); save(); renderStat(); renderLog(); toast(`${pend.length}日を完了にしました`); };
+}
+function renderWeightChart() {
+  const pts = Object.keys(S.days).filter(d => S.days[d].w).sort().slice(-60).map(d => [d, S.days[d].w]);
+  $('wCard').classList.toggle('hide', pts.length < 2);
+  if (pts.length < 2) return;
+  const W = 640, H = 200, L = 36, B = 24, T = 14, ws = pts.map(x => x[1]), lo = Math.min(...ws) - 0.5, hi = Math.max(...ws) + 0.5;
+  const t0 = parseYmd(pts[0][0]).getTime(), t1 = parseYmd(pts[pts.length - 1][0]).getTime() || t0 + 1;
+  const x = d => L + (parseYmd(d).getTime() - t0) / Math.max(1, t1 - t0) * (W - L - 12), y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="体重の推移">`;
+  for (const f of [0, 0.5, 1]) { const v = lo + (hi - lo) * f; s += `<line x1="${L}" x2="${W - 4}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 4}" y="${y(v) + 4}" font-size="10" text-anchor="end" fill="var(--sub)">${v.toFixed(1)}</text>`; }
+  s += `<polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="${pts.map(q => x(q[0]) + ',' + y(q[1])).join(' ')}"/>`;
+  pts.forEach(q => { s += `<circle cx="${x(q[0])}" cy="${y(q[1])}" r="3.5" fill="var(--acc)"/>`; });
+  const f = pts[0], l = pts[pts.length - 1], dt = d => `${parseYmd(d).getMonth() + 1}/${parseYmd(d).getDate()}`;
+  s += `<text x="${L}" y="${H - 6}" font-size="10" fill="var(--sub)">${dt(f[0])}</text><text x="${W - 6}" y="${H - 6}" font-size="10" text-anchor="end" fill="var(--sub)">${dt(l[0])}</text></svg>`;
+  const diff = l[1] - f[1];
+  $('wChart').innerHTML = s + `<div class="note">${f[1]}kg → ${l[1]}kg（${diff <= 0 ? '' : '+'}${diff.toFixed(1)}kg）</div>`;
+}
+function profInfo() {
+  const p = prof(), el = $('pInfo');
+  if (!p) { el.textContent = '性別・年齢・身長・体重・活動量を入れてください。'; return; }
+  const bmr = Math.round(bmrOf(p, p.w)), tdee = Math.round(bmr * p.pal), bmi = p.w / Math.pow(p.h / 100, 2);
+  el.innerHTML = `基礎代謝：約<b>${bmr}</b> kcal／1日の消費の目安：約<b>${tdee}</b> kcal／BMI：${bmi.toFixed(1)}`;
+}
+function setTargetFromProfile(delta) {
+  const p = prof(); if (!p) { toast('先に性別・年齢・身長・体重を入れてください'); return; }
+  if (p.age < 18) { toast('18歳未満は自動設定しません'); return; }
+  const tdee = Math.round(bmrOf(p, p.w) * p.pal), floor = p.sex === 'm' ? 1500 : 1200;
+  const v = Math.max(floor, Math.round((tdee + delta) / 10) * 10);
+  S.settings.target = v; save(); $('setTarget').value = v; renderLog(); renderStat();
+  toast(v === Math.round((tdee + delta) / 10) * 10 ? `目標を ${v} kcal にしました` : `${floor} kcal を下回らないよう、${v} kcal にしました`);
+}
+function readProfile() {
+  const sex = $('pSex').value, age = parseInt($('pAge').value, 10), h = parseFloat($('pH').value), w = parseFloat($('pW').value), pal = parseFloat($('pPal').value);
+  S.profile = { sex, age: age || 0, h: h || 0, w: w || 0, pal: pal || 1.375 };
+  save(); profInfo(); renderLog(); renderStat();
+}
+PALS.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; $('pPal').appendChild(o); });
+['pSex', 'pAge', 'pH', 'pW', 'pPal'].forEach(id => $(id).addEventListener('input', readProfile));
+$('tgMaint').onclick = () => setTargetFromProfile(0); $('tgSlow').onclick = () => setTargetFromProfile(-250); $('tgMid').onclick = () => setTargetFromProfile(-500);
+
 /* ---------- 設定・バックアップ ---------- */
-function renderSettings() { $('setTarget').value = S.settings.target; $('setSalt').value = S.settings.salt; renderCustomList(); updPersist(); }
+function renderSettings() {
+  $('setTarget').value = S.settings.target; $('setSalt').value = S.settings.salt; renderCustomList(); updPersist();
+  const p = S.profile || {}; $('pSex').value = p.sex || ''; $('pAge').value = p.age || ''; $('pH').value = p.h || ''; $('pW').value = p.w || ''; $('pPal').value = String(p.pal || 1.375); profInfo();
+}
 $('setTarget').oninput = () => { const v = +$('setTarget').value; if (v >= 800) { S.settings.target = v; save(); renderLog(); renderStat(); } };
 $('setSalt').oninput = () => { const v = +$('setSalt').value; if (v > 0) { S.settings.salt = v; save(); renderLog(); } };
 $('exportBtn').onclick = () => {
