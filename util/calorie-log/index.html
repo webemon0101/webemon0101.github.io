@@ -99,6 +99,15 @@
   .diet .dl{font-size:.85rem;color:var(--sub)}
   .diet .dn{font-size:1.9rem;font-weight:800;line-height:1.2}
   .diet .ds{font-size:.78rem;color:var(--sub)}
+  .vw{position:relative;display:block;min-width:0}
+  .vw input.hasmic,.vw textarea.hasmic{padding-right:44px}
+  .vw select.hasmic{padding-right:68px}
+  .vmic{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:0;background:var(--accbg);color:var(--acc);font-size:1rem;line-height:1;cursor:pointer;padding:0}
+  .vw.sel .vmic{right:30px}
+  .vw.ta .vmic{top:6px;transform:none}
+  .vmic.on{background:var(--bad);color:#fff;animation:mp 1s infinite}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield;appearance:textfield}
   .mic.on{background:var(--bad);border-color:var(--bad);color:#fff;animation:mp 1s infinite}
   @keyframes mp{50%{opacity:.55}}
   .multi .mi{border-top:1px solid var(--line);padding:10px 0}
@@ -132,8 +141,8 @@
         <div class="card">
           <h2>食べたものを追加</h2>
           <div class="addrow">
-            <select id="mealSel" aria-label="食事の区分"></select>
-            <input id="q" type="search" placeholder="例：らーめん、ごはん、からあげ" autocomplete="off" enterkeyhint="search">
+            <select id="mealSel" data-nomic="1" aria-label="食事の区分"></select>
+            <input id="q" data-nomic="1" type="search" placeholder="例：らーめん、ごはん、からあげ" autocomplete="off" enterkeyhint="search">
             <button class="ib mic" id="micBtn" type="button" aria-label="声で入力" title="声で入力">🎤</button>
           </div>
           <div id="results"></div>
@@ -401,7 +410,7 @@ function closeModal() { $('modalRoot').textContent = ''; }
 function openModal(html) {
   const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="sheet">${html}</div>`;
   m.addEventListener('mousedown', e => { if (e.target === m) closeModal(); });
-  $('modalRoot').textContent = ''; $('modalRoot').appendChild(m); return m.querySelector('.sheet');
+  $('modalRoot').textContent = ''; $('modalRoot').appendChild(m); attachMics(m); return m.querySelector('.sheet');
 }
 function openAmount(it, editing) {
   const isFood = it.t === 'food';
@@ -468,6 +477,56 @@ let qTimer = 0;
 $('q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(renderResults, 90); });
 $('q').addEventListener('keydown', e => { if (e.key === 'Enter') { const f = document.querySelector('#results .it'); if (f) f.click(); } });
 
+/* ---------- どの入力欄にも🎤 ---------- */
+const KD = { '〇': 0, '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+function kanjiToNum(k) {
+  if (/^[〇零一二三四五六七八九]+$/.test(k)) return k.split('').map(c => KD[c]).join('');         // 一八〇 → 180
+  let total = 0, cur = 0, num = null;
+  for (const c of k) {
+    if (c in KD) num = KD[c];
+    else if (c === '十') { cur += (num === null ? 1 : num) * 10; num = null; }
+    else if (c === '百') { cur += (num === null ? 1 : num) * 100; num = null; }
+    else if (c === '千') { cur += (num === null ? 1 : num) * 1000; num = null; }
+    else if (c === '万') { total += ((cur + (num || 0)) || 1) * 10000; cur = 0; num = null; }
+  }
+  return String(total + cur + (num || 0));
+}
+function jaNum(str) {
+  let t = String(str).normalize('NFKC').replace(/[,，\s]/g, '').replace(/点|てん/g, '.');
+  t = t.replace(/[〇零一二三四五六七八九十百千万]+/g, m => kanjiToNum(m));
+  const m = t.match(/\d+(?:\.\d+)?/);
+  return m ? parseFloat(m[0]) : NaN;
+}
+function setByVoice(el, text) {
+  const t = text.replace(/[。．、，!！?？]+$/g, '').trim();
+  if (el.tagName === 'SELECT') {
+    const n = norm(t), opts = [...el.options].filter(o => o.value !== '');
+    const hit = opts.find(o => norm(o.textContent).includes(n) || n.includes(norm(o.textContent).replace(/（.*$/, ''))) || opts.find(o => /^(男|おとこ)/.test(t) && /男/.test(o.textContent)) || opts.find(o => /^(女|おんな)/.test(t) && /女/.test(o.textContent));
+    if (!hit) { toast('選べませんでした：' + t); return; }
+    el.value = hit.value;
+  } else if (el.type === 'number') {
+    const v = jaNum(t);
+    if (isNaN(v)) { toast('数字が聞き取れませんでした：' + t); return; }
+    el.value = v;
+  } else el.value = t;
+  el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+  toast('入力しました：' + (el.tagName === 'SELECT' ? el.options[el.selectedIndex].textContent : el.value));
+}
+function attachMics(root) {
+  if (!SR) return;                                                     // 非対応のブラウザでは出さない（検索欄のボタンだけ薄く残す）
+  root.querySelectorAll('input[type=text],input[type=number],input[type=search],textarea,select').forEach(el => {
+    if (el.dataset.mic || el.dataset.nomic) return;
+    el.dataset.mic = '1';
+    const w = document.createElement('span'); w.className = 'vw' + (el.tagName === 'SELECT' ? ' sel' : el.tagName === 'TEXTAREA' ? ' ta' : '');
+    const par = el.parentNode, flexParent = getComputedStyle(par).display === 'flex';
+    if (flexParent) w.style.flex = el.tagName === 'SELECT' ? '0 0 auto' : '1 1 0';
+    par.insertBefore(w, el); w.appendChild(el); el.classList.add('hasmic');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'vmic'; b.textContent = '🎤'; b.title = '声で入力'; b.setAttribute('aria-label', '声で入力');
+    b.onclick = e => { e.preventDefault(); listen((t, fin) => { if (fin) setByVoice(el, t); else toast('聞き取り中：' + t); }, b); };
+    w.appendChild(b);
+  });
+}
+
 /* ---------- 声で入力 ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
@@ -533,7 +592,7 @@ function parseToken(tok) {
 }
 function openMulti(prefill) {
   const sheet = openModal(`<h3>まとめて入力</h3><div class="note" style="margin-top:0">食べたものを「、」や改行で区切って入れてください。量は「200g」「2個」「×2」のように後ろに書けます。<br>例：ごはん、味噌汁、納豆、卵2個、からあげ</div>
-    <textarea id="mText" rows="3" placeholder="ごはん、味噌汁、納豆"></textarea>
+    <textarea id="mText" data-nomic="1" rows="3" placeholder="ごはん、味噌汁、納豆"></textarea>
     <div class="row" style="margin-top:8px"><button class="sb" id="mGo">候補を出す</button><button class="ib mic" id="mMic" type="button" aria-label="声で入力" title="声で入力">🎤</button></div>
     <div class="multi" id="mList"></div>
     <div class="row" style="margin-top:12px;justify-content:space-between"><button class="gb" id="mCancel">閉じる</button><button class="pb hide" id="mAdd">ぜんぶ追加</button></div>`);
@@ -662,6 +721,7 @@ function renderDiet() {
     </div>
     <label class="chk" style="margin-top:10px"><input id="dDone" type="checkbox"> この日の記録は完了（食べたものを全部入れた）</label>
     <div id="dietRes"></div>`;
+  attachMics(box);
   $('dW').value = di.w || ''; $('dW').placeholder = weightAt(cur) || ''; $('dEx').value = di.ex || ''; $('dDone').checked = !!di.done;
   $('dW').oninput = () => { const v = parseFloat($('dW').value); setDay({ w: v > 20 && v < 300 ? v : null }); };
   $('dEx').oninput = () => setDay({ ex: Math.max(0, parseFloat($('dEx').value) || 0) });
@@ -802,7 +862,7 @@ $('dToday').onclick = () => { cur = ymd(new Date()); renderLog(); };
 for (const [k, n] of MEALS) { const o = document.createElement('option'); o.value = k; o.textContent = n; $('mealSel').appendChild(o); }
 $('mealSel').value = defaultMeal();
 
-buildIndex(); renderLog(); renderStat();
+buildIndex(); renderLog(); renderStat(); attachMics(document);
 })();
 </script>
 </body>
