@@ -14,6 +14,7 @@
   body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
   .wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
   header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 14px}
+  .back{display:inline-block;color:var(--acc2);text-decoration:none;font-size:13px;margin-bottom:2px}
   h1{font-size:20px;margin:0}
   h1 small{display:block;font-size:12px;font-weight:400;color:var(--sub)}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--sh);margin-bottom:16px}
@@ -66,7 +67,10 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>📔 ひとこと日記<small>今日あったことを、声でも書けます</small></h1>
+    <div>
+      <a class="back" href="../">← UTIL</a>
+      <h1>📔 ひとこと日記<small>今日あったことを、声でも書けます</small></h1>
+    </div>
     <button class="ib" id="menuBtn">⚙ 設定・バックアップ</button>
   </header>
 
