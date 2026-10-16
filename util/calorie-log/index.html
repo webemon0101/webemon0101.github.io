@@ -203,12 +203,13 @@
         <button class="gb" id="importBtn">読み込む</button>
         <input id="importFile" type="file" accept="application/json,.json" class="hide">
       </div>
-      <div class="note">記録はこの端末のブラウザの中だけに保存されます（どこにも送信されません）。ブラウザのデータを消す、端末を変える、などをすると記録は消えます。時々ファイルに書き出して、OneDrive などに置いておくと安心です。</div>
+      <div class="note">記録はこの端末のブラウザの中だけに保存されます（下の「同期」を設定しない限り、どこにも送信されません）。ブラウザのデータを消す、端末を変える、などをすると記録は消えます。時々ファイルに書き出して、OneDrive などに置いておくと安心です。</div>
       <div class="row" style="margin-top:12px">
         <button class="sb" id="persistBtn">消えにくい保存を要求する</button>
         <span id="persistState" class="note" style="margin:0"></span>
       </div>
     </div>
+    <div id="syncMount"></div>
     <div class="card">
       <h2>自分で登録した食品</h2>
       <div id="customList"></div>
@@ -229,6 +230,7 @@
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
 
+<script src="../shared/sync.js"></script>
 <script src="data.js"></script>
 <script>
 (() => {
@@ -240,14 +242,38 @@ const MEALS = [['b', '朝食'], ['l', '昼食'], ['d', '夕食'], ['s', '間食'
 const MEALNAME = Object.fromEntries(MEALS);
 
 /* ---------- 保存 ---------- */
-function blank() { return { settings: { target: 2000, salt: 7.5 }, entries: {}, customs: [], usage: {}, last: {}, profile: null, days: {} }; }
+function blank() { return { settings: { target: 2000, salt: 7.5 }, entries: {}, customs: [], usage: {}, last: {}, profile: null, days: {}, dayUpd: {}, metaUpd: 0 }; }
 function load() {
   try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.entries) return Object.assign(blank(), j, { settings: Object.assign(blank().settings, j.settings || {}) }); } catch {}
   return blank();
 }
 let S = load();
 let storageOK = true;
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storageOK = false; toast('保存できませんでした（ブラウザの設定を確認してください）'); } }
+function save() {
+  touch();
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storageOK = false; toast('保存できませんでした（ブラウザの設定を確認してください）'); return; }
+  schedulePush();
+}
+
+/* ---------- 同期の下ごしらえ（変わった日・設定を見つけて、更新時刻を付ける） ---------- */
+const kit = window.SyncKit;
+const EMPTYDAY = '[[],null]';
+let snapDay = {}, snapMeta = '', remoteUpd = {}, remoteMetaUpd = 0, pushTimer = 0;
+const dayJSON = d => JSON.stringify([S.entries[d] || [], S.days[d] || null]);
+const metaJSON = () => JSON.stringify([S.settings, S.customs, S.usage, S.last, S.profile]);
+function touch() {
+  const now = Date.now();
+  for (const d of new Set([...Object.keys(S.entries), ...Object.keys(S.days), ...Object.keys(snapDay)])) {
+    const j = dayJSON(d), old = snapDay[d];
+    if (old !== j) { snapDay[d] = j; if (!(old === undefined && j === EMPTYDAY)) S.dayUpd[d] = now; }
+  }
+  const mj = metaJSON(); if (mj !== snapMeta) { snapMeta = mj; S.metaUpd = now; }
+}
+(function seed() {                                                       // すでにある記録は、更新時刻を最小値にして「送る対象」にする
+  for (const d of new Set([...Object.keys(S.entries), ...Object.keys(S.days)])) { if (!S.dayUpd[d] && dayJSON(d) !== EMPTYDAY) S.dayUpd[d] = 1; snapDay[d] = dayJSON(d); }
+  if (!S.metaUpd && (S.customs.length || S.profile || Object.keys(S.usage).length)) S.metaUpd = 1;
+  snapMeta = metaJSON();
+})();
 function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2200); }
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -863,6 +889,57 @@ for (const [k, n] of MEALS) { const o = document.createElement('option'); o.valu
 $('mealSel').value = defaultMeal();
 
 buildIndex(); renderLog(); renderStat(); attachMics(document);
+
+/* ---------- 同期（共有部品 ../shared/sync.js・任意） ---------- */
+async function onDays(docs) {
+  let changed = false;
+  for (const { id: d, raw } of docs) {
+    const upd = raw.upd || 0;
+    remoteUpd[d] = upd;
+    if (upd <= (S.dayUpd[d] || 0)) continue;
+    const u = await kit.unpack(raw); if (!u) continue;
+    const list = Array.isArray(u.entries) ? u.entries : [];
+    if (list.length) S.entries[d] = list; else delete S.entries[d];
+    if (u.day) S.days[d] = u.day; else delete S.days[d];
+    S.dayUpd[d] = upd; snapDay[d] = dayJSON(d);
+    changed = true;
+  }
+  if (changed) { save(); renderLog(); renderStat(); }
+  await pushLocal();
+}
+async function onMeta(raw) {
+  remoteMetaUpd = raw ? (raw.upd || 0) : 0;
+  if (raw && remoteMetaUpd > (S.metaUpd || 0)) {
+    const u = await kit.unpack(raw);
+    if (u) {
+      S.settings = Object.assign(blank().settings, u.settings || {}); S.customs = u.customs || []; S.usage = u.usage || {}; S.last = u.last || {}; S.profile = u.profile || null;
+      S.metaUpd = remoteMetaUpd; snapMeta = metaJSON();
+      save(); buildIndex(); renderLog(); renderStat(); renderSettings();
+    }
+  }
+  await pushLocal();
+}
+function schedulePush() { if (!kit || !kit.isReady()) return; clearTimeout(pushTimer); pushTimer = setTimeout(() => kit.run(pushLocal), 700); }
+async function pushLocal() {
+  if (!kit.isReady()) return;
+  for (const d of Object.keys(S.dayUpd)) {
+    const upd = S.dayUpd[d] || 0;
+    if (upd <= (remoteUpd[d] || 0)) continue;
+    const prev = remoteUpd[d]; remoteUpd[d] = upd;
+    try { await kit.put('cal_days', d, { upd }, { entries: S.entries[d] || [], day: S.days[d] || null }); }
+    catch (err) { remoteUpd[d] = prev; throw err; }
+  }
+  if ((S.metaUpd || 0) > remoteMetaUpd) {
+    const prev = remoteMetaUpd; remoteMetaUpd = S.metaUpd;
+    try { await kit.put('meta', 'calorie', { upd: S.metaUpd }, { settings: S.settings, customs: S.customs, usage: S.usage, last: S.last, profile: S.profile }); }
+    catch (err) { remoteMetaUpd = prev; throw err; }
+  }
+  kit.done();
+}
+if (kit) kit.init({
+  mount: $('syncMount'),
+  onReady: () => { remoteUpd = {}; remoteMetaUpd = 0; kit.watchCol('cal_days', onDays); kit.watchDoc('meta', 'calorie', onMeta); }
+});
 })();
 </script>
 </body>
