@@ -60,6 +60,15 @@
   .note{font-size:12px;color:var(--sub);margin-top:10px}
   #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,25,20,.92);color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;z-index:99;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .2s}
   #toast.on{opacity:1}
+  .sync{margin-top:24px}
+  .sync summary{cursor:pointer;font-weight:700;font-size:14px}
+  .sbody{font-size:14px;margin-top:10px}
+  .sbody ol{padding-left:20px}
+  .sbody li{margin-bottom:8px}
+  .sbody code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 5px;font-size:13px;word-break:break-all}
+  .sbody pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;overflow:auto;margin:6px 0}
+  .sbody a{color:var(--acc2)}
+  .sub{color:var(--sub);font-size:13px}
   .hide{display:none!important}
 </style>
 </head>
@@ -93,6 +102,47 @@
     <div class="tb"><input type="search" id="q" placeholder="ことばで探す" aria-label="検索"></div>
     <div id="list"></div>
   </section>
+
+  <details class="panel sync" id="syncBox">
+    <summary>☁ 同期したい人は（PCとスマホで記録を共有・上級者向け） <span class="tag" id="syncBadge"></span></summary>
+    <div class="sbody">
+      <p>ふだんは同期しなくても使えます。<b>PCとスマホで同じ日記を見たい人だけ</b>、下の手順で<b>自分専用のデータ置き場（Googleの Firebase・無料枠）</b>を作ってつなぎます。記録はあなた自身のFirebaseに保存され、運営者には届きません。所要時間は10分ほどです。</p>
+      <ol>
+        <li><a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebaseコンソール</a>を開き、Googleアカウントでログイン →「プロジェクトを追加」→ 名前（例：my-diary）を入れ、Googleアナリティクスは<b>オフ</b>のまま作成します。</li>
+        <li>左メニュー「構築」→「Authentication」→「始める」→「Sign-in method」→「Google」を<b>有効</b>にして、サポートメールを選んで保存します。</li>
+        <li>Authentication の「設定」→「承認済みドメイン」→「ドメインを追加」で、<code id="hostName"></code> を追加します。<span class="sub">（これを忘れるとログインできません）</span></li>
+        <li>左メニュー「Firestore Database」→「データベースを作成」→ ロケーションは <code>asia-northeast1（東京）</code> → 「<b>本番環境モード</b>」で作成します。</li>
+        <li>Firestore の「ルール」タブの中身を<b>すべて消して</b>、下のルールを貼り付け →「公開」を押します。
+          <pre id="rulesTx">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}</pre>
+          <button class="ib" id="copyRules" type="button">ルールをコピー</button></li>
+        <li>左上の歯車 →「プロジェクトの設定」→「全般」→ 下の「マイアプリ」で<b>ウェブ（&lt;/&gt;）</b>のアイコンを押し、ニックネームを入れて登録します（Hostingのチェックは不要）。表示される <code>firebaseConfig = { … }</code> の部分をコピーします。</li>
+        <li>下の欄に貼り付けて「保存して接続」→「Googleでログイン」を押します。これで同期が始まります。</li>
+        <li>もう1台（スマホ／PC）でも、このページを開いて同じ欄に貼ります。<b>「設定コードをコピー」</b>で作れるコードを貼ってもOKです。同じGoogleアカウントでログインすれば、記録がそろいます。</li>
+      </ol>
+
+      <label class="lbl cfgonly" for="cfgIn">firebaseConfig（または設定コード）</label>
+      <textarea id="cfgIn" rows="5" data-nomic="1" placeholder='const firebaseConfig = {&#10;  apiKey: "…",&#10;  authDomain: "…",&#10;  projectId: "…",&#10;  appId: "…"&#10;};' spellcheck="false" style="min-height:0;font:13px/1.4 ui-monospace,monospace"></textarea>
+      <label class="lbl cfgonly" for="passIn" style="margin-top:8px">暗号化の合言葉（任意）</label>
+      <input type="password" id="passIn" autocomplete="off" placeholder="入れると、本文を暗号化してから保存します">
+      <div class="note cfgonly" style="margin-top:4px">合言葉を決めると、Firebaseに置かれる本文・カテゴリー名はこの端末で暗号化され、あなたにも合言葉なしでは読めません。<b>忘れると復元できません。</b>どの端末にも同じ合言葉を入れてください。<b>最初の接続のときだけ</b>決められます（あとから変更はできません）。</div>
+      <div class="row" style="margin-top:10px">
+        <button class="pb" id="syConnect" type="button">保存して接続</button>
+        <button class="pb hide" id="syLogin" type="button">Googleでログイン</button>
+        <button class="ib hide" id="syNow" type="button">今すぐ同期</button>
+        <button class="ib hide" id="syCode" type="button">設定コードをコピー</button>
+        <button class="ib hide" id="syOff" type="button" style="color:var(--bad)">同期をやめる</button>
+      </div>
+      <div class="note" id="syncStat" role="status">未設定</div>
+      <div class="note">「同期をやめる」は、この端末の同期設定を消すだけです。記録は、この端末にも Firebase にも残ります。</div>
+    </div>
+  </details>
 </div>
 <div id="toast" role="status"></div>
 
@@ -110,13 +160,19 @@ const EMOJIS = ['⭐','❤️','🏠','🚗','🎵','📷','🍺','☕','🎂','
 
 /* ---------- 保存 ---------- */
 const KEY = 'diaryapp.v1', DKEY = 'diaryapp.draft';
-const blank = () => ({ entries: [], custom: [], hidden: [] });
+const blank = () => ({ entries: [], custom: [], hidden: [], setUpd: 0 });
 let S = load();
 function load() {
-  try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && Array.isArray(j.entries)) return Object.assign(blank(), j); } catch {}
-  return blank();
+  let s = blank();
+  try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && Array.isArray(j.entries)) s = Object.assign(blank(), j); } catch {}
+  s.entries.forEach(e => { if (!e.upd) e.upd = e.edited || e.ts || 0; });     // 同期用：更新時刻
+  return s;
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); return true; } catch { toast('保存できませんでした（ブラウザの設定を確認してください）'); return false; } }
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { toast('保存できませんでした（ブラウザの設定を確認してください）'); return false; }
+  schedulePush(); return true;
+}
+const live = () => S.entries.filter(e => !e.del);                              // 削除済み（同期用の印だけ残してある）を除く
 
 /* ---------- 小道具 ---------- */
 const $ = id => document.getElementById(id);
@@ -156,9 +212,10 @@ $('saveBtn').onclick = () => {
   const cats = [...selCats];
   if (editingId != null) {
     const e = S.entries.find(x => x.id === editingId);
-    if (e) { e.text = text; e.date = date; e.cats = cats; e.edited = Date.now(); }
+    if (e) { e.text = text; e.date = date; e.cats = cats; e.upd = Date.now(); }
   } else {
-    S.entries.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, ts: Date.now(), text, cats });
+    const now = Date.now();
+    S.entries.push({ id: 'e' + now.toString(36) + Math.random().toString(36).slice(2, 6), date, ts: now, upd: now, text, cats });
   }
   if (!save()) return;
   toast(editingId != null ? '更新しました' : '記録しました');
@@ -223,24 +280,24 @@ if (!SR) { $('micBtn').title = 'このブラウザは声の入力に対応して
 /* ---------- 一覧 ---------- */
 let filterCat = null;
 function renderFilter() {
-  const counts = {}; S.entries.forEach(e => e.cats.forEach(c => counts[c] = (counts[c] || 0) + 1));
+  const counts = {}; live().forEach(e => e.cats.forEach(c => counts[c] = (counts[c] || 0) + 1));
   const used = allCats().filter(c => counts[c.id]);
   if (filterCat && !counts[filterCat]) filterCat = null;
-  $('filterChips').innerHTML = S.entries.length
-    ? `<button class="chip${filterCat ? '' : ' on'}" data-id="">すべて<span class="n">${S.entries.length}</span></button>` +
+  $('filterChips').innerHTML = live().length
+    ? `<button class="chip${filterCat ? '' : ' on'}" data-id="">すべて<span class="n">${live().length}</span></button>` +
       used.map(c => `<button class="chip${filterCat === c.id ? ' on' : ''}" data-id="${c.id}">${esc(c.e)} ${esc(c.n)}<span class="n">${counts[c.id]}</span></button>`).join('')
     : '';
   $('filterChips').querySelectorAll('.chip').forEach(b => b.onclick = () => { filterCat = b.dataset.id || null; renderFilter(); renderList(); });
 }
 function renderList() {
   const q = $('q').value.trim().toLowerCase();
-  let es = S.entries.slice();
+  let es = live();
   if (filterCat) es = es.filter(e => e.cats.includes(filterCat));
   if (q) es = es.filter(e => (e.text + ' ' + e.cats.map(c => (catById(c) || {}).n || '').join(' ')).toLowerCase().includes(q));
   es.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.ts - a.ts);
-  $('count').textContent = S.entries.length ? `（${es.length}件）` : '';
+  $('count').textContent = live().length ? `（${es.length}件）` : '';
   if (!es.length) {
-    $('list').innerHTML = `<div class="empty">${S.entries.length ? '見つかりませんでした' : 'まだ記録がありません。<br>上の欄に、今日あったことをひとこと書いてみましょう。'}</div>`;
+    $('list').innerHTML = `<div class="empty">${live().length ?'見つかりませんでした' : 'まだ記録がありません。<br>上の欄に、今日あったことをひとこと書いてみましょう。'}</div>`;
     return;
   }
   let html = '', cur = '';
@@ -255,7 +312,8 @@ function renderList() {
   $('list').querySelectorAll('[data-ed]').forEach(b => b.onclick = () => startEdit(b.dataset.ed));
   $('list').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if (!confirm('この記録を削除しますか？')) return;
-    S.entries = S.entries.filter(x => x.id !== b.dataset.del);
+    const t = S.entries.find(x => x.id === b.dataset.del);
+    if (t) { t.del = true; t.text = ''; t.cats = []; t.upd = Date.now(); }       // 他の端末にも削除を伝えるため、印だけ残す
     if (editingId === b.dataset.del) resetComposer();
     save(); renderAll();
   });
@@ -290,14 +348,15 @@ function openCatMgr() {
     }).join('');
     list.querySelectorAll('[data-v]').forEach(cb => cb.onchange = () => {
       const id = cb.dataset.v; S.hidden = cb.checked ? S.hidden.filter(h => h !== id) : S.hidden.concat(id);
+      S.setUpd = Date.now();
       if (!cb.checked) selCats.delete(id);
       save(); renderCatChips();
     });
     list.querySelectorAll('[data-x]').forEach(b => b.onclick = () => {
-      const id = b.dataset.x, c = catById(id), n = S.entries.filter(e => e.cats.includes(id)).length;
+      const id = b.dataset.x, c = catById(id), n = live().filter(e => e.cats.includes(id)).length;
       if (!confirm(`「${c.n}」を削除しますか？` + (n ? `\n${n}件の記録からこのカテゴリーが外れます（本文は消えません）。` : ''))) return;
-      S.custom = S.custom.filter(x => x.id !== id); S.hidden = S.hidden.filter(h => h !== id);
-      S.entries.forEach(e => e.cats = e.cats.filter(x => x !== id)); selCats.delete(id);
+      S.custom = S.custom.filter(x => x.id !== id); S.hidden = S.hidden.filter(h => h !== id); S.setUpd = Date.now();
+      S.entries.forEach(e => { if (e.cats.includes(id)) { e.cats = e.cats.filter(x => x !== id); e.upd = Date.now(); } }); selCats.delete(id);
       save(); draw(); renderCatChips(); renderAll();
     });
   }
@@ -311,7 +370,7 @@ function openCatMgr() {
     if (!nm) { toast('名前を入れてください'); return; }
     if (allCats().some(c => c.n === nm)) { toast('同じ名前のカテゴリーがあります'); return; }
     const id = 'c' + Date.now().toString(36);
-    S.custom.push({ id, e: emo, n: nm }); selCats.add(id);
+    S.custom.push({ id, e: emo, n: nm }); S.setUpd = Date.now(); selCats.add(id);
     save(); ov.querySelector('#cn').value = ''; draw(); renderCatChips(); toast('追加しました');
   };
   ov.querySelector('#cc').onclick = () => ov.remove();
@@ -333,7 +392,7 @@ $('menuBtn').onclick = () => {
   const dl = (name, type, body) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   ov.querySelector('#exJ').onclick = () => dl('diary-backup-' + ymd(new Date()) + '.json', 'application/json', JSON.stringify(S));
   ov.querySelector('#exT').onclick = () => {
-    const es = S.entries.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts);
+    const es = live().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts);
     dl('diary-' + ymd(new Date()) + '.txt', 'text/plain', es.map(e => `■ ${dayLabel(e.date)}　${e.cats.map(catById).filter(Boolean).map(c => '#' + c.n).join(' ')}\n${e.text}\n`).join('\n'));
   };
   const f = ov.querySelector('#imf');
@@ -345,8 +404,8 @@ $('menuBtn').onclick = () => {
       try {
         const j = JSON.parse(rd.result); if (!j || !Array.isArray(j.entries)) throw 0;
         const ids = new Set(S.entries.map(e => e.id)); let add = 0;
-        j.entries.forEach(e => { if (e && e.id && typeof e.text === 'string' && /^\d{4}-\d\d-\d\d$/.test(e.date) && !ids.has(e.id)) { S.entries.push({ id: String(e.id), date: e.date, ts: +e.ts || Date.now(), text: e.text, cats: Array.isArray(e.cats) ? e.cats.map(String) : [] }); add++; } });
-        (j.custom || []).forEach(c => { if (c && c.id && c.n && !S.custom.some(x => x.id === c.id)) S.custom.push({ id: String(c.id), e: String(c.e || '⭐'), n: String(c.n) }); });
+        j.entries.forEach(e => { if (e && e.id && typeof e.text === 'string' && /^\d{4}-\d\d-\d\d$/.test(e.date) && !ids.has(e.id)) { const ts = +e.ts || Date.now(); S.entries.push({ id: String(e.id), date: e.date, ts, upd: +e.upd || ts, del: !!e.del, text: e.text, cats: Array.isArray(e.cats) ? e.cats.map(String) : [] }); if (!e.del) add++; } });
+        (j.custom || []).forEach(c => { if (c && c.id && c.n && !S.custom.some(x => x.id === c.id)) { S.custom.push({ id: String(c.id), e: String(c.e || '⭐'), n: String(c.n) }); S.setUpd = Date.now(); } });
         save(); renderCatChips(); renderAll(); toast(add + '件を戻しました'); ov.remove();
       } catch { toast('このファイルは読み込めませんでした'); }
     };
@@ -354,6 +413,174 @@ $('menuBtn').onclick = () => {
   };
   ov.querySelector('#cc').onclick = () => ov.remove();
 };
+
+/* ---------- 同期（自分のFirebaseにつなぐ・任意） ---------- */
+const SYK = 'diaryapp.sync', FBU = 'https://www.gstatic.com/firebasejs/10.12.2/';
+let SY = (() => { try { return JSON.parse(localStorage.getItem(SYK)) || {}; } catch { return {}; } })();
+const saveSY = () => { try { localStorage.setItem(SYK, JSON.stringify(SY)); } catch { toast('設定を保存できませんでした'); } };
+let fb = null, user = null, ready = false, encMode = false, ckey = null, unsubs = [], remoteUpd = {}, remoteSetUpd = 0, chain = Promise.resolve(), pushTimer = 0, lastSync = 0;
+$('hostName').textContent = location.hostname;
+
+function sst(msg) { $('syncStat').textContent = msg; }
+function syncUI() {
+  const has = !!SY.cfg;
+  $('syConnect').classList.toggle('hide', has);
+  $('syLogin').classList.toggle('hide', !(has && fb && !user));
+  $('syNow').classList.toggle('hide', !ready);
+  $('syCode').classList.toggle('hide', !has);
+  $('syOff').classList.toggle('hide', !has);
+  $('cfgIn').classList.toggle('hide', has); $('passIn').classList.toggle('hide', has);
+  document.querySelectorAll('#syncBox .cfgonly').forEach(el => el.classList.toggle('hide', has));
+  $('syncBadge').textContent = ready ? '● 同期中' : (has ? '△ 未接続' : '');
+}
+function errMsg(e) {
+  const c = (e && e.code) || '';
+  if (/permission-denied/.test(c)) return 'データを読み書きできません。手順5のルールが「公開」されているか確認してください。';
+  if (/unauthorized-domain/.test(c)) return 'このサイトのドメインが承認されていません。手順3を確認してください。';
+  if (/popup-closed|cancelled-popup/.test(c)) return 'ログインが途中で閉じられました。';
+  if (/popup-blocked/.test(c)) return 'ポップアップがブロックされました。許可してもう一度押してください。';
+  if (/operation-not-allowed/.test(c)) return 'Googleログインが有効になっていません。手順2を確認してください。';
+  if (/unavailable|network/.test(c)) return 'ネットワークにつながっていません。つながると自動で同期します。';
+  if (/not-found|failed-precondition/.test(c) && /firestore/i.test(String(e.message))) return 'Firestore が作成されていません。手順4を確認してください。';
+  return '同期でエラー：' + (c || (e && e.message) || e);
+}
+function doneMsg() { lastSync = Date.now(); const d = new Date(lastSync); sst('同期中（' + (user && user.email || '') + '・最終 ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + '）' + (encMode ? '・暗号化あり' : '')); }
+
+/* 暗号化（合言葉 → AES-GCM） */
+const b64 = u => btoa(String.fromCharCode(...u)), unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pass, saltB64) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: unb64(saltB64), iterations: 150000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function enc(obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, ckey, new TextEncoder().encode(JSON.stringify(obj))));
+  return b64(iv) + '.' + b64(ct);
+}
+async function dec(s) {
+  const [iv, ct] = s.split('.');
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, ckey, unb64(ct))));
+}
+const pack = async (base, payload) => encMode ? Object.assign(base, { enc: await enc(payload) }) : Object.assign(base, payload);
+const unpack = async raw => { try { return raw.enc ? await dec(raw.enc) : raw; } catch { return null; } };
+
+/* 読み込み・ログイン */
+async function startSync() {
+  syncUI();
+  if (!SY.cfg) return;
+  sst('読み込み中…');
+  try {
+    const [a, au, fs] = await Promise.all([import(FBU + 'firebase-app.js'), import(FBU + 'firebase-auth.js'), import(FBU + 'firebase-firestore.js')]);
+    const app = a.initializeApp(SY.cfg);
+    fb = { au, fs, auth: au.getAuth(app), db: fs.getFirestore(app) };
+  } catch (e) { sst('同期の部品を読み込めませんでした（ネットワークを確認してください）'); return; }
+  fb.au.onAuthStateChanged(fb.auth, u => {
+    user = u; syncUI();
+    if (u) connect(); else { teardown(); sst('「Googleでログイン」を押してください'); syncUI(); }
+  }, e => sst(errMsg(e)));
+  syncUI();
+}
+function teardown() { unsubs.forEach(f => { try { f(); } catch {} }); unsubs = []; ready = false; remoteUpd = {}; remoteSetUpd = 0; }
+
+async function connect() {
+  teardown(); sst('接続中…');
+  const { doc, getDoc, setDoc, collection, onSnapshot } = fb.fs, uid = user.uid;
+  try {
+    const mref = doc(fb.db, 'users', uid, 'meta', 'crypto'), ms = await getDoc(mref);
+    if (ms.exists() && ms.data().enc) {
+      encMode = true;
+      if (!SY.pass) { sst('このデータは暗号化されています。「同期をやめる」→ もう一度接続して、合言葉を入れてください。'); syncUI(); return; }
+      ckey = await deriveKey(SY.pass, ms.data().salt);
+      try { await dec(ms.data().check); } catch { ckey = null; sst('合言葉が違います。「同期をやめる」→ もう一度接続して入れ直してください。'); syncUI(); return; }
+    } else if (ms.exists()) {
+      encMode = false;
+    } else if (SY.pass) {
+      const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+      ckey = await deriveKey(SY.pass, salt); encMode = true;
+      await setDoc(mref, { enc: true, salt, check: await enc({ ok: 1 }) });
+    } else {
+      encMode = false; await setDoc(mref, { enc: false });
+    }
+    ready = true; syncUI();
+    const run = fn => snap => { chain = chain.then(() => fn(snap)).catch(e => sst(errMsg(e))); };
+    unsubs.push(onSnapshot(collection(fb.db, 'users', uid, 'diary'), run(onEntries), e => sst(errMsg(e))));
+    unsubs.push(onSnapshot(doc(fb.db, 'users', uid, 'meta', 'settings'), run(onSettings), e => sst(errMsg(e))));
+  } catch (e) { ready = false; syncUI(); sst(errMsg(e)); }
+}
+
+/* 受け取り（新しいほうを採用） */
+async function onEntries(snap) {
+  const loc = new Map(S.entries.map(e => [e.id, e])); let changed = false;
+  for (const d of snap.docs) {
+    const raw = d.data(), upd = raw.upd || 0, l = loc.get(d.id);
+    remoteUpd[d.id] = upd;
+    if (l && upd <= (l.upd || 0)) continue;
+    const u = await unpack(raw); if (!u) continue;
+    const ne = { id: d.id, date: raw.date, ts: raw.ts || upd, upd, del: !!raw.del, text: u.text || '', cats: Array.isArray(u.cats) ? u.cats : [] };
+    if (l) Object.assign(l, ne); else S.entries.push(ne);
+    changed = true;
+  }
+  if (changed) { save(); renderCatChips(); renderAll(); }
+  await pushLocal(); doneMsg();
+}
+async function onSettings(snap) {
+  const { doc, setDoc } = fb.fs;
+  remoteSetUpd = snap.exists() ? (snap.data().upd || 0) : 0;
+  if (!snap.exists()) { if ((S.custom.length || S.hidden.length) && !S.setUpd) { S.setUpd = Date.now(); save(); } }
+  else if (remoteSetUpd > (S.setUpd || 0)) {
+    const u = await unpack(snap.data());
+    if (u) { S.custom = u.custom || []; S.hidden = u.hidden || []; S.setUpd = remoteSetUpd; save(); renderCatChips(); renderAll(); }
+  }
+  await pushLocal(); doneMsg();
+}
+
+/* 送り出し */
+function schedulePush() { if (!ready) return; clearTimeout(pushTimer); pushTimer = setTimeout(() => { chain = chain.then(pushLocal).catch(e => sst(errMsg(e))); }, 700); }
+async function pushLocal() {
+  if (!ready) return;
+  const { doc, setDoc } = fb.fs, uid = user.uid;
+  for (const e of S.entries) {
+    if ((e.upd || 0) <= (remoteUpd[e.id] || 0)) continue;
+    const prev = remoteUpd[e.id]; remoteUpd[e.id] = e.upd;
+    try { await setDoc(doc(fb.db, 'users', uid, 'diary', e.id), await pack({ date: e.date, ts: e.ts, upd: e.upd, del: !!e.del }, { text: e.text, cats: e.cats })); }
+    catch (err) { remoteUpd[e.id] = prev; throw err; }
+  }
+  if ((S.setUpd || 0) > remoteSetUpd) {
+    const prev = remoteSetUpd; remoteSetUpd = S.setUpd;
+    try { await setDoc(doc(fb.db, 'users', uid, 'meta', 'settings'), await pack({ upd: S.setUpd }, { custom: S.custom, hidden: S.hidden })); }
+    catch (err) { remoteSetUpd = prev; throw err; }
+  }
+  doneMsg();
+}
+
+/* 設定欄の操作 */
+function parseCfg(t) {
+  t = (t || '').trim();
+  if (t.startsWith('dl1:')) { try { return JSON.parse(atob(t.slice(4))); } catch { return null; } }
+  const raw = {}; for (const m of t.matchAll(/["']?(\w+)["']?\s*:\s*["']([^"']*)["']/g)) raw[m[1]] = m[2];
+  if (!['apiKey', 'authDomain', 'projectId', 'appId'].every(k => raw[k])) return null;
+  const cfg = {}; ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId', 'measurementId'].forEach(k => { if (raw[k]) cfg[k] = raw[k]; });
+  return cfg;
+}
+$('copyRules').onclick = () => copyText($('rulesTx').textContent, 'ルールをコピーしました');
+function copyText(s, msg) {
+  (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(() => toast(msg), () => { prompt('コピーしてください', s); });
+}
+$('syConnect').onclick = () => {
+  const cfg = parseCfg($('cfgIn').value);
+  if (!cfg) { toast('設定を読み取れませんでした。firebaseConfig の { } の中身をそのまま貼ってください'); return; }
+  SY = { cfg, pass: $('passIn').value }; saveSY(); $('cfgIn').value = ''; $('passIn').value = '';
+  startSync();
+};
+$('syLogin').onclick = () => fb.au.signInWithPopup(fb.auth, new fb.au.GoogleAuthProvider()).catch(e => { sst(errMsg(e)); toast(errMsg(e)); });
+$('syNow').onclick = () => { chain = chain.then(pushLocal).then(() => toast('同期しました')).catch(e => { sst(errMsg(e)); toast(errMsg(e)); }); };
+$('syCode').onclick = () => copyText('dl1:' + btoa(JSON.stringify(SY.cfg)), '設定コードをコピーしました（他の端末の欄に貼ってください。合言葉は別に入れます）');
+$('syOff').onclick = () => {
+  if (!confirm('この端末の同期をやめますか？（記録は、この端末にも Firebase にも残ります）')) return;
+  try { localStorage.removeItem(SYK); } catch {}
+  location.reload();
+};
+syncUI(); startSync();
 
 renderCatChips(); renderAll();
 </script>
