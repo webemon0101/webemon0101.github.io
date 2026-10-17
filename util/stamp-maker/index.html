@@ -102,7 +102,8 @@
       <div id="sheetAnimBox" class="hide"><label>1つのスタンプのコマ数（コマ送りの枚数）</label>
         <select id="chFrames"><option>3</option><option selected>4</option><option>5</option><option>6</option></select>
         <label style="margin-top:8px">1枚の絵に並べるスタンプ数（行）</label>
-        <select id="chRowsA"><option>2</option><option selected>3</option><option>4</option></select></div>
+        <select id="chRowsA"><option selected>2</option><option>3</option><option>4</option></select>
+        <div class="note" style="margin-top:4px">行が少ないほど、Gemini の絵は安定します（2行がおすすめ）。</div></div>
       <div><label>文字の入れ方</label>
         <select id="chText"><option value="app" selected>文字は入れない（このアプリで入れる・おすすめ）</option><option value="ai">日本語の文字も Gemini に入れてもらう</option></select></div>
     </div>
@@ -204,12 +205,22 @@
     <h2><span class="step">4</span>書き出し（LINE Creators Market 用の ZIP）</h2>
     <div id="checks" class="note" style="font-size:.9rem"></div>
     <div class="row" style="margin-top:10px"><button id="zipBtn">ZIP を作る</button><span id="zipStatus" class="note" style="margin:0"></span></div>
-    <h3>登録のときに入れる文章の案</h3>
+    <h3>登録のときに入れる文章の案（日本語）</h3>
     <div class="grid">
       <div><label>タイトル（40文字以内の目安）</label><input id="rTitle" type="text"><div class="note"><span id="tLen">0</span>文字</div></div>
       <div><label>説明文（160文字以内の目安）</label><textarea id="rDesc" style="min-height:70px"></textarea><div class="note"><span id="dLen">0</span>文字</div></div>
     </div>
-    <div class="row" style="margin-top:8px"><button class="sec" id="cpTitle">タイトルをコピー</button><button class="sec" id="cpDesc">説明文をコピー</button><button class="sec" id="regen">案を作り直す</button></div>
+    <div class="row" style="margin-top:8px"><button class="sec" id="cpTitle">タイトルをコピー</button><button class="sec" id="cpDesc">説明文をコピー</button></div>
+    <h3>English version（LINE の登録画面で、英語のタイトルと説明も足せます）</h3>
+    <div class="grid">
+      <div><label>キャラクターの英語の名前・呼び方（任意。入れると英語の文に使います）</label><input id="rEnWho" type="text" placeholder="例：Round White Cat"></div>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <div><label>Title（40 characters or less）</label><input id="rTitleEn" type="text"><div class="note"><span id="tLenEn">0</span> chars</div></div>
+      <div><label>Description（160 characters or less）</label><textarea id="rDescEn" style="min-height:70px"></textarea><div class="note"><span id="dLenEn">0</span> chars</div></div>
+    </div>
+    <div class="row" style="margin-top:8px"><button class="sec" id="cpTitleEn">Copy title</button><button class="sec" id="cpDescEn">Copy description</button><button class="sec" id="regen">日本語・英語の案を作り直す</button></div>
+    <div class="note">英語の文は、カテゴリ名などから自動で作った簡単な案です。キャラクターの英語名や、言い回しは、ご自身で直してください。</div>
     <div class="note" style="margin-top:14px">
       <b>登録のしかた（ご自身で行います）</b>：<a href="https://creator.line.me/ja/" target="_blank" rel="noopener" style="color:var(--acc)">LINE Creators Market</a> にログイン → 「スタンプ」→「新規登録」→ 個数を選び、画像をアップロード（ZIP の中身は main.png・tab.png・01.png〜）→ タイトル・説明文などを入れて審査をリクエストします。<br>
       <b>先に確認してください</b>：①写真に写った人の許可がとれているか ②他人のキャラクターや絵を使っていないか ③生成 AI で作った画像の扱いが、LINE の最新のガイドライン（<a href="https://creator.line.me/ja/guideline/" target="_blank" rel="noopener" style="color:var(--acc)">制作ガイドライン</a>）で認められているか。スタンプの規格（370×320px・8/16/24/32/40個・メイン画像240×240px・タブ画像96×74px）は、この記載をもとに自動で整えています。審査の基準は変わることがあるので、最新のものを確認してください。
@@ -240,7 +251,7 @@ function renderCats() {
   const box = $('cats'); box.textContent = '';
   for (const c of Object.keys(LIB)) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (catSel.has(c) ? ' on' : ''); b.textContent = c;
-    b.onclick = () => { catSel.has(c) ? catSel.delete(c) : catSel.add(c); renderCats(); fillPhrases(); };
+    b.onclick = () => { catSel.has(c) ? catSel.delete(c) : catSel.add(c); renderCats(); fillPhrases(); if (!regDirty) suggestText(); };
     box.appendChild(b);
   }
 }
@@ -265,16 +276,18 @@ $('mkPrompt').onclick = () => {
   const withText = $('chText').value === 'ai', list = phrasesList();
   if (!list.length) { $('prompts').innerHTML = '<div class="note err">言葉が空です。カテゴリを選ぶか、言葉を入力してください。</div>'; return; }
   const box = $('prompts'); box.textContent = '';
-  const sheets = Math.ceil(list.length / per);
+  const sheets = Math.ceil(list.length / per), baseN = Math.floor(list.length / sheets), extraN = list.length % sheets;   // できるだけ均等に分ける（最後のシートだけ極端に少なくならないように）
+  let from = 0;
   for (let s = 0; s < sheets; s++) {
-    const items = list.slice(s * per, (s + 1) * per);
+    const size = baseN + (s < extraN ? 1 : 0), items = list.slice(from, from + size); from += size;
     const lines = animP
       ? items.map((p, i) => `${i + 1}行目「${p}」：${HINT[p] || 'その言葉の気持ちが伝わる表情とポーズ'}。コマ送り：1コマ目は基本の姿勢。${MOVE_TXT[autoMotion(p).motion] || MOVE_TXT.none}の様子を、左から右へ${K}コマで順番に描く。目や口の形も、動きに合わせて少しずつ変える。最後のコマは、1コマ目に自然につながる姿にする。`).join('\n')
       : items.map((p, i) => `${i + 1}. 「${p}」：${HINT[p] || 'その言葉の気持ちが伝わる表情とポーズ'}`).join('\n');
-    const text = animP ? `LINEの「動くスタンプ」用の、コマ送りのイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${K}列×縦${items.length}行の格子状。1行が1つのスタンプのコマ送りで、左から右へ時間の順に${K}コマ並べる。全部のコマで、キャラクターは同じ大きさ・同じ位置（マスの中央）に描く。マスのあいだは十分にあけて、はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '文字は入れない（言葉はあとから別に入れます）。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各行の内容（上から下へ）】\n${lines}\n\n全部のコマで、キャラクターの見た目（顔・服・色・線の太さ）は同じにしてください。変えるのは、表情とポーズだけです。` : `LINEスタンプ用のイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${cols}列×縦${rows}行の格子状に、全部で${items.length}個のイラストを並べる。1つのマスに1つの絵。絵と絵のあいだは十分にあけて、重ならない・はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。キャラクターの外側にも、同じ色以外は置かない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '各絵の下に、指定の日本語の言葉を、読みやすい大きな文字で入れる。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各マスの内容（左上から右へ、上から下へ）】\n${lines}\n\n同じキャラクターが全部のマスで同じ見た目になるようにしてください。`;
+    const text = animP ? `LINEの「動くスタンプ」用の、コマ送りのイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${K}列×縦${items.length}行の格子状。1行が1つのスタンプのコマ送りで、左から右へ時間の順に${K}コマ並べる。全部のコマで、キャラクターは同じ大きさ・同じ位置（マスの中央）に描く。マスのあいだは十分にあけて、はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '文字は入れない（言葉はあとから別に入れます）。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各行の内容（上から下へ）】\n${lines}\n\n全部のコマで、キャラクターの見た目（顔・服・色・線の太さ）は同じにしてください。変えるのは、表情とポーズだけです。` : `LINEスタンプ用のイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${cols}列×縦${Math.ceil(items.length / cols)}行の格子状に、全部で${items.length}個のイラストを並べる。1つのマスに1つの絵。絵と絵のあいだは十分にあけて、重ならない・はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。キャラクターの外側にも、同じ色以外は置かない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '各絵の下に、指定の日本語の言葉を、読みやすい大きな文字で入れる。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各マスの内容（左上から右へ、上から下へ）】\n${lines}\n\n同じキャラクターが全部のマスで同じ見た目になるようにしてください。`;
     if (animP && s === 0) { $('gCols').value = K; $('gRows').value = items.length; $('inMode').value = 'frames'; $('inMode').onchange(); }
+    if (animP && s > 0 && items.length !== (+$('gRows').value)) { /* 行数が違うシートは、取り込むときに行数を変える（上に表示） */ }
     const wrap = document.createElement('div'); wrap.style.marginTop = '12px';
-    wrap.innerHTML = `<div class="row"><b>シート ${s + 1} / ${sheets}</b><button class="sec">コピー</button></div><div class="prompt"></div>`;
+    wrap.innerHTML = `<div class="row"><b>シート ${s + 1} / ${sheets}</b><span class="note" style="margin:0">（${animP ? `取り込むときの設定：${K}列 × ${items.length}行` : `${items.length}個`}）</span><button class="sec">コピー</button></div><div class="prompt"></div>`;
     wrap.querySelector('.prompt').textContent = text;
     wrap.querySelector('button').onclick = async e => { try { await navigator.clipboard.writeText(text); } catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } e.target.textContent = 'コピーしました'; setTimeout(() => e.target.textContent = 'コピー', 1500); };
     box.appendChild(wrap);
@@ -519,7 +532,7 @@ function setMode(m) {
   $('inMode').onchange();
   $('big').width = LW; $('big').height = LH; $('big').style.maxWidth = LW + 'px';
   $('bigNote').textContent = `${LW}×${LH}px の実寸の見本です。余白（約10px）は、はみ出さないように自動で守ります。`;
-  fillPhrases(); renderAll();
+  fillPhrases(); renderAll(); if (typeof regDirty !== 'undefined' && !regDirty) suggestText();
 }
 $('modeStatic').onclick = () => setMode('static'); $('modeAnim').onclick = () => setMode('anim');
 function renderGrid() {
@@ -616,15 +629,31 @@ $('eDel').onclick = () => { if (cur()) { stamps.splice(sel, 1); if (mainIdx >= s
 
 /* ===================== 登録用の文章 ===================== */
 function suggestText() {
-  const cats = [...catSel].join('・') || 'あいさつ', who = ($('chDesc').value.trim().split(/[。\n]/)[0] || '').slice(0, 14);
-  $('rTitle').value = `${who ? who + 'の' : ''}毎日つかえる${cats}スタンプ`.slice(0, 40);
-  $('rDesc').value = `${who ? who + 'の' : ''}スタンプです。${cats}など、毎日のトークで使いやすい言葉をそろえました。ふだんのやりとりに、ぜひ使ってください。`.slice(0, 160);
+  const anim = MODE === 'anim', cats = [...catSel].join('・') || 'あいさつ', who = ($('chDesc').value.trim().split(/[。\n]/)[0] || '').slice(0, 14);
+  $('rTitle').value = `${who ? who + 'の' : ''}毎日つかえる${anim ? '動く' : ''}${cats}スタンプ`.slice(0, 40);
+  $('rDesc').value = `${who ? who + 'の' : ''}${anim ? '動く' : ''}スタンプです。${cats}など、毎日のトークで使いやすい言葉をそろえました。ふだんのやりとりに、ぜひ使ってください。`.slice(0, 160);
+  // English
+  const en = [...catSel].map(c => CATEN[c]).filter(Boolean), enList = en.length ? en : ['Greetings'], enWho = $('rEnWho').value.trim();
+  const joined = enList.length <= 2 ? enList.join(' & ') : enList.slice(0, 2).join(', ') + ' & more';
+  const cut = (t, n) => { if (t.length <= n) return t; const c = t.slice(0, n + 1), i = c.lastIndexOf(' '); return (i > n * 0.6 ? c.slice(0, i) : t.slice(0, n)).replace(/[ ,&]+$/, ''); };
+  const mkTitle = names => `${anim ? 'Animated ' : ''}${enWho ? enWho + ' ' : ''}${names} Stickers`;
+  let tEn = mkTitle(joined); if (tEn.length > 40) tEn = mkTitle(enList[0]); if (tEn.length > 40) tEn = mkTitle('').replace('  ', ' '); if (tEn.length > 40) tEn = cut(tEn, 40);
+  $('rTitleEn').value = tEn;
+  $('rDescEn').value = cut(`${enWho ? 'Stickers featuring ' + enWho + '. ' : 'Cute stickers for everyday chats. '}${anim ? 'Animated! ' : ''}Handy phrases for ${enList.slice(0, 3).join(', ').toLowerCase()} and more. Perfect for your daily conversations!`, 160);
   cnt();
 }
-function cnt() { $('tLen').textContent = [...$('rTitle').value].length; $('dLen').textContent = [...$('rDesc').value].length; $('tLen').className = [...$('rTitle').value].length > 40 ? 'err' : ''; $('dLen').className = [...$('rDesc').value].length > 160 ? 'err' : ''; }
-$('rTitle').oninput = cnt; $('rDesc').oninput = cnt; $('regen').onclick = suggestText;
+const CATEN = { 'あいさつ': 'Greetings', '励まし': 'Encouragement', '謝罪': 'Apologies', '感情': 'Emotions', '寄り添い': 'Comfort', '返事・日常': 'Everyday Replies', 'お祝い': 'Celebrations' };
+let regDirty = false;
+function cnt() {
+  const L = (id, v, max) => { const n = [...v].length; $(id).textContent = n; $(id).className = n > max ? 'err' : ''; };
+  L('tLen', $('rTitle').value, 40); L('dLen', $('rDesc').value, 160); L('tLenEn', $('rTitleEn').value, 40); L('dLenEn', $('rDescEn').value, 160);
+}
+['rTitle', 'rDesc', 'rTitleEn', 'rDescEn'].forEach(i => $(i).oninput = () => { regDirty = true; cnt(); });
+$('rEnWho').oninput = () => { if (!regDirty) suggestText(); };
+$('regen').onclick = () => { regDirty = false; suggestText(); };
 async function copyText(v, btn) { try { await navigator.clipboard.writeText(v); } catch { const ta = document.createElement('textarea'); ta.value = v; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } const o = btn.textContent; btn.textContent = 'コピーしました'; setTimeout(() => btn.textContent = o, 1500); }
 $('cpTitle').onclick = e => copyText($('rTitle').value, e.target); $('cpDesc').onclick = e => copyText($('rDesc').value, e.target);
+$('cpTitleEn').onclick = e => copyText($('rTitleEn').value, e.target); $('cpDescEn').onclick = e => copyText($('rDescEn').value, e.target);
 
 /* ===================== ZIP書き出し ===================== */
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
