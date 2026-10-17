@@ -97,8 +97,12 @@
     <div class="grid" style="margin-top:12px">
       <div><label>スタンプの個数</label>
         <select id="chCount"><option>8</option><option selected>16</option><option>24</option><option>32</option><option>40</option></select></div>
-      <div><label>1枚の絵（シート）に並べる数</label>
+      <div id="sheetStaticBox"><label>1枚の絵（シート）に並べる数</label>
         <select id="chSheet"><option value="6">6個（3列×2行）</option><option value="8" selected>8個（4列×2行）</option><option value="9">9個（3列×3行）</option><option value="12">12個（4列×3行）</option><option value="16">16個（4列×4行）</option></select></div>
+      <div id="sheetAnimBox" class="hide"><label>1つのスタンプのコマ数（コマ送りの枚数）</label>
+        <select id="chFrames"><option>3</option><option selected>4</option><option>5</option><option>6</option></select>
+        <label style="margin-top:8px">1枚の絵に並べるスタンプ数（行）</label>
+        <select id="chRowsA"><option>2</option><option selected>3</option><option>4</option></select></div>
       <div><label>文字の入れ方</label>
         <select id="chText"><option value="app" selected>文字は入れない（このアプリで入れる・おすすめ）</option><option value="ai">日本語の文字も Gemini に入れてもらう</option></select></div>
     </div>
@@ -107,7 +111,7 @@
     <div class="note" id="phraseInfo"></div>
     <div class="row" style="margin-top:10px"><button id="mkPrompt">指示文を作る</button></div>
     <div id="prompts"></div>
-    <div class="note">使い方：Gemini（gemini.google.com）を別のタブで開き、写真やイラストを添付して、指示文を貼り付けます。できた絵を保存（またはコピー）して、下の「2」に入れてください。同じキャラクターにそろえるコツ：最初に「このキャラクターの基本の絵」を作ってもらい、そのあとの指示では「この子で」と続けます。</div>
+    <div class="note">使い方：Gemini（gemini.google.com）を別のタブで開き、写真やイラストを添付して、指示文を貼り付けます。できた絵を保存（またはコピー）して、下の「2」に入れてください。同じキャラクターにそろえるコツ：最初に「このキャラクターの基本の絵」を作ってもらい、そのあとの指示では「この子で」と続けます。<br>「動くスタンプ」を選んでいるときは、1つのスタンプにつき数コマの「コマ送り」を描いてもらう指示文になります（1行＝1スタンプ、左から右へ時間の順）。できたシートは、下の「2」で「コマ送りシート」を選んで入れてください。</div>
   </section>
 
   <!-- ===== STEP 2 ===== -->
@@ -119,9 +123,10 @@
         <select id="inMode">
           <option value="auto">シート（複数の絵）→ 自動で見つけて切り分ける</option>
           <option value="grid">シート（複数の絵）→ 格子で等分する</option>
+          <option value="frames">コマ送りシート（1行＝1スタンプ、左→右にコマ送り）→ 行と列で切り分ける</option>
           <option value="one">1枚だけの絵</option>
         </select></div>
-      <div id="gridBox" class="hide"><label>格子の列数 × 行数</label>
+      <div id="gridBox" class="hide"><label>列数（コマ数） × 行数（スタンプ数）</label>
         <div class="row"><input id="gCols" type="number" min="1" max="8" value="4" style="width:80px"> × <input id="gRows" type="number" min="1" max="8" value="2" style="width:80px"></div></div>
       <div><label>背景の色</label>
         <select id="inBg"><option value="auto">自動（四隅の色）</option><option value="#00ff00">緑 #00FF00</option><option value="#ffffff">白</option><option value="#ff00ff">マゼンタ</option><option value="none">すでに透明（何もしない）</option></select></div>
@@ -129,7 +134,7 @@
       <div><label>絵のふちをけずる: <span id="eroV">1</span>px</label><input id="ero" type="range" min="0" max="4" value="1"></div>
       <div><label>近い絵をひとまとめにする距離: <span id="gapV">24</span>px</label><input id="gap" type="range" min="4" max="80" value="24"></div>
     </div>
-    <div class="row" style="margin-top:10px"><label class="chk"><input id="autoText" type="checkbox" checked> 入れた順に、上の「言葉」を自動でつける</label></div>
+    <div class="row" style="margin-top:10px"><label class="chk"><input id="autoText" type="checkbox" checked> 入れた順に、上の「言葉」を自動でつける</label><label class="chk hide" id="alignBox"><input id="alignBottom" type="checkbox"> コマの足もとの位置をそろえる（コマがガタつくときに）</label></div>
     <div id="inStatus" class="note"></div>
   </section>
 
@@ -169,6 +174,7 @@
         <div class="note" id="edHint">上のスタンプを選ぶと、ここで直せます。</div>
         <div id="edForm" class="hide">
           <label>言葉（改行で2行にできます）</label><textarea id="eText" style="min-height:60px"></textarea>
+          <div id="frWrap" class="hide" style="margin-top:8px"><label>コマ（左から順に再生されます。静止画では1コマ目を使います）</label><div id="frStrip" class="pieces"></div></div>
           <div class="row" style="margin-top:8px"><span class="note" style="margin:0">文字の位置</span>
             <button class="sec" data-pos="b">下</button><button class="sec" data-pos="t">上</button><button class="sec" data-pos="c">中央</button><button class="sec" data-pos="n">なし</button></div>
           <div class="grid" style="margin-top:8px">
@@ -250,18 +256,23 @@ $('chCount').onchange = () => { fillPhrases(); renderChecks(); };
 $('phrases').oninput = phraseInfo;
 
 /* ===================== 指示文 ===================== */
+const MOVE_TXT = { wave: '手を上げて、左右に振る動き', bounce: '少しかがんで、ジャンプして、着地する動き', bow: '頭を下げて、また戻る動き', sway: '体がゆっくり左右にゆれる動き', pulse: '目がキラキラして、胸がドキドキとふくらむ動き', shake: '体がぷるぷる震えて、表情が変わる動き', surprise: '目が丸くなり、口が開いて、飛び上がる動き', droop: '肩が落ちて、うつむいて、涙ぐむ動き', float: 'ふわっとゆれて、やさしくほほえむ動き', turn: 'くるっと向きが変わる動き', none: '表情が少しずつ変わる動き' };
 $('mkPrompt').onclick = () => {
   const desc = $('chDesc').value.trim() || '（ここにキャラクターの説明を書いてください）', style = $('chStyle').value;
   const bgText = $('chBg').selectedOptions[0].textContent;
-  const per = +$('chSheet').value, cols = per === 6 || per === 9 ? 3 : 4, rows = Math.ceil(per / cols);
+  const animP = MODE === 'anim', K = +$('chFrames').value, R = +$('chRowsA').value;
+  const per = animP ? R : +$('chSheet').value, cols = animP ? K : (per === 6 || per === 9 ? 3 : 4), rows = animP ? R : Math.ceil(per / cols);
   const withText = $('chText').value === 'ai', list = phrasesList();
   if (!list.length) { $('prompts').innerHTML = '<div class="note err">言葉が空です。カテゴリを選ぶか、言葉を入力してください。</div>'; return; }
   const box = $('prompts'); box.textContent = '';
   const sheets = Math.ceil(list.length / per);
   for (let s = 0; s < sheets; s++) {
     const items = list.slice(s * per, (s + 1) * per);
-    const lines = items.map((p, i) => `${i + 1}. 「${p}」：${HINT[p] || 'その言葉の気持ちが伝わる表情とポーズ'}`).join('\n');
-    const text = `LINEスタンプ用のイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${cols}列×縦${rows}行の格子状に、全部で${items.length}個のイラストを並べる。1つのマスに1つの絵。絵と絵のあいだは十分にあけて、重ならない・はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。キャラクターの外側にも、同じ色以外は置かない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '各絵の下に、指定の日本語の言葉を、読みやすい大きな文字で入れる。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各マスの内容（左上から右へ、上から下へ）】\n${lines}\n\n同じキャラクターが全部のマスで同じ見た目になるようにしてください。`;
+    const lines = animP
+      ? items.map((p, i) => `${i + 1}行目「${p}」：${HINT[p] || 'その言葉の気持ちが伝わる表情とポーズ'}。コマ送り：1コマ目は基本の姿勢。${MOVE_TXT[autoMotion(p).motion] || MOVE_TXT.none}の様子を、左から右へ${K}コマで順番に描く。目や口の形も、動きに合わせて少しずつ変える。最後のコマは、1コマ目に自然につながる姿にする。`).join('\n')
+      : items.map((p, i) => `${i + 1}. 「${p}」：${HINT[p] || 'その言葉の気持ちが伝わる表情とポーズ'}`).join('\n');
+    const text = animP ? `LINEの「動くスタンプ」用の、コマ送りのイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${K}列×縦${items.length}行の格子状。1行が1つのスタンプのコマ送りで、左から右へ時間の順に${K}コマ並べる。全部のコマで、キャラクターは同じ大きさ・同じ位置（マスの中央）に描く。マスのあいだは十分にあけて、はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '文字は入れない（言葉はあとから別に入れます）。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各行の内容（上から下へ）】\n${lines}\n\n全部のコマで、キャラクターの見た目（顔・服・色・線の太さ）は同じにしてください。変えるのは、表情とポーズだけです。` : `LINEスタンプ用のイラストシートを1枚つくってください。\n\n【キャラクター】${desc}\n（写真やイラストを添付している場合は、その人物・キャラクターの顔や特徴をそのまま保ってください）\n【絵のタイプ】${style}\n【レイアウト】横${cols}列×縦${rows}行の格子状に、全部で${items.length}個のイラストを並べる。1つのマスに1つの絵。絵と絵のあいだは十分にあけて、重ならない・はみ出さないようにする。\n【背景】全体を${bgText.replace(/おすすめ/, '')}の単色でべた塗りする。影・グラデーション・模様はつけない。キャラクターの外側にも、同じ色以外は置かない。\n【輪郭】キャラクターのまわりに、太めではっきりした線を入れる（背景を切り抜きやすくするため）。\n【文字】${withText ? '各絵の下に、指定の日本語の言葉を、読みやすい大きな文字で入れる。' : '文字は入れない（言葉はあとから別に入れます）。'}\n【各マスの内容（左上から右へ、上から下へ）】\n${lines}\n\n同じキャラクターが全部のマスで同じ見た目になるようにしてください。`;
+    if (animP && s === 0) { $('gCols').value = K; $('gRows').value = items.length; $('inMode').value = 'frames'; $('inMode').onchange(); }
     const wrap = document.createElement('div'); wrap.style.marginTop = '12px';
     wrap.innerHTML = `<div class="row"><b>シート ${s + 1} / ${sheets}</b><button class="sec">コピー</button></div><div class="prompt"></div>`;
     wrap.querySelector('.prompt').textContent = text;
@@ -345,6 +356,19 @@ function findPieces(c, gap, minFrac) {
   const rows = []; for (const p of out) { const row = rows.find(r => Math.abs(r.cy - p.cy) < Math.max(r.h, p.h) * 0.55); if (row) { row.items.push(p); row.cy = (row.cy * (row.items.length - 1) + p.cy) / row.items.length; row.h = Math.max(row.h, p.h); } else rows.push({ cy: p.cy, h: p.h, items: [p] }); }
   rows.sort((a, b) => a.cy - b.cy); return rows.flatMap(r => r.items.sort((a, b) => a.cx - b.cx).map(p => p.c));
 }
+function alphaBBox(c) {
+  const w = c.width, h = c.height, d = c.getContext('2d').getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return x1 < 0 || (x1 - x0) * (y1 - y0) < 400 ? null : { x0, y0, x1, y1 };
+}
+// コマ送りの1行（複数のコマ）を、共通の枠で切り出して、大きさをそろえる
+function buildFrames(cells, alignBottom) {
+  const boxes = cells.map(alphaBBox), ok = boxes.map((b, i) => b ? i : -1).filter(i => i >= 0); if (!ok.length) return null;
+  const off = cells.map(() => 0); if (alignBottom) { const base = boxes[ok[0]].y1; cells.forEach((c, i) => { if (boxes[i]) off[i] = base - boxes[i].y1; }); }
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; ok.forEach(i => { const b = boxes[i]; x0 = Math.min(x0, b.x0); y0 = Math.min(y0, b.y0 + off[i]); x1 = Math.max(x1, b.x1); y1 = Math.max(y1, b.y1 + off[i]); });
+  const pad = 2, W = x1 - x0 + 1 + pad * 2, H = y1 - y0 + 1 + pad * 2;
+  return ok.map(i => { const f = mk(W, H); f.getContext('2d').drawImage(cells[i], pad - x0, pad - y0 + off[i]); return f; });
+}
 async function addFiles(files) {
   files = files.filter(f => f.type.startsWith('image/')); if (!files.length) return;
   const mode = $('inMode').value, bgMode = $('inBg').value, tol = +$('tol').value, ero = +$('ero').value, gap = +$('gap').value;
@@ -354,6 +378,16 @@ async function addFiles(files) {
     let c; try { c = await loadCanvas(f); } catch { $('inStatus').textContent = `${f.name} を読み込めませんでした。`; continue; }
     const alreadyAlpha = hasAlpha(c.getContext('2d').getImageData(0, 0, c.width, c.height).data) || bgMode === 'none';
     let pieces = [];
+    if (mode === 'frames') {
+      const cols = Math.max(1, +$('gCols').value || 1), rows = Math.max(1, +$('gRows').value || 1), cw = c.width / cols, ch = c.height / rows, plist = phrasesList();
+      for (let ry = 0; ry < rows; ry++) {
+        const cells = [];
+        for (let cx = 0; cx < cols; cx++) { const sub = mk(Math.round(cw), Math.round(ch)); sub.getContext('2d').drawImage(c, cx * cw, ry * ch, cw, ch, 0, 0, sub.width, sub.height); if (!alreadyAlpha) removeBg(sub, bgFor(sub, bgMode), tol, ero); cells.push(sub); }
+        const fr = buildFrames(cells, $('alignBottom').checked); if (!fr || stamps.length >= maxStamps()) continue;
+        stamps.push(newStamp(fr[0], $('autoText').checked ? (plist[stamps.length] || '') : '', fr)); added++;
+      }
+      continue;
+    }
     if (mode === 'grid') {
       const cols = Math.max(1, +$('gCols').value || 1), rows = Math.max(1, +$('gRows').value || 1), cw = c.width / cols, ch = c.height / rows;
       for (let ry = 0; ry < rows; ry++) for (let cx = 0; cx < cols; cx++) {
@@ -370,17 +404,17 @@ async function addFiles(files) {
     const list = phrasesList();
     for (const p of pieces) { if (stamps.length >= maxStamps()) break; stamps.push(newStamp(p, $('autoText').checked ? (list[stamps.length] || '') : '')); added++; }
   }
-  $('inStatus').textContent = added ? `${added} 個のスタンプを追加しました（合計 ${stamps.length} 個）。足りない・多すぎるときは、設定（背景のゆるし幅・近い絵をまとめる距離）を変えて、もう一度入れてください。` : 'スタンプを見つけられませんでした。背景の色や「ゆるし幅」を変えてみてください。';
+  $('inStatus').textContent = added ? `${added} 個のスタンプを追加しました（合計 ${stamps.length} 個）。` + (mode === 'frames' ? 'コマ送りの列数・行数が合っているか、確認してください。' : '足りない・多すぎるときは、設定（背景のゆるし幅・近い絵をまとめる距離）を変えて、もう一度入れてください。') : 'スタンプを見つけられませんでした。背景の色や「ゆるし幅」を変えてみてください。';
   if (stamps.length && sel < 0) sel = 0; renderAll();
 }
-function newStamp(img, text) { return Object.assign({ id: ++uid, img, text, pos: 'b', scale: 1, rot: 0, flip: false, dx: 0, dy: 0, tanim: 'none' }, autoMotion(text)); }
+function newStamp(img, text, frames) { const multi = frames && frames.length > 1; return Object.assign({ id: ++uid, img, frames: multi ? frames : [img], text, pos: 'b', scale: 1, rot: 0, flip: false, dx: 0, dy: 0, tanim: 'none' }, autoMotion(text), multi ? { motion: 'none' } : {}); }
 const drop = $('drop'), fileIn = $('file');
 drop.onclick = () => fileIn.click();
 drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); }; drop.ondragleave = () => drop.classList.remove('over');
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files]); };
 fileIn.onchange = () => { addFiles([...fileIn.files]); fileIn.value = ''; };
 window.addEventListener('paste', e => { const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/')); if (fs.length) { e.preventDefault(); addFiles(fs); } });
-$('inMode').onchange = () => $('gridBox').classList.toggle('hide', $('inMode').value !== 'grid');
+$('inMode').onchange = () => { const m = $('inMode').value; $('gridBox').classList.toggle('hide', m !== 'grid' && m !== 'frames'); $('alignBox').classList.toggle('hide', m !== 'frames'); };
 ['tol', 'ero', 'gap'].forEach(i => $(i).oninput = () => { $(i + 'V').textContent = $(i).value; });
 
 /* ===================== スタンプの描画 ===================== */
@@ -448,13 +482,14 @@ function drawStamp(ctx, st, W, H, phase) {
   if (hasText) { do { ctx.font = `${wt} ${fs}px ${fam}`; if (Math.max(...lines.map(l => ctx.measureText(l).width)) <= maxW || fs <= 20) break; fs -= 2; } while (true); }
   const th = hasText ? lines.length * fs * 1.1 : 0, extra = anim ? 12 : 0;
   const boxW = LW - 2 * M - 2 * extra, boxH = LH - 2 * M - 2 * extra - (hasText && st.pos !== 'c' ? th * 0.55 : 0), by = M + extra + (hasText && st.pos === 't' ? th * 0.55 : 0);
-  const k = Math.min(boxW / st.img.width, boxH / st.img.height) * st.scale, w = st.img.width * k, h = st.img.height * k;
+  const frs = st.frames && st.frames.length > 1 ? st.frames : null, img = anim && frs ? frs[Math.min(frs.length - 1, Math.floor(t * frs.length))] : st.img;   // コマ送り：一方向にくり返す
+  const k = Math.min(boxW / img.width, boxH / img.height) * st.scale, w = img.width * k, h = img.height * k;
   const cx = LW / 2 + st.dx, cy = by + boxH / 2 + st.dy;
   const m = anim ? (MOTIONS[st.motion] || MOTIONS.none)[1](t) : {}, py = m.pv === 'b' ? h / 2 : 0;
   ctx.imageSmoothingQuality = 'high';
   ctx.save(); ctx.translate(cx, cy); ctx.rotate((st.rot || 0) * Math.PI / 180);
   ctx.translate(m.dx || 0, py + (m.dy || 0)); ctx.rotate((m.rot || 0) * Math.PI / 180); ctx.scale((m.sx ?? 1) * (st.flip ? -1 : 1), m.sy ?? 1);
-  ctx.drawImage(st.img, -w / 2, -h / 2 - py, w, h); ctx.restore();
+  ctx.drawImage(img, -w / 2, -h / 2 - py, w, h); ctx.restore();
   const fx = anim && FX[st.fx] && FX[st.fx][1]; if (fx) { ctx.save(); ctx.beginPath(); ctx.rect(M, M, LW - 2 * M, LH - 2 * M); ctx.clip(); fx(ctx, t, { cx, cy, w, h, top: cy - h / 2 }); ctx.restore(); }
   if (hasText) {
     ctx.font = `${wt} ${fs}px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
@@ -478,6 +513,10 @@ function setMode(m) {
   $('chCount').textContent = ''; opts.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; $('chCount').appendChild(o); });
   $('chCount').value = opts.includes(keep) ? keep : 16;
   $('animBox').classList.toggle('hide', m !== 'anim'); $('animEd').classList.toggle('hide', m !== 'anim');
+  $('sheetStaticBox').classList.toggle('hide', m === 'anim'); $('sheetAnimBox').classList.toggle('hide', m !== 'anim');
+  if (m === 'anim' && $('inMode').value === 'auto') { $('inMode').value = 'frames'; $('gCols').value = $('chFrames').value; $('gRows').value = $('chRowsA').value; }
+  if (m === 'static' && $('inMode').value === 'frames') $('inMode').value = 'auto';
+  $('inMode').onchange();
   $('big').width = LW; $('big').height = LH; $('big').style.maxWidth = LW + 'px';
   $('bigNote').textContent = `${LW}×${LH}px の実寸の見本です。余白（約10px）は、はみ出さないように自動で守ります。`;
   fillPhrases(); renderAll();
@@ -510,7 +549,22 @@ function renderEditor() {
     document.querySelectorAll('#edForm [data-pos]').forEach(b => b.classList.toggle('on', b.dataset.pos === st.pos));
     $('eMo').value = st.motion; $('eFx').value = st.fx; $('eTa').value = st.tanim || 'none';
   }
-  paintBig(curT);
+  renderFrames(); paintBig(curT);
+}
+function renderFrames() {
+  const st = stamps[sel], wrap = $('frWrap'), box = $('frStrip'), show = !!(st && st.frames && st.frames.length > 1);
+  wrap.classList.toggle('hide', !show); box.textContent = ''; if (!show) return;
+  const sync = () => { st.img = st.frames[0]; renderAll(); };
+  st.frames.forEach((f, i) => {
+    const d = document.createElement('div'); d.style.textAlign = 'center';
+    const c = mk(f.width, f.height); c.getContext('2d').drawImage(f, 0, 0); d.appendChild(c);
+    const r = document.createElement('div'); r.className = 'row'; r.style.cssText = 'justify-content:center;gap:2px;margin-top:2px';
+    const mkb = (t, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'sec'; b.style.padding = '1px 7px'; b.textContent = t; b.onclick = fn; r.appendChild(b); };
+    mkb('◀', () => { if (i > 0) { [st.frames[i - 1], st.frames[i]] = [st.frames[i], st.frames[i - 1]]; sync(); } });
+    mkb('✕', () => { st.frames.splice(i, 1); if (!st.frames.length) return; sync(); });
+    mkb('▶', () => { if (i < st.frames.length - 1) { [st.frames[i + 1], st.frames[i]] = [st.frames[i], st.frames[i + 1]]; sync(); } });
+    d.appendChild(r); box.appendChild(d);
+  });
 }
 function renderChecks() {
   const N = +$('chCount').value, n = stamps.length, el = $('checks'), msgs = [];
@@ -627,12 +681,13 @@ function posterize(c, bits) {
 }
 // 1MBに収まるまで、色を減らす→コマを減らす、の順にためす
 async function animatedPng(st) {
-  const [W, H] = dims(); let F = ANIM.F, q = false, blob = null;
+  const [W, H] = dims(), K = st.frames && st.frames.length > 1 ? st.frames.length : 0, minF = K ? K * Math.ceil(5 / K) : 5;
+  let F = K ? Math.min(20, Math.max(minF, K * Math.max(1, Math.round(ANIM.F / K)))) : ANIM.F, q = false, blob = null;   // コマ送りのときは、コマ数の倍数にそろえる
   for (let attempt = 0; attempt < 8; attempt++) {
     const frames = []; for (let i = 0; i < F; i++) { const c = stampCanvas(st, W, H, i / F); if (q) posterize(c, 5); frames.push(c); }
     blob = await buildApng(frames, Math.round(ANIM.T / F * 1000), ANIM.L);
     if (blob.size <= 1000000) return { blob, F, q, ok: true };
-    if (!q) q = true; else if (F > 5) F = Math.max(5, F - 3); else break;
+    if (!q) q = true; else if (F > minF) F = Math.max(minF, F - (K || 3)); else break;
   }
   return { blob, F, q, ok: false };
 }
