@@ -60,7 +60,14 @@
 <main>
   <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
   <h1>LINEスタンプメーカー</h1>
-  <p class="lead">Gemini などで作った絵を貼り付けると、切り分け・背景の透明化・サイズ調整・文字入れをして、LINE の規格（370×320px）のスタンプ一式（ZIP）にします。画像はこのページの中だけで処理され、アップロードされません。LINE への登録は、ご自身で「LINE Creators Market」から行います。</p>
+  <p class="lead">Gemini などで作った絵を貼り付けると、切り分け・背景の透明化・サイズ調整・文字入れ・動き（動くスタンプ）をつけて、LINE の規格のスタンプ一式（ZIP）にします。画像はこのページの中だけで処理され、アップロードされません。LINE への登録は、ご自身で「LINE Creators Market」から行います。</p>
+
+  <section class="panel" id="modePanel">
+    <h2>作るスタンプの種類</h2>
+    <div class="row"><button id="modeStatic" class="chip on" type="button">静止画のスタンプ</button><button id="modeAnim" class="chip" type="button">動くスタンプ（アニメーション）</button></div>
+    <div class="note" id="modeNote"></div>
+    <div class="note">切り替えても、入れた絵と言葉はそのまま使えます。</div>
+  </section>
 
   <!-- ===== STEP 1 ===== -->
   <section class="panel">
@@ -145,9 +152,19 @@
         <select id="sBg"><option value="checker">透明（市松）</option><option value="#ffffff">白</option><option value="#8fb5ff">空色</option><option value="#7494c0">LINE風の青</option><option value="#222222">黒</option></select></div>
     </div>
     <div class="row" style="margin-top:10px"><button class="sec" id="applyAll">この文字の設定を、全部のスタンプに使う</button></div>
+    <div id="animBox" class="hide" style="margin-top:14px">
+      <h3>動くスタンプの設定（全部のスタンプ共通）</h3>
+      <div class="grid">
+        <div><label>1回の長さ</label><select id="aT"><option value="1">1秒</option><option value="1.5" selected>1.5秒</option><option value="2">2秒</option><option value="2.5">2.5秒</option><option value="3">3秒</option><option value="4">4秒</option></select></div>
+        <div><label>くり返す回数（長さ×回数は4秒まで）</label><select id="aL"></select></div>
+        <div><label>コマ数: <span id="aFV">12</span>（5〜20。多いとなめらかですが重くなります）</label><input id="aF" type="range" min="5" max="20" value="12"></div>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="sec" id="aPlay" type="button">⏸ 止める</button><button class="sec" id="aAuto" type="button">言葉に合わせて動きを自動設定</button><button class="sec" id="aAll" type="button">いま選んでいる動きを、全部に使う</button></div>
+      <div class="note">一覧の ▶ は、動きがついているスタンプです（一覧では止まって見えます。動きは右下の見本で確認できます）。</div>
+    </div>
     <div class="sgrid" id="sgrid"></div>
     <div class="editor" id="editor">
-      <div><canvas id="big" width="370" height="320"></canvas><div class="note">370×320px の実寸の見本です。余白（約10px）は、はみ出さないように自動で守ります。</div></div>
+      <div><canvas id="big" width="370" height="320"></canvas><div class="note" id="bigNote"></div></div>
       <div id="edPanel">
         <div class="note" id="edHint">上のスタンプを選ぶと、ここで直せます。</div>
         <div id="edForm" class="hide">
@@ -159,6 +176,13 @@
             <div><label>絵の傾き: <span id="eRoV">0</span>°</label><input id="eRo" type="range" min="-25" max="25" value="0"></div>
             <div><label>左右の位置</label><input id="eDx" type="range" min="-80" max="80" value="0"></div>
             <div><label>上下の位置</label><input id="eDy" type="range" min="-80" max="80" value="0"></div>
+          </div>
+          <div id="animEd" class="hide">
+            <div class="grid" style="margin-top:8px">
+              <div><label>動き</label><select id="eMo"></select></div>
+              <div><label>飾り</label><select id="eFx"></select></div>
+              <div><label>文字の動き</label><select id="eTa"></select></div>
+            </div>
           </div>
           <div class="row" style="margin-top:10px">
             <button class="sec" id="eFlip">左右反転</button><button class="sec" id="eL">◀ 前へ</button><button class="sec" id="eR">次へ ▶</button>
@@ -191,7 +215,7 @@
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const SW = 370, SH = 320, M = 10;
+const M = 10;
 
 /* ===================== 言葉のライブラリ ===================== */
 const LIB = {
@@ -344,12 +368,12 @@ async function addFiles(files) {
       pieces = findPieces(c, gap, 0.002);
     }
     const list = phrasesList();
-    for (const p of pieces) { if (stamps.length >= 40) break; stamps.push(newStamp(p, $('autoText').checked ? (list[stamps.length] || '') : '')); added++; }
+    for (const p of pieces) { if (stamps.length >= maxStamps()) break; stamps.push(newStamp(p, $('autoText').checked ? (list[stamps.length] || '') : '')); added++; }
   }
   $('inStatus').textContent = added ? `${added} 個のスタンプを追加しました（合計 ${stamps.length} 個）。足りない・多すぎるときは、設定（背景のゆるし幅・近い絵をまとめる距離）を変えて、もう一度入れてください。` : 'スタンプを見つけられませんでした。背景の色や「ゆるし幅」を変えてみてください。';
   if (stamps.length && sel < 0) sel = 0; renderAll();
 }
-function newStamp(img, text) { return { id: ++uid, img, text, pos: 'b', scale: 1, rot: 0, flip: false, dx: 0, dy: 0 }; }
+function newStamp(img, text) { return Object.assign({ id: ++uid, img, text, pos: 'b', scale: 1, rot: 0, flip: false, dx: 0, dy: 0, tanim: 'none' }, autoMotion(text)); }
 const drop = $('drop'), fileIn = $('file');
 drop.onclick = () => fileIn.click();
 drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); }; drop.ondragleave = () => drop.classList.remove('over');
@@ -360,62 +384,140 @@ $('inMode').onchange = () => $('gridBox').classList.toggle('hide', $('inMode').v
 ['tol', 'ero', 'gap'].forEach(i => $(i).oninput = () => { $(i + 'V').textContent = $(i).value; });
 
 /* ===================== スタンプの描画 ===================== */
+let MODE = 'static';                                                       // 'static'=静止画 / 'anim'=動くスタンプ
+const ANIM = { T: 1.5, L: 2, F: 12 };                                      // 1回の長さ(秒)・くり返し回数・コマ数
+const dims = () => MODE === 'anim' ? [320, 270] : [370, 320];
+const maxStamps = () => MODE === 'anim' ? 24 : 40;
 function fontSpec() { const [fam, wt] = $('sFont').value.split('|'); return { fam, wt }; }
-function drawStamp(ctx, st, W, H) {
-  ctx.clearRect(0, 0, W, H);
-  const sx = W / SW, sy = H / SH; ctx.save(); ctx.scale(sx, sy);
-  const style = { size: +$('sSize').value, ow: +$('sOw').value, color: st.tcolor || $('sColor').value, oc: st.ocolor || $('sOutline').value }, { fam, wt } = fontSpec();
+const ease = u => u * u * (3 - 2 * u);
+
+// 動き：t(0〜1)の関数。pv='b'は足もとを軸に、'c'は中心を軸に動かす
+const MOTIONS = {
+  none: ['動かさない', () => ({})],
+  bounce: ['ぴょんぴょん', t => { const u = (t * 2) % 1, h = Math.sin(Math.PI * u), sq = Math.pow(1 - h, 3); return { pv: 'b', dy: -h * 24, sx: 1 + 0.03 * sq, sy: 1 - 0.04 * sq }; }],
+  bow: ['お辞儀', t => { const p = t < 0.5 ? ease(t / 0.5) : ease(1 - (t - 0.5) / 0.5); return { pv: 'b', rot: p * 18, dy: p * 5, sy: 1 - p * 0.04 }; }],
+  sway: ['ゆらゆら', t => ({ pv: 'b', rot: 8 * Math.sin(2 * Math.PI * t) })],
+  wave: ['ふりふり', t => ({ pv: 'b', rot: 12 * Math.sin(4 * Math.PI * t) })],
+  pulse: ['ドキドキ', t => { const s = Math.pow(Math.max(0, Math.sin(4 * Math.PI * t)), 2); return { pv: 'c', sx: 1 + 0.09 * s, sy: 1 + 0.09 * s }; }],
+  shake: ['ぶるぶる', t => ({ pv: 'c', dx: 5 * Math.sin(2 * Math.PI * 8 * t), rot: 2 * Math.sin(2 * Math.PI * 8 * t + 1) })],
+  turn: ['くるっと回る', t => ({ pv: 'c', sx: Math.cos(2 * Math.PI * t) })],
+  float: ['ふわふわ', t => ({ pv: 'c', dy: 8 * Math.sin(2 * Math.PI * t), rot: 2 * Math.sin(2 * Math.PI * t + 1) })],
+  surprise: ['びっくり', t => { const u = Math.min(1, t / 0.3), s = 1 + 0.24 * Math.sin(Math.PI * u); return { pv: 'c', sx: s, sy: s, dx: t > 0.3 && t < 0.75 ? 3 * Math.sin(2 * Math.PI * 10 * t) : 0 }; }],
+  droop: ['しょんぼり', t => { const s = Math.sin(Math.PI * t); return { pv: 'b', rot: -6 * s, dy: 7 * s, sy: 1 - 0.07 * s, sx: 1 + 0.03 * s }; }]
+};
+// 飾り（絵の上に重ねて動かす）
+function heartPath(c, x, y, s) { c.beginPath(); c.moveTo(x, y + s * 0.35); c.bezierCurveTo(x - s, y - s * 0.3, x - s * 0.5, y - s, x, y - s * 0.45); c.bezierCurveTo(x + s * 0.5, y - s, x + s, y - s * 0.3, x, y + s * 0.35); c.closePath(); }
+function starPath(c, x, y, r) { c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? r * 0.28 : r; i ? c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : c.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); }
+function dropPath(c, x, y, s) { c.beginPath(); c.moveTo(x, y - s); c.bezierCurveTo(x + s * 0.9, y, x + s * 0.8, y + s * 0.9, x, y + s * 0.9); c.bezierCurveTo(x - s * 0.8, y + s * 0.9, x - s * 0.9, y, x, y - s); c.closePath(); }
+const FX = {
+  none: ['なし', null],
+  hearts: ['ハート', (c, t, b) => { for (let i = 0; i < 3; i++) { const p = (t + i / 3) % 1, x = b.cx + b.w * (0.3 + 0.07 * i) + 8 * Math.sin(2 * Math.PI * (p + i / 3)), y = b.top + b.h * 0.25 - p * b.h * 0.35, s = 9 + i * 3; c.globalAlpha = Math.sin(Math.PI * p); c.fillStyle = '#ff5c8a'; c.strokeStyle = '#fff'; c.lineWidth = 2; heartPath(c, x, y, s); c.stroke(); c.fill(); } c.globalAlpha = 1; }],
+  sparkles: ['キラキラ', (c, t, b) => { [[-0.45, -0.35], [0.45, -0.25], [-0.35, 0.3], [0.4, 0.35]].forEach((q, i) => { const s = Math.max(0, Math.sin(2 * Math.PI * (t + i * 0.25))); c.fillStyle = '#ffe14d'; c.strokeStyle = '#fff'; c.lineWidth = 1.5; starPath(c, b.cx + q[0] * b.w, b.cy + q[1] * b.h, 4 + 9 * s); c.stroke(); c.fill(); }); }],
+  sweat: ['汗', (c, t, b) => { const p = t % 1, x = b.cx - b.w * 0.38, y = b.top + b.h * (0.15 + 0.3 * p); c.globalAlpha = 1 - Math.pow(p, 3); c.fillStyle = '#7ec8ff'; c.strokeStyle = '#3a8fd0'; c.lineWidth = 2; dropPath(c, x, y, 10); c.fill(); c.stroke(); c.globalAlpha = 1; }],
+  tears: ['涙', (c, t, b) => { for (const sg of [-1, 1]) { const p = (t + (sg > 0 ? 0.3 : 0)) % 1, x = b.cx + sg * b.w * 0.2, y = b.cy - b.h * 0.05 + p * b.h * 0.4; c.globalAlpha = 1 - Math.pow(p, 2.5); c.fillStyle = '#7ec8ff'; c.strokeStyle = '#3a8fd0'; c.lineWidth = 2; dropPath(c, x, y, 7 + 3 * p); c.fill(); c.stroke(); } c.globalAlpha = 1; }],
+  anger: ['怒りマーク', (c, t, b) => { const s = 1 + 0.15 * Math.sin(4 * Math.PI * t); c.save(); c.translate(b.cx + b.w * 0.36, b.top + b.h * 0.12); c.scale(s, s); c.strokeStyle = '#e53935'; c.lineWidth = 5; c.lineCap = 'round'; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { c.beginPath(); c.moveTo(sx * 4, sy * 4); c.quadraticCurveTo(sx * 14, sy * 4, sx * 14, sy * 14); c.stroke(); } c.restore(); }],
+  notes: ['音符', (c, t, b) => { c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ff8fb0'; c.strokeStyle = '#fff'; c.lineWidth = 4; c.font = 'bold 26px sans-serif'; ['♪', '♫'].forEach((n, i) => { const p = (t + i * 0.5) % 1, x = b.cx + b.w * (0.32 + 0.06 * i) + 7 * Math.sin(2 * Math.PI * (p + i)), y = b.top + b.h * 0.3 - p * b.h * 0.3; c.globalAlpha = Math.sin(Math.PI * p); c.strokeText(n, x, y); c.fillText(n, x, y); }); c.globalAlpha = 1; }],
+  zzz: ['Zzz（ねむい）', (c, t, b) => { c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#7b8cff'; c.strokeStyle = '#fff'; c.lineWidth = 4; ['z', 'Z', 'Z'].forEach((n, i) => { const p = (t + i / 3) % 1, x = b.cx + b.w * 0.3 + i * 10 + 5 * Math.sin(2 * Math.PI * p), y = b.top + b.h * 0.3 - p * b.h * 0.3; c.globalAlpha = Math.sin(Math.PI * p); c.font = `bold ${14 + i * 5}px sans-serif`; c.strokeText(n, x, y); c.fillText(n, x, y); }); c.globalAlpha = 1; }],
+  exclam: ['！（びっくり）', (c, t, b) => { const u = Math.min(1, t / 0.3), s = 0.2 + 0.9 * Math.sin(Math.PI * u * 0.5) + (t > 0.3 ? 0.1 * Math.sin(2 * Math.PI * 4 * t) : 0); c.save(); c.translate(b.cx + b.w * 0.3, b.top + b.h * 0.12); c.scale(s, s); c.font = '900 40px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 7; c.lineJoin = 'round'; c.strokeStyle = '#fff'; c.strokeText('!', 0, 0); c.fillStyle = '#e53935'; c.fillText('!', 0, 0); c.restore(); }]
+};
+const TANIM = { none: 'そのまま', hop: 'ぴょこぴょこ', sway: 'ゆれる', pop: 'ぷるぷる拡大' };
+function textTf(kind, t) {
+  if (kind === 'hop') return { dy: -5 * Math.max(0, Math.sin(4 * Math.PI * t)) };
+  if (kind === 'sway') return { rot: 3 * Math.sin(2 * Math.PI * t) };
+  if (kind === 'pop') { const s = 1 + 0.07 * Math.max(0, Math.sin(4 * Math.PI * t)); return { sc: s }; }
+  return {};
+}
+// 言葉から、似合う動きと飾りを選ぶ
+const AUTO = [
+  [/おやすみ|ねむ|眠/, 'sway', 'zzz'], [/ごめん|すみません|もうしわけ|ゆるして|土下座|反省|しつれい|気をつけ/, 'bow', 'sweat'],
+  [/びっくり|えっ|ガーン/, 'surprise', 'exclam'], [/おこ|ムカ/, 'shake', 'anger'], [/かなし|ぴえん|泣/, 'droop', 'tears'],
+  [/大好き|ドキドキ|ハート|ぎゅー|よしよし|愛/, 'pulse', 'hearts'], [/おはよう|こんにちは|こんばんは|またね|バイバイ|いってき|いってらっしゃい|ただいま|おかえり|はじめまして|よろしく/, 'wave', 'none'],
+  [/ありがとう|おねがい|おつかれ|お疲れ/, 'bow', 'none'], [/そばにいる|ひとりじゃ|味方|だいじょうぶだよ|話きく|ゆっくり|むりしない|えらかったね/, 'float', 'hearts'],
+  [/がんばれ|ファイト|ナイス|えらい|すごい|最高|やった|わーい|うれしい|ワクワク|おめでとう|かんぱい|祝|やれば|その調子|応援|OK|りょうかい|まかせて/, 'bounce', 'sparkles'],
+  [/ニヤニヤ|ふふふ|はずかしい|なるほど/, 'sway', 'none'], [/おなかすいた|うん|ううん|ちょっと/, 'bounce', 'none']
+];
+function autoMotion(text) { for (const [re, mo, fx] of AUTO) if (re.test(text || '')) return { motion: mo, fx }; return { motion: 'bounce', fx: 'none' }; }
+
+// 1枚のスタンプを描く（phase=0〜1 のときは、その瞬間の動く絵）
+function drawStamp(ctx, st, W, H, phase) {
+  const [LW, LH] = dims(), anim = MODE === 'anim', t = phase == null ? 0 : phase, fk = LW / 370, M = 10;
+  ctx.clearRect(0, 0, W, H); ctx.save(); ctx.scale(W / LW, H / LH);
+  const style = { size: +$('sSize').value * fk, ow: +$('sOw').value * fk, color: st.tcolor || $('sColor').value, oc: st.ocolor || $('sOutline').value }, { fam, wt } = fontSpec();
   const text = (st.text || '').trim(), lines = text ? text.split('\n') : [], hasText = lines.length && st.pos !== 'n';
-  // 文字の大きさ（幅に収まるまで小さくする）
-  let fs = style.size; const maxW = SW - 2 * M - style.ow * 2;
-  if (hasText) { do { ctx.font = `${wt} ${fs}px ${fam}`; if (Math.max(...lines.map(l => ctx.measureText(l).width)) <= maxW || fs <= 22) break; fs -= 2; } while (true); }
-  const th = hasText ? lines.length * fs * 1.1 : 0;
-  // 絵
-  const boxW = SW - 2 * M, boxH = SH - 2 * M - (hasText && st.pos !== 'c' ? th * 0.55 : 0), by = M + (hasText && st.pos === 't' ? th * 0.55 : 0);
-  const k = Math.min(boxW / st.img.width, boxH / st.img.height) * st.scale;
-  ctx.save(); ctx.translate(SW / 2 + st.dx, by + boxH / 2 + st.dy); ctx.rotate(st.rot * Math.PI / 180); if (st.flip) ctx.scale(-1, 1);
-  ctx.imageSmoothingQuality = 'high'; ctx.drawImage(st.img, -st.img.width * k / 2, -st.img.height * k / 2, st.img.width * k, st.img.height * k); ctx.restore();
-  // 文字
+  let fs = style.size; const maxW = LW - 2 * M - style.ow * 2;
+  if (hasText) { do { ctx.font = `${wt} ${fs}px ${fam}`; if (Math.max(...lines.map(l => ctx.measureText(l).width)) <= maxW || fs <= 20) break; fs -= 2; } while (true); }
+  const th = hasText ? lines.length * fs * 1.1 : 0, extra = anim ? 12 : 0;
+  const boxW = LW - 2 * M - 2 * extra, boxH = LH - 2 * M - 2 * extra - (hasText && st.pos !== 'c' ? th * 0.55 : 0), by = M + extra + (hasText && st.pos === 't' ? th * 0.55 : 0);
+  const k = Math.min(boxW / st.img.width, boxH / st.img.height) * st.scale, w = st.img.width * k, h = st.img.height * k;
+  const cx = LW / 2 + st.dx, cy = by + boxH / 2 + st.dy;
+  const m = anim ? (MOTIONS[st.motion] || MOTIONS.none)[1](t) : {}, py = m.pv === 'b' ? h / 2 : 0;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate((st.rot || 0) * Math.PI / 180);
+  ctx.translate(m.dx || 0, py + (m.dy || 0)); ctx.rotate((m.rot || 0) * Math.PI / 180); ctx.scale((m.sx ?? 1) * (st.flip ? -1 : 1), m.sy ?? 1);
+  ctx.drawImage(st.img, -w / 2, -h / 2 - py, w, h); ctx.restore();
+  const fx = anim && FX[st.fx] && FX[st.fx][1]; if (fx) { ctx.save(); ctx.beginPath(); ctx.rect(M, M, LW - 2 * M, LH - 2 * M); ctx.clip(); fx(ctx, t, { cx, cy, w, h, top: cy - h / 2 }); ctx.restore(); }
   if (hasText) {
     ctx.font = `${wt} ${fs}px ${fam}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    const top = st.pos === 't' ? M + style.ow + th / 2 : st.pos === 'c' ? SH / 2 : SH - M - style.ow - th / 2;
-    lines.forEach((l, i) => { const y = top + (i - (lines.length - 1) / 2) * fs * 1.1;
-      if (style.ow > 0) { ctx.lineWidth = style.ow * 2; ctx.strokeStyle = style.oc; ctx.strokeText(l, SW / 2, y); }
-      ctx.fillStyle = style.color; ctx.fillText(l, SW / 2, y); });
+    const top = st.pos === 't' ? M + style.ow + th / 2 : st.pos === 'c' ? LH / 2 : LH - M - style.ow - th / 2, tt = anim ? textTf(st.tanim, t) : {};
+    ctx.save(); ctx.translate(LW / 2, top + (tt.dy || 0)); ctx.rotate((tt.rot || 0) * Math.PI / 180); ctx.scale(tt.sc || 1, tt.sc || 1);
+    lines.forEach((l, i) => { const y = (i - (lines.length - 1) / 2) * fs * 1.1; if (style.ow > 0) { ctx.lineWidth = style.ow * 2; ctx.strokeStyle = style.oc; ctx.strokeText(l, 0, y); } ctx.fillStyle = style.color; ctx.fillText(l, 0, y); });
+    ctx.restore();
   }
   ctx.restore();
 }
-function stampCanvas(st, W = SW, H = SH) { const c = mk(W, H); drawStamp(c.getContext('2d'), st, W, H); return c; }
+function stampCanvas(st, W, H, phase) { const d = dims(); W = W || d[0]; H = H || d[1]; const c = mk(W, H); drawStamp(c.getContext('2d'), st, W, H, phase); return c; }
 
 /* ===================== 画面 ===================== */
+let playing = true, curT = 0;
 function bgStyle(el) { const v = $('sBg').value; el.style.setProperty('--cb', v === 'checker' ? 'repeating-conic-gradient(#d8d8d8 0 25%,#fff 0 50%) 0 0/14px 14px' : v); }
+function setMode(m) {
+  MODE = m; const [LW, LH] = dims();
+  $('modeStatic').classList.toggle('on', m === 'static'); $('modeAnim').classList.toggle('on', m === 'anim');
+  $('modeNote').textContent = m === 'static' ? '静止画：370×320px・8/16/24/32/40個。' : '動くスタンプ：320×270px の APNG・8/16/24個・1個につき5〜20コマ・（1回の長さ×くり返し回数）は4秒以内・1ファイル1MB以内。1コマ目は静止画としても表示されます。';
+  const keep = +$('chCount').value, opts = m === 'anim' ? [8, 16, 24] : [8, 16, 24, 32, 40];
+  $('chCount').textContent = ''; opts.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; $('chCount').appendChild(o); });
+  $('chCount').value = opts.includes(keep) ? keep : 16;
+  $('animBox').classList.toggle('hide', m !== 'anim'); $('animEd').classList.toggle('hide', m !== 'anim');
+  $('big').width = LW; $('big').height = LH; $('big').style.maxWidth = LW + 'px';
+  $('bigNote').textContent = `${LW}×${LH}px の実寸の見本です。余白（約10px）は、はみ出さないように自動で守ります。`;
+  fillPhrases(); renderAll();
+}
+$('modeStatic').onclick = () => setMode('static'); $('modeAnim').onclick = () => setMode('anim');
 function renderGrid() {
-  const g = $('sgrid'); g.textContent = ''; const N = +$('chCount').value, total = Math.max(N, stamps.length);
+  const g = $('sgrid'); g.textContent = ''; const N = +$('chCount').value, total = Math.max(N, stamps.length), [LW, LH] = dims();
   for (let i = 0; i < total; i++) {
     const d = document.createElement('div');
     if (i < stamps.length) {
       d.className = 'st' + (i === sel ? ' sel' : ''); bgStyle(d);
-      const c = stampCanvas(stamps[i], 185, 160); d.appendChild(c);
-      const no = document.createElement('span'); no.className = 'no'; no.textContent = String(i + 1).padStart(2, '0') + (i === mainIdx ? ' ★メイン' : '') + (i === tabIdx ? ' ▣タブ' : ''); d.appendChild(no);
+      d.appendChild(stampCanvas(stamps[i], Math.round(LW / 2), Math.round(LH / 2), MODE === 'anim' ? 0.12 : null));
+      const no = document.createElement('span'); no.className = 'no'; no.textContent = String(i + 1).padStart(2, '0') + (i === mainIdx ? ' ★メイン' : '') + (i === tabIdx ? ' ▣タブ' : '') + (MODE === 'anim' && stamps[i].motion !== 'none' ? ' ▶' : ''); d.appendChild(no);
       d.onclick = () => { sel = i; renderAll(); };
-    } else { d.className = 'st empty'; d.textContent = String(i + 1).padStart(2, '0') + ' あき'; }
+    } else { d.className = 'st empty'; d.style.aspectRatio = `${LW}/${LH}`; d.textContent = String(i + 1).padStart(2, '0') + ' あき'; }
     g.appendChild(d);
   }
 }
+function paintBig(t) {
+  const has = sel >= 0 && sel < stamps.length, bc = $('big'); bgStyle(bc); const ctx = bc.getContext('2d'); ctx.clearRect(0, 0, bc.width, bc.height);
+  if (has) drawStamp(ctx, stamps[sel], bc.width, bc.height, MODE === 'anim' ? t : null);
+}
+function fillSelect(id, obj, isArr) { const el = $(id); if (el.dataset.f) return; el.dataset.f = '1'; for (const k of Object.keys(obj)) { const o = document.createElement('option'); o.value = k; o.textContent = isArr ? obj[k][0] : obj[k]; el.appendChild(o); } }
 function renderEditor() {
   const has = sel >= 0 && sel < stamps.length; $('edForm').classList.toggle('hide', !has); $('edHint').classList.toggle('hide', has);
-  const bc = $('big'); bgStyle(bc); const ctx = bc.getContext('2d'); ctx.clearRect(0, 0, SW, SH);
-  if (!has) return;
-  const st = stamps[sel]; drawStamp(ctx, st, SW, SH);
-  if (document.activeElement !== $('eText')) $('eText').value = st.text;
-  $('eSc').value = Math.round(st.scale * 100); $('eScV').textContent = Math.round(st.scale * 100); $('eRo').value = st.rot; $('eRoV').textContent = st.rot; $('eDx').value = st.dx; $('eDy').value = st.dy;
-  document.querySelectorAll('#edForm [data-pos]').forEach(b => b.classList.toggle('on', b.dataset.pos === st.pos));
+  if (has) {
+    const st = stamps[sel];
+    if (document.activeElement !== $('eText')) $('eText').value = st.text;
+    $('eSc').value = Math.round(st.scale * 100); $('eScV').textContent = Math.round(st.scale * 100); $('eRo').value = st.rot; $('eRoV').textContent = st.rot; $('eDx').value = st.dx; $('eDy').value = st.dy;
+    document.querySelectorAll('#edForm [data-pos]').forEach(b => b.classList.toggle('on', b.dataset.pos === st.pos));
+    $('eMo').value = st.motion; $('eFx').value = st.fx; $('eTa').value = st.tanim || 'none';
+  }
+  paintBig(curT);
 }
 function renderChecks() {
   const N = +$('chCount').value, n = stamps.length, el = $('checks'), msgs = [];
   msgs.push(n === N ? `<span class="ok">✓ スタンプは ${N} 個そろっています。</span>` : n > N ? `<span class="warn">スタンプが ${n} 個あります。書き出すのは、先頭の ${N} 個です。</span>` : `<span class="err">スタンプが ${n} 個です（${N} 個にするには、あと ${N - n} 個必要です）。</span>`);
   const noText = stamps.slice(0, N).filter(s => !(s.text || '').trim()).length; if (noText) msgs.push(`<span class="warn">言葉のないスタンプが ${noText} 個あります（絵だけでも、登録はできます）。</span>`);
   msgs.push(`メイン画像：${stamps[mainIdx] ? (mainIdx + 1) + ' 番' : '（なし）'}／タブ画像：${stamps[tabIdx] ? (tabIdx + 1) + ' 番' : '（なし）'}`);
+  if (MODE === 'anim') msgs.push(`動き：1回 ${ANIM.T} 秒 × ${ANIM.L} 回 ＝ ${(ANIM.T * ANIM.L).toFixed(1)} 秒／${ANIM.F} コマ`);
   el.innerHTML = msgs.join('<br>'); $('countInfo').textContent = `${n} / ${N} 個`;
   $('zipBtn').disabled = n < N;
 }
@@ -423,6 +525,25 @@ function renderAll() { renderGrid(); renderEditor(); renderChecks(); }
 ['sFont', 'sColor', 'sOutline', 'sBg'].forEach(i => $(i).oninput = () => renderAll());
 ['sSize', 'sOw'].forEach(i => $(i).oninput = () => { $(i + 'V').textContent = $(i).value; renderAll(); });
 $('applyAll').onclick = () => { stamps.forEach(s => { delete s.tcolor; delete s.ocolor; }); renderAll(); };
+
+// 動くスタンプの設定
+fillSelect('eMo', MOTIONS, true); fillSelect('eFx', FX, true); fillSelect('eTa', TANIM, false);
+function loopsFor(T) { const mx = Math.max(1, Math.floor(4 / T + 1e-9)), el = $('aL'); el.textContent = ''; for (let i = 1; i <= mx; i++) { const o = document.createElement('option'); o.value = i; o.textContent = `${i} 回（合計 ${(T * i).toFixed(1)} 秒）`; el.appendChild(o); } ANIM.L = Math.min(ANIM.L, mx); el.value = ANIM.L; }
+loopsFor(ANIM.T);
+$('aT').onchange = () => { ANIM.T = +$('aT').value; loopsFor(ANIM.T); renderChecks(); };
+$('aL').onchange = () => { ANIM.L = +$('aL').value; renderChecks(); };
+$('aF').oninput = () => { ANIM.F = +$('aF').value; $('aFV').textContent = ANIM.F; renderChecks(); };
+$('aPlay').onclick = () => { playing = !playing; $('aPlay').textContent = playing ? '⏸ 止める' : '▶ 動かす'; };
+$('aAuto').onclick = () => { stamps.forEach(s => Object.assign(s, autoMotion(s.text))); renderAll(); };
+$('aAll').onclick = () => { if (!cur()) return; const { motion, fx, tanim } = cur(); stamps.forEach(s => Object.assign(s, { motion, fx, tanim })); renderAll(); };
+$('eMo').onchange = () => { if (cur()) { cur().motion = $('eMo').value; renderAll(); } };
+$('eFx').onchange = () => { if (cur()) { cur().fx = $('eFx').value; renderAll(); } };
+$('eTa').onchange = () => { if (cur()) { cur().tanim = $('eTa').value; renderAll(); } };
+function startLoop() {
+  let t0 = performance.now();
+  const loop = now => { requestAnimationFrame(loop); if (MODE !== 'anim' || !playing || sel < 0 || sel >= stamps.length) return; curT = ((now - t0) / 1000 / ANIM.T) % 1; paintBig(curT); };
+  requestAnimationFrame(loop);
+}
 
 // 編集パネル
 const cur = () => stamps[sel];
@@ -453,12 +574,13 @@ $('cpTitle').onclick = e => copyText($('rTitle').value, e.target); $('cpDesc').o
 
 /* ===================== ZIP書き出し ===================== */
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
-const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+const crc32 = (u8, c0 = 0xFFFFFFFF) => { let c = c0; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return c; };
+const crcFinal = (u8) => (crc32(u8) ^ 0xFFFFFFFF) >>> 0;
 async function makeZip(files) {
   const enc = new TextEncoder(), parts = [], cent = []; let off = 0;
   const d = new Date(), dt = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dd = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
   for (const f of files) {
-    const data = new Uint8Array(await f.blob.arrayBuffer()), nb = enc.encode(f.name), crc = crc32(data), lh = new DataView(new ArrayBuffer(30));
+    const data = new Uint8Array(await f.blob.arrayBuffer()), nb = enc.encode(f.name), crc = crcFinal(data), lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, nb.length, true);
     parts.push(lh.buffer, nb, data);
     const ch = new DataView(new ArrayBuffer(46)); ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
@@ -470,25 +592,77 @@ async function makeZip(files) {
 }
 const toBlob = c => new Promise(r => c.toBlob(r, 'image/png'));
 function fitInto(src, W, H, margin) { const c = mk(W, H), k = Math.min((W - margin * 2) / src.width, (H - margin * 2) / src.height); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, (W - src.width * k) / 2, (H - src.height * k) / 2, src.width * k, src.height * k); return c; }
+
+// ---- APNG（動く画像）を作る ----
+function pngChunks(u8) {                                                  // PNGを部品（チャンク）に分ける
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), out = []; let p = 8;
+  while (p + 8 <= u8.length) { const len = dv.getUint32(p), type = String.fromCharCode(u8[p + 4], u8[p + 5], u8[p + 6], u8[p + 7]); out.push({ type, data: u8.subarray(p + 8, p + 8 + len) }); p += 12 + len; }
+  return out;
+}
+function mkChunk(type, data) {
+  const out = new Uint8Array(12 + data.length), dv = new DataView(out.buffer);
+  dv.setUint32(0, data.length); for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i); out.set(data, 8);
+  dv.setUint32(8 + data.length, crcFinal(out.subarray(4, 8 + data.length))); return out;
+}
+async function buildApng(frames, delayMs, plays) {
+  const pngs = []; for (const f of frames) pngs.push(new Uint8Array(await (await toBlob(f)).arrayBuffer()));
+  const first = pngChunks(pngs[0]), ihdr = first.find(c => c.type === 'IHDR').data, W = frames[0].width, H = frames[0].height;
+  const out = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), mkChunk('IHDR', ihdr)];
+  const ac = new DataView(new ArrayBuffer(8)); ac.setUint32(0, frames.length); ac.setUint32(4, plays); out.push(mkChunk('acTL', new Uint8Array(ac.buffer)));
+  let seq = 0;
+  const fctl = () => { const d = new DataView(new ArrayBuffer(26)); d.setUint32(0, seq++); d.setUint32(4, W); d.setUint32(8, H); d.setUint32(12, 0); d.setUint32(16, 0); d.setUint16(20, delayMs); d.setUint16(22, 1000); d.setUint8(24, 0); d.setUint8(25, 0); return mkChunk('fcTL', new Uint8Array(d.buffer)); };
+  for (let i = 0; i < pngs.length; i++) {
+    const idats = pngChunks(pngs[i]).filter(c => c.type === 'IDAT');
+    out.push(fctl());
+    if (i === 0) for (const c of idats) out.push(mkChunk('IDAT', c.data));
+    else for (const c of idats) { const d = new Uint8Array(4 + c.data.length); new DataView(d.buffer).setUint32(0, seq++); d.set(c.data, 4); out.push(mkChunk('fdAT', d)); }
+  }
+  out.push(mkChunk('IEND', new Uint8Array(0)));
+  return new Blob(out, { type: 'image/png' });
+}
+function posterize(c, bits) {
+  const ctx = c.getContext('2d'), im = ctx.getImageData(0, 0, c.width, c.height), d = im.data, lv = (1 << bits) - 1;
+  for (let i = 0; i < d.length; i += 4) { if (!d[i + 3]) continue; d[i] = Math.round(Math.round(d[i] / 255 * lv) / lv * 255); d[i + 1] = Math.round(Math.round(d[i + 1] / 255 * lv) / lv * 255); d[i + 2] = Math.round(Math.round(d[i + 2] / 255 * lv) / lv * 255); }
+  ctx.putImageData(im, 0, 0);
+}
+// 1MBに収まるまで、色を減らす→コマを減らす、の順にためす
+async function animatedPng(st) {
+  const [W, H] = dims(); let F = ANIM.F, q = false, blob = null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const frames = []; for (let i = 0; i < F; i++) { const c = stampCanvas(st, W, H, i / F); if (q) posterize(c, 5); frames.push(c); }
+    blob = await buildApng(frames, Math.round(ANIM.T / F * 1000), ANIM.L);
+    if (blob.size <= 1000000) return { blob, F, q, ok: true };
+    if (!q) q = true; else if (F > 5) F = Math.max(5, F - 3); else break;
+  }
+  return { blob, F, q, ok: false };
+}
 $('zipBtn').onclick = async () => {
   const N = +$('chCount').value; if (stamps.length < N) return;
   $('zipBtn').disabled = true; $('zipStatus').textContent = '作っています…';
   try {
     if (document.fonts) await Promise.all([document.fonts.load('800 40px "M PLUS Rounded 1c"'), document.fonts.load('400 40px "Kosugi Maru"'), document.fonts.load('400 40px "Dela Gothic One"')].map(p => p.catch(() => 0)));
-    const files = [], warn = [];
-    const list = stamps.slice(0, N), cs = list.map(s => stampCanvas(s));
-    const mainSrc = cs[Math.min(mainIdx, N - 1)], tabSrc = cs[Math.min(tabIdx, N - 1)];
-    files.push({ name: 'main.png', blob: await toBlob(fitInto(mainSrc, 240, 240, 8)) });
-    files.push({ name: 'tab.png', blob: await toBlob(fitInto(tabSrc, 96, 74, 4)) });
-    for (let i = 0; i < N; i++) { const b = await toBlob(cs[i]); files.push({ name: String(i + 1).padStart(2, '0') + '.png', blob: b }); if (b.size > 1000000) warn.push(`${i + 1}番が 1MB を超えています`); }
-    const z = await makeZip(files), a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = 'line-stamps.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    $('zipStatus').innerHTML = `<span class="ok">ZIP を保存しました（${files.length} ファイル／${(z.size / 1048576).toFixed(2)} MB）。</span>` + (warn.length ? ' <span class="warn">' + warn.join('、') + '</span>' : '');
+    const files = [], warn = [], info = [], list = stamps.slice(0, N), anim = MODE === 'anim';
+    const stills = list.map(s => stampCanvas(s, undefined, undefined, anim ? 0.12 : null));
+    files.push({ name: 'main.png', blob: await toBlob(fitInto(stills[Math.min(mainIdx, N - 1)], 240, 240, 8)) });
+    files.push({ name: 'tab.png', blob: await toBlob(fitInto(stills[Math.min(tabIdx, N - 1)], 96, 74, 4)) });
+    for (let i = 0; i < N; i++) {
+      const nm = String(i + 1).padStart(2, '0') + '.png';
+      if (anim) {
+        $('zipStatus').textContent = `動くスタンプを作っています… ${i + 1} / ${N}`; await new Promise(r => setTimeout(r, 10));
+        const r = await animatedPng(list[i]); files.push({ name: nm, blob: r.blob });
+        if (!r.ok) warn.push(`${i + 1}番が 1MB を超えています（${(r.blob.size / 1048576).toFixed(2)}MB）`); else if (r.q || r.F < ANIM.F) info.push(`${i + 1}番：軽くするため${r.q ? '色を減らし' : ''}${r.F < ANIM.F ? `、${r.F}コマにしました` : 'ました'}`);
+      } else {
+        const b = await toBlob(stills[i]); files.push({ name: nm, blob: b }); if (b.size > 1000000) warn.push(`${i + 1}番が 1MB を超えています`);
+      }
+    }
+    const z = await makeZip(files), a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = anim ? 'line-animated-stamps.zip' : 'line-stamps.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    $('zipStatus').innerHTML = `<span class="ok">ZIP を保存しました（${files.length} ファイル／${(z.size / 1048576).toFixed(2)} MB）。</span>` + (info.length ? ' <span class="note">' + info.join('、') + '</span>' : '') + (warn.length ? ' <span class="warn">' + warn.join('、') + '</span>' : '');
   } catch (e) { $('zipStatus').innerHTML = '<span class="err">作れませんでした：' + (e.message || e) + '</span>'; }
   $('zipBtn').disabled = stamps.length < N;
 };
 
 /* ===================== 起動 ===================== */
-renderCats(); fillPhrases(); suggestText(); renderAll();
+renderCats(); setMode('static'); suggestText(); startLoop();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderAll);
 })();
 </script>
