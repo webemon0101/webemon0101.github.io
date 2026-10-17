@@ -204,6 +204,12 @@
   <section class="panel">
     <h2><span class="step">4</span>書き出し（LINE Creators Market 用の ZIP）</h2>
     <div id="checks" class="note" style="font-size:.9rem"></div>
+    <div id="mainBox" class="hide" style="margin-top:10px">
+      <label>メイン画像（main.png）の形式</label>
+      <div class="row"><select id="mainFmt" style="max-width:340px"><option value="apng" selected>動く画像（APNG）・おすすめ</option><option value="png">静止画（PNG）</option></select>
+      <button class="sec" id="mainOnly" type="button">メイン画像だけを保存</button></div>
+      <div class="note">LINE の登録画面で、静止画のメイン画像が「240×240px・PNG で設定してください」とエラーになることがあったため、標準は動く画像（APNG）にしています。それでもエラーになるときは、「メイン画像だけを保存」で別々に作って、LINE の画面で個別にアップロードして試せます。</div>
+    </div>
     <div class="row" style="margin-top:10px"><button id="zipBtn">ZIP を作る</button><span id="zipStatus" class="note" style="margin:0"></span></div>
     <h3>登録のときに入れる文章の案（日本語）</h3>
     <div class="grid">
@@ -526,7 +532,7 @@ function setMode(m) {
   $('chCount').textContent = ''; opts.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; $('chCount').appendChild(o); });
   $('chCount').value = opts.includes(keep) ? keep : 16;
   $('animBox').classList.toggle('hide', m !== 'anim'); $('animEd').classList.toggle('hide', m !== 'anim');
-  $('sheetStaticBox').classList.toggle('hide', m === 'anim'); $('sheetAnimBox').classList.toggle('hide', m !== 'anim');
+  $('sheetStaticBox').classList.toggle('hide', m === 'anim'); $('sheetAnimBox').classList.toggle('hide', m !== 'anim'); $('mainBox').classList.toggle('hide', m !== 'anim');
   if (m === 'anim' && $('inMode').value === 'auto') { $('inMode').value = 'frames'; $('gCols').value = $('chFrames').value; $('gRows').value = $('chRowsA').value; }
   if (m === 'static' && $('inMode').value === 'frames') $('inMode').value = 'auto';
   $('inMode').onchange();
@@ -585,6 +591,7 @@ function renderChecks() {
   const noText = stamps.slice(0, N).filter(s => !(s.text || '').trim()).length; if (noText) msgs.push(`<span class="warn">言葉のないスタンプが ${noText} 個あります（絵だけでも、登録はできます）。</span>`);
   msgs.push(`メイン画像：${stamps[mainIdx] ? (mainIdx + 1) + ' 番' : '（なし）'}／タブ画像：${stamps[tabIdx] ? (tabIdx + 1) + ' 番' : '（なし）'}`);
   if (MODE === 'anim') msgs.push(`動き：1回 ${ANIM.T} 秒 × ${ANIM.L} 回 ＝ ${(ANIM.T * ANIM.L).toFixed(1)} 秒／${ANIM.F} コマ`);
+  if (MODE === 'anim') { const still = stamps.slice(0, N).map((st, i) => (st.motion === 'none' && st.fx === 'none' && (st.tanim || 'none') === 'none' && !(st.frames && st.frames.length > 1)) ? i + 1 : 0).filter(Boolean); if (still.length) msgs.push(`<span class="err">動きのないスタンプがあります（${still.join('・')}番）。全コマが同じ絵だと、LINE にアップロードするときエラーになります。動きか飾りを選んでください。</span>`); }
   el.innerHTML = msgs.join('<br>'); $('countInfo').textContent = `${n} / ${N} 個`;
   $('zipBtn').disabled = n < N;
 }
@@ -709,17 +716,32 @@ function posterize(c, bits) {
   ctx.putImageData(im, 0, 0);
 }
 // 1MBに収まるまで、色を減らす→コマを減らす、の順にためす
-async function animatedPng(st) {
+async function animatedPng(st, fit) {
   const [W, H] = dims(), K = st.frames && st.frames.length > 1 ? st.frames.length : 0, minF = K ? K * Math.ceil(5 / K) : 5;
   let F = K ? Math.min(20, Math.max(minF, K * Math.max(1, Math.round(ANIM.F / K)))) : ANIM.F, q = false, blob = null;   // コマ送りのときは、コマ数の倍数にそろえる
   for (let attempt = 0; attempt < 8; attempt++) {
-    const frames = []; for (let i = 0; i < F; i++) { const c = stampCanvas(st, W, H, i / F); if (q) posterize(c, 5); frames.push(c); }
+    const frames = []; for (let i = 0; i < F; i++) { let c = stampCanvas(st, W, H, i / F); if (fit) c = fitInto(c, fit.w, fit.h, fit.m); if (q) posterize(c, 5); frames.push(c); }
     blob = await buildApng(frames, Math.round(ANIM.T / F * 1000), ANIM.L);
     if (blob.size <= 1000000) return { blob, F, q, ok: true };
     if (!q) q = true; else if (F > minF) F = Math.max(minF, F - (K || 3)); else break;
   }
   return { blob, F, q, ok: false };
 }
+async function mainBlob(st, still) {
+  if (MODE === 'anim' && $('mainFmt').value === 'apng') return (await animatedPng(st, { w: 240, h: 240, m: 8 })).blob;
+  return toBlob(fitInto(still, 240, 240, 8));
+}
+$('mainOnly').onclick = async () => {
+  if (!stamps.length) { $('zipStatus').textContent = '先にスタンプを入れてください。'; return; }
+  $('mainOnly').disabled = true;
+  try {
+    if (document.fonts) await Promise.all([document.fonts.load('800 40px "M PLUS Rounded 1c"'), document.fonts.load('400 40px "Kosugi Maru"'), document.fonts.load('400 40px "Dela Gothic One"')].map(p => p.catch(() => 0)));
+    const st = stamps[Math.min(mainIdx, stamps.length - 1)], blob = await mainBlob(st, stampCanvas(st, undefined, undefined, MODE === 'anim' ? 0.12 : null));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'main.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    $('zipStatus').innerHTML = `<span class="ok">main.png を保存しました（${(blob.size / 1024).toFixed(0)} KB）。</span>`;
+  } catch (e) { $('zipStatus').innerHTML = '<span class="err">作れませんでした：' + (e.message || e) + '</span>'; }
+  $('mainOnly').disabled = false;
+};
 $('zipBtn').onclick = async () => {
   const N = +$('chCount').value; if (stamps.length < N) return;
   $('zipBtn').disabled = true; $('zipStatus').textContent = '作っています…';
@@ -727,7 +749,7 @@ $('zipBtn').onclick = async () => {
     if (document.fonts) await Promise.all([document.fonts.load('800 40px "M PLUS Rounded 1c"'), document.fonts.load('400 40px "Kosugi Maru"'), document.fonts.load('400 40px "Dela Gothic One"')].map(p => p.catch(() => 0)));
     const files = [], warn = [], info = [], list = stamps.slice(0, N), anim = MODE === 'anim';
     const stills = list.map(s => stampCanvas(s, undefined, undefined, anim ? 0.12 : null));
-    files.push({ name: 'main.png', blob: await toBlob(fitInto(stills[Math.min(mainIdx, N - 1)], 240, 240, 8)) });
+    files.push({ name: 'main.png', blob: await mainBlob(list[Math.min(mainIdx, N - 1)], stills[Math.min(mainIdx, N - 1)]) });
     files.push({ name: 'tab.png', blob: await toBlob(fitInto(stills[Math.min(tabIdx, N - 1)], 96, 74, 4)) });
     for (let i = 0; i < N; i++) {
       const nm = String(i + 1).padStart(2, '0') + '.png';
