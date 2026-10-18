@@ -66,8 +66,8 @@
   .res .nm div:first-child{overflow:hidden;text-overflow:ellipsis}
   .res .sub{font-size:.76rem;color:var(--sub)}
   .tag{font-size:.68rem;padding:1px 7px;border-radius:9px;background:var(--accbg);color:var(--acc);white-space:nowrap}
-  .tag.food{background:#e8eef9;color:#4a6fb0}.tag.custom{background:#fbeede;color:#b4731a}
-  @media (prefers-color-scheme:dark){.tag.food{background:#22304a;color:#8fb2ec}.tag.custom{background:#43341c;color:#e6b36a}}
+  .tag.food{background:#e8eef9;color:#4a6fb0}.tag.custom{background:#fbeede;color:#b4731a}.tag.set{background:#f3e3f7;color:#9a3fb0}
+  @media (prefers-color-scheme:dark){.tag.food{background:#22304a;color:#8fb2ec}.tag.custom{background:#43341c;color:#e6b36a}.tag.set{background:#3b2646;color:#d6a6e6}}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .chip{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:5px 11px;font-size:.85rem;cursor:pointer;color:var(--fg)}
   .chip:hover{border-color:var(--acc)}
@@ -110,6 +110,18 @@
   input[type=number]{-moz-appearance:textfield;appearance:textfield}
   .mic.on{background:var(--bad);border-color:var(--bad);color:#fff;animation:mp 1s infinite}
   @keyframes mp{50%{opacity:.55}}
+  .scrollx{overflow-x:auto}
+  .ntab{width:100%;border-collapse:collapse;font-size:.82rem}
+  .ntab td,.ntab th{padding:5px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-weight:400}
+  .ntab th{font-weight:700;color:var(--sub);font-size:.74rem}
+  .ntab td:first-child,.ntab th:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  .ntab tr.grp td{background:var(--bg);color:var(--sub);font-weight:700;text-align:left;font-size:.74rem}
+  .ntab .sub{color:var(--sub);font-size:.72rem}
+  .s-ok{background:rgba(60,192,136,.26)}.s-mid{background:rgba(226,154,28,.30)}.s-low{background:rgba(214,69,69,.26)}
+  .nbar{display:inline-block;width:42px;height:7px;background:var(--bg);border-radius:4px;overflow:hidden;vertical-align:middle}
+  .nbar i{display:block;height:100%}
+  .nbar i.s-ok{background:var(--acc)}.nbar i.s-mid{background:var(--warn)}.nbar i.s-low{background:var(--bad)}
+  #nutDet{margin-top:12px}#nutDet summary{cursor:pointer;font-weight:700;color:var(--acc);padding:4px 0}
   .multi .mi{border-top:1px solid var(--line);padding:10px 0}
   .multi .mi:first-child{border-top:0}
   .multi .mi .q{font-size:.8rem;color:var(--sub)}
@@ -159,6 +171,7 @@
 
   <!-- ===== グラフ・履歴 ===== -->
   <div id="vStat" class="hide">
+    <div class="card"><h2>1週間の栄養チェック（直近7日）</h2><div id="weekNut"></div></div>
     <div class="card"><h2>ダイエットの成果（体脂肪に換算した目安）</h2><div id="dietStat"></div></div>
     <div class="card hide" id="wCard"><h2>体重の記録</h2><div id="wChart"></div></div>
     <div class="card"><h2>この7日間のカロリー</h2><div id="chart7"></div><div id="avg" class="note"></div></div>
@@ -191,6 +204,13 @@
       成長期（18歳未満）、妊娠中・授乳中、持病のある方は、減量の計算を目安にしないでください。極端な食事制限はせず、気になるときは医師や管理栄養士に相談してください。</div>
     </div>
     <div class="card">
+      <h2>栄養素の目安量（自分用に変えられます）</h2>
+      <div class="note" style="margin-top:0">「くわしい栄養素」と「1週間の栄養チェック」で使う、1日の目安です。<span id="refWho"></span><br>
+      日本人の食事摂取基準（2020年版）の成人の値を、私が代表的な数値にまとめたものです。年齢の細かい区分、月経・妊娠・授乳、持病などで変わります。必要なら、下の数字を直してください。</div>
+      <div id="refList"></div>
+      <div class="row" style="margin-top:10px"><button class="gb" id="refReset">初期値に戻す</button></div>
+    </div>
+    <div class="card">
       <h2>目標</h2>
       <label>1日の目標カロリー（kcal）</label><input id="setTarget" type="number" min="800" max="6000" step="50">
       <label>食塩相当量の目安（g／日）</label><input id="setSalt" type="number" min="1" max="20" step="0.5">
@@ -211,13 +231,18 @@
     </div>
     <div id="syncMount"></div>
     <div class="card">
+      <h2>保存したセット</h2>
+      <div class="note" style="margin-top:0">「記録」画面の各食事にある「セット保存」で、いまの食事を名前をつけて保存できます。検索で名前を入れると、1回で追加できます（量は 0.5〜2倍に変えられます）。</div>
+      <div id="setList"></div>
+    </div>
+    <div class="card">
       <h2>自分で登録した食品</h2>
       <div id="customList"></div>
     </div>
     <div class="card">
       <h2>データについて</h2>
       <div class="note" style="margin-top:0">
-        食品のカロリー・栄養素は、文部科学省「日本食品標準成分表（八訂）増補2023年」から引用しています（食品100gあたり）。<br>
+        食品のカロリー・栄養素（ミネラル・ビタミンなど）は、文部科学省「日本食品標準成分表（八訂）増補2023年」から引用しています（食品100gあたり）。測定されていない項目は、0として計算しています。<br>
         「料理」の数値は、標準的なレシピ（1人前の材料の量）をもとに、成分表の食品から計算した<b>概算値</b>です。お店や家庭によって大きく変わるので、目安として使ってください。<br>
         ここで表示する数値は医療上の助言ではありません。<br>
         声での入力（🎤）を使うと、話した声がブラウザの音声認識サービス（Chrome・Edge では Google など）に送られて文字になります。使わなければ、何も送られません。
@@ -242,7 +267,7 @@ const MEALS = [['b', '朝食'], ['l', '昼食'], ['d', '夕食'], ['s', '間食'
 const MEALNAME = Object.fromEntries(MEALS);
 
 /* ---------- 保存 ---------- */
-function blank() { return { settings: { target: 2000, salt: 7.5 }, entries: {}, customs: [], usage: {}, last: {}, profile: null, days: {}, dayUpd: {}, metaUpd: 0 }; }
+function blank() { return { settings: { target: 2000, salt: 7.5 }, entries: {}, customs: [], usage: {}, last: {}, profile: null, days: {}, dayUpd: {}, metaUpd: 0, sets: [] }; }
 function load() {
   try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.entries) return Object.assign(blank(), j, { settings: Object.assign(blank().settings, j.settings || {}) }); } catch {}
   return blank();
@@ -260,7 +285,7 @@ const kit = window.SyncKit;
 const EMPTYDAY = '[[],null]';
 let snapDay = {}, snapMeta = '', remoteUpd = {}, remoteMetaUpd = 0, pushTimer = 0;
 const dayJSON = d => JSON.stringify([S.entries[d] || [], S.days[d] || null]);
-const metaJSON = () => JSON.stringify([S.settings, S.customs, S.usage, S.last, S.profile]);
+const metaJSON = () => JSON.stringify([S.settings, S.customs, S.usage, S.last, S.profile, S.sets]);
 function touch() {
   const now = Date.now();
   for (const d of new Set([...Object.keys(S.entries), ...Object.keys(S.days), ...Object.keys(snapDay)])) {
@@ -271,7 +296,7 @@ function touch() {
 }
 (function seed() {                                                       // すでにある記録は、更新時刻を最小値にして「送る対象」にする
   for (const d of new Set([...Object.keys(S.entries), ...Object.keys(S.days)])) { if (!S.dayUpd[d] && dayJSON(d) !== EMPTYDAY) S.dayUpd[d] = 1; snapDay[d] = dayJSON(d); }
-  if (!S.metaUpd && (S.customs.length || S.profile || Object.keys(S.usage).length)) S.metaUpd = 1;
+  if (!S.metaUpd && (S.customs.length || S.profile || (S.sets && S.sets.length) || Object.keys(S.usage).length)) S.metaUpd = 1;
   snapMeta = metaJSON();
 })();
 function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2200); }
@@ -308,15 +333,16 @@ function buildIndex() {
   ITEMS = [];
   for (const d of D.dishes) {
     const names = [d[1], ...d[2]];
-    ITEMS.push({ t: 'dish', name: d[1], unit: d[3], g: d[4], n: { kcal: d[5], p: d[6], f: d[7], c: d[8], s: d[9] }, cat: d[0], keys: keysOf(names), key: 'd:' + d[1] });
+    ITEMS.push({ t: 'dish', name: d[1], unit: d[3], g: d[4], n: { kcal: d[5], p: d[6], f: d[7], c: d[8], s: d[9] }, x: d.slice(10), cat: d[0], keys: keysOf(names), key: 'd:' + d[1] });
   }
   for (const f of D.foods) {
-    ITEMS.push({ t: 'food', name: f[1], id: f[0], n: { kcal: f[2], p: f[3], f: f[4], c: f[5], s: f[7] }, keys: keysOf([f[1]]), key: 'f:' + f[0] });
+    ITEMS.push({ t: 'food', name: f[1], id: f[0], n: { kcal: f[2], p: f[3], f: f[4], c: f[5], s: f[7] }, x: f.slice(8), keys: keysOf([f[1]]), key: 'f:' + f[0] });
   }
   for (const c of S.customs) ITEMS.push(customItem(c));
+  for (const st of S.sets || []) ITEMS.push(setItem(st));
   ITEMS.forEach((it, i) => { it.idx = i; it.bg = it.keys.map(bigrams); });
 }
-function customItem(c) { return { t: 'custom', name: c.name, unit: c.unit || '1食分', cid: c.id, n: { kcal: c.kcal, p: c.p || 0, f: c.f || 0, c: c.c || 0, s: c.s || 0 }, keys: keysOf([c.name]), key: 'c:' + c.id }; }
+function customItem(c) { return { t: 'custom', name: c.name, unit: c.unit || '1食分', cid: c.id, n: { kcal: c.kcal, p: c.p || 0, f: c.f || 0, c: c.c || 0, s: c.s || 0 }, x: new Array(20).fill(0), keys: keysOf([c.name]), key: 'c:' + c.id }; }
 function matchScore(it, tok) {
   let best = 0;
   for (let i = 0; i < it.keys.length; i++) {
@@ -338,7 +364,7 @@ function search(raw, limit = 40) {
     for (const t of toks) { const m = matchScore(it, t); if (m <= 0) { ok = false; break; } sc += m; }
     if (!ok) continue;
     sc = sc / toks.length;
-    sc += it.t === 'custom' ? 25 : it.t === 'dish' ? 12 : 0;
+    sc += it.t === 'custom' || it.t === 'set' ? 25 : it.t === 'dish' ? 12 : 0;
     sc += Math.min(25, (S.usage[it.key] || 0) * 3);
     sc -= it.idx * 0.002;                                            // 同点なら登録順（よく使うものを先に並べてある）
     out.push([sc, it]);
@@ -355,7 +381,7 @@ const UNITS = { '12004': [['1個', 50]], '01026': [['6枚切り1枚', 60], ['4�
 function calc(it, amount) {
   const k = it.t === 'food' ? amount / 100 : amount;               // 食品=グラム／料理・自作=人前
   const r = (v, d = 1) => Math.round(v * k * Math.pow(10, d)) / Math.pow(10, d);
-  return { kcal: Math.round(it.n.kcal * k), p: r(it.n.p), f: r(it.n.f), c: r(it.n.c), s: r(it.n.s) };
+  return { kcal: Math.round(it.n.kcal * k), p: r(it.n.p), f: r(it.n.f), c: r(it.n.c), s: r(it.n.s), x: it.x ? it.x.map(v => Math.round(v * k * 100) / 100) : null };
 }
 function amountLabel(e) {
   if (e.kind === 'food') return `${e.amount}g`;
@@ -382,15 +408,17 @@ function renderLog() {
       <div><b style="${t.s > S.settings.salt ? 'color:var(--bad)' : ''}">${t.s.toFixed(1)}g</b>食塩<small>目安 ${S.settings.salt}g</small></div>
     </div>
     <div class="pfcbar" title="エネルギーの割合（たんぱく質・脂質・炭水化物）"><i style="width:${kP / kT * 100}%;background:var(--p)"></i><i style="width:${kF / kT * 100}%;background:var(--f)"></i><i style="width:${kC / kT * 100}%;background:var(--c)"></i></div>
-    <div id="dietBox"></div>`;
-  renderDiet();
+    <div id="dietBox"></div>
+    <details id="nutDet"><summary>くわしい栄養素（ミネラル・ビタミンなど）</summary><div id="nutBody"></div></details>`;
+  renderDiet(); renderNutDay();
   const box = $('meals'); box.textContent = '';
   for (const [mk, mn] of MEALS) {
     const es = list.filter(e => e.meal === mk), mt = totals(es);
     const card = document.createElement('div'); card.className = 'card meal';
     const h = document.createElement('div'); h.className = 'mh';
-    h.innerHTML = `<h3>${mn}</h3><span class="k">${es.length ? Math.round(mt.kcal) + ' kcal' : ''}</span><button class="sb" data-meal="${mk}">＋ 追加</button>`;
+    h.innerHTML = `<h3>${mn}</h3><span class="k">${es.length ? Math.round(mt.kcal) + ' kcal' : ''}</span><button class="sb" data-meal="${mk}">＋ 追加</button>${es.length ? '<button class="gb" data-saveset="1" style="padding:6px 9px;font-size:.76rem">セット保存</button>' : ''}`;
     h.querySelector('button').onclick = () => { $('mealSel').value = mk; $('q').focus(); $('q').scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+    const sv = h.querySelector('[data-saveset]'); if (sv) sv.onclick = () => openSaveSet(es, `${mn}のセット`);
     card.appendChild(h);
     if (!es.length) { const em = document.createElement('div'); em.className = 'empty'; em.textContent = 'まだ記録がありません'; card.appendChild(em); }
     for (const e of es) {
@@ -419,10 +447,10 @@ function renderQuick() {
   }
   box.appendChild(c);
 }
-function quickAdd(it) { addEntry(it, S.last[it.key] || (it.t === 'food' ? 100 : 1), $('mealSel').value); toast(`追加しました：${it.name}`); }
+function quickAdd(it) { if (it.t === 'set') { addSet(it.set, S.last[it.key] || 1, $('mealSel').value); toast(`追加しました：${it.name}`); return; } addEntry(it, S.last[it.key] || (it.t === 'food' ? 100 : 1), $('mealSel').value); toast(`追加しました：${it.name}`); }
 
 /* ---------- 追加・編集 ---------- */
-function addEntry(it, amount, meal, editing) {
+function addEntry(it, amount, meal, editing, quiet) {
   const c = calc(it, amount);
   const base = it.n;
   const e = Object.assign({ id: editing ? editing.id : uid(), meal, kind: it.t, key: it.key, name: it.name, unit: it.unit || '', g: it.g || 0, amount, base }, c);
@@ -430,7 +458,7 @@ function addEntry(it, amount, meal, editing) {
   if (editing) { const i = list.findIndex(x => x.id === editing.id); if (i >= 0) list[i] = e; else list.push(e); }
   else { list.push(e); S.usage[it.key] = (S.usage[it.key] || 0) + 1; }
   S.last[it.key] = amount;
-  save(); renderLog(); renderStat();
+  if (!quiet) { save(); renderLog(); renderStat(); }
 }
 function closeModal() { $('modalRoot').textContent = ''; }
 function openModal(html) {
@@ -480,8 +508,91 @@ function openAmount(it, editing) {
   setTimeout(() => { val.focus(); val.select(); }, 50);
 }
 
+/* ---------- セット（よく食べる組み合わせ） ---------- */
+function setTotals(set) {
+  const t = { kcal: 0, p: 0, f: 0, c: 0, s: 0 }, x = new Array(20).fill(0);
+  for (const sn of set.items) { for (const k of ['kcal', 'p', 'f', 'c', 's']) t[k] += sn[k] || 0; if (Array.isArray(sn.x)) sn.x.forEach((v, i) => x[i] += v); }
+  return { t, x };
+}
+function setItem(st) {
+  const { t, x } = setTotals(st);
+  return { t: 'set', name: st.name, unit: '1セット', g: 0, n: { kcal: Math.round(t.kcal), p: +t.p.toFixed(1), f: +t.f.toFixed(1), c: +t.c.toFixed(1), s: +t.s.toFixed(1) }, x, set: st, keys: keysOf([st.name]), key: 'set:' + st.id };
+}
+const snapOf = e => { const x = entryX(e); return { key: e.key, kind: e.kind, name: e.name, unit: e.unit || '', g: e.g || 0, amount: e.amount, base: e.base || null, kcal: e.kcal, p: e.p, f: e.f, c: e.c, s: e.s, x: x ? x.map(v => Math.round(v * 100) / 100) : null }; };
+function addRaw(sn, mult, meal) {
+  const r = n => Math.round((n || 0) * mult * 100) / 100;
+  (S.entries[cur] = S.entries[cur] || []).push({ id: uid(), meal, kind: sn.kind, key: sn.key, name: sn.name, unit: sn.unit, g: sn.g, amount: r(sn.amount), base: sn.base, kcal: Math.round((sn.kcal || 0) * mult), p: r(sn.p), f: r(sn.f), c: r(sn.c), s: r(sn.s), x: sn.x ? sn.x.map(v => Math.round(v * mult * 100) / 100) : null });
+}
+function addSet(set, mult, meal) {
+  for (const sn of set.items) {
+    const c = byKey(sn.key), amount = Math.round(sn.amount * mult * 100) / 100;
+    if (c && c.t !== 'set' && amount > 0) addEntry(c, amount, meal, null, true); else if (amount > 0) addRaw(sn, mult, meal);
+  }
+  S.usage['set:' + set.id] = (S.usage['set:' + set.id] || 0) + 1; S.last['set:' + set.id] = mult;
+  save(); renderLog(); renderStat();
+}
+function openSaveSet(entries, defName) {
+  const tot = totals(entries);
+  openModal(`<h3>セットに保存</h3><div class="note" style="margin-top:0">いまの食事を、名前をつけて保存します。次からは、検索して1回で入れられます。</div>
+    <label>セットの名前</label><input id="stName" type="text">
+    <div class="note" id="stInfo"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="gb" id="stCancel">キャンセル</button><button class="pb" id="stOk">保存する</button></div>`);
+  $('stName').value = defName; $('stInfo').textContent = `${entries.length}品・${Math.round(tot.kcal)} kcal：` + entries.map(e => e.name).join('、');
+  $('stCancel').onclick = closeModal;
+  $('stOk').onclick = () => {
+    const name = $('stName').value.trim(); if (!name) { toast('名前を入れてください'); return; }
+    S.sets.push({ id: uid(), name, items: entries.map(snapOf) });
+    save(); buildIndex(); renderSetList(); closeModal(); toast(`セットを保存しました：${name}`);
+  };
+  setTimeout(() => $('stName').select(), 50);
+}
+function openSet(set) {
+  let mult = S.last['set:' + set.id] || 1, meal = $('mealSel').value;
+  const sheet = openModal(`<h3></h3><div class="note" id="sSub" style="margin-top:0"></div>
+    <div class="nut" id="sNut"></div><div id="sList" class="note" style="margin-top:0"></div>
+    <label>量（セット全体の何倍か）</label>
+    <div class="stepper"><button class="ib" id="sMinus">−</button><input id="sVal" type="number" inputmode="decimal" min="0" step="0.5"><button class="ib" id="sPlus">＋</button></div>
+    <div class="chips" id="sChips"></div>
+    <label>食事の区分</label><div class="chips" id="sMeals"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="gb" id="sCancel">キャンセル</button><button class="pb" id="sOk">追加する</button></div>`);
+  sheet.querySelector('h3').textContent = set.name;
+  const { t } = setTotals(set), val = $('sVal');
+  function refresh() {
+    const a = Math.max(0, parseFloat(val.value) || 0);
+    $('sSub').textContent = `${set.items.length}品のセット`;
+    $('sNut').innerHTML = `<div><b>${Math.round(t.kcal * a)}</b>kcal</div><div><b>${(t.p * a).toFixed(1)}</b>たんぱく質</div><div><b>${(t.f * a).toFixed(1)}</b>脂質</div><div><b>${(t.c * a).toFixed(1)}</b>炭水化物</div><div><b>${(t.s * a).toFixed(1)}</b>塩分</div>`;
+    $('sList').textContent = set.items.map(sn => `${sn.name}（${amountLabel({ kind: sn.kind, amount: Math.round(sn.amount * a * 100) / 100, unit: sn.unit })}）`).join('、');
+    sheet.querySelectorAll('#sChips .chip').forEach(ch => ch.classList.toggle('on', +ch.dataset.v === a));
+  }
+  val.value = mult; val.oninput = refresh;
+  $('sMinus').onclick = () => { val.value = Math.max(0, (parseFloat(val.value) || 0) - 0.5); refresh(); };
+  $('sPlus').onclick = () => { val.value = (parseFloat(val.value) || 0) + 0.5; refresh(); };
+  for (const v of [0.5, 0.75, 1, 1.5, 2]) { const b = document.createElement('button'); b.className = 'chip'; b.textContent = v + '倍'; b.dataset.v = v; b.onclick = () => { val.value = v; refresh(); }; $('sChips').appendChild(b); }
+  for (const [mk, mn] of MEALS) { const b = document.createElement('button'); b.className = 'chip' + (mk === meal ? ' on' : ''); b.textContent = mn; b.onclick = () => { meal = mk; $('sMeals').querySelectorAll('.chip').forEach(x => x.classList.remove('on')); b.classList.add('on'); }; $('sMeals').appendChild(b); }
+  $('sCancel').onclick = closeModal;
+  $('sOk').onclick = () => { const a = parseFloat(val.value); if (!(a > 0)) { toast('量を入れてください'); return; } addSet(set, a, meal); closeModal(); toast(`追加しました：${set.name}`); $('q').value = ''; $('results').textContent = ''; };
+  refresh();
+}
+function openRenameSet(set) {
+  openModal(`<h3>セットの名前を変える</h3><label>名前</label><input id="rnName" type="text"><div class="row" style="margin-top:14px;justify-content:flex-end"><button class="gb" id="rnCancel">キャンセル</button><button class="pb" id="rnOk">変更する</button></div>`);
+  $('rnName').value = set.name; $('rnCancel').onclick = closeModal;
+  $('rnOk').onclick = () => { const n = $('rnName').value.trim(); if (!n) { toast('名前を入れてください'); return; } set.name = n; save(); buildIndex(); renderSetList(); closeModal(); };
+}
+function renderSetList() {
+  const box = $('setList'); if (!box) return; box.textContent = '';
+  if (!S.sets.length) { box.innerHTML = '<div class="note">まだありません。</div>'; return; }
+  for (const st of S.sets) {
+    const { t } = setTotals(st), r = document.createElement('div'); r.className = 'ent'; r.style.cssText = 'padding:9px 0;cursor:default';
+    r.innerHTML = '<div class="nm"><div></div><div class="am"></div></div><div class="kc"></div><button class="gb" data-a="r" style="padding:5px 9px;font-size:.78rem">名前</button><button class="db" data-a="d">削除</button>';
+    r.querySelector('.nm div').textContent = st.name; r.querySelector('.am').textContent = `${st.items.length}品：` + st.items.map(i => i.name).join('、'); r.querySelector('.kc').textContent = Math.round(t.kcal) + ' kcal';
+    r.querySelector('[data-a=r]').onclick = () => openRenameSet(st);
+    r.querySelector('[data-a=d]').onclick = () => { if (confirm(`セット「${st.name}」を消しますか？（記録済みの食事は消えません）`)) { S.sets = S.sets.filter(x => x.id !== st.id); save(); buildIndex(); renderSetList(); } };
+    box.appendChild(r);
+  }
+}
+
 /* ---------- 検索欄 ---------- */
-const typeTag = it => it.t === 'dish' ? '<span class="tag">料理</span>' : it.t === 'custom' ? '<span class="tag custom">自作</span>' : '<span class="tag food">食品</span>';
+const typeTag = it => it.t === 'dish' ? '<span class="tag">料理</span>' : it.t === 'custom' ? '<span class="tag custom">自作</span>' : it.t === 'set' ? '<span class="tag set">セット</span>' : '<span class="tag food">食品</span>';
 function renderResults() {
   const q = $('q').value.trim(), box = $('results'); box.textContent = '';
   if (!q) return;
@@ -490,11 +601,12 @@ function renderResults() {
   const wrap = document.createElement('div'); wrap.className = 'res';
   for (const it of rs) {
     const r = document.createElement('div'); r.className = 'it'; r.tabIndex = 0;
-    const meta = it.t === 'food' ? `100gあたり ${it.n.kcal} kcal` : `${it.unit || '1人前'}　${it.n.kcal} kcal`;
+    const meta = it.t === 'food' ? `100gあたり ${it.n.kcal} kcal` : it.t === 'set' ? `1セット　${it.n.kcal} kcal（${it.set.items.length}品）` : `${it.unit || '1人前'}　${it.n.kcal} kcal`;
     r.innerHTML = `<div class="nm"><div></div><div class="sub">${meta}</div></div>${typeTag(it)}`;
     r.querySelector('.nm div').textContent = it.name;
-    r.onclick = () => openAmount(it);
-    r.onkeydown = e => { if (e.key === 'Enter') openAmount(it); };
+    const go = () => it.t === 'set' ? openSet(it.set) : openAmount(it);
+    r.onclick = go;
+    r.onkeydown = e => { if (e.key === 'Enter') go(); };
     wrap.appendChild(r);
   }
   box.appendChild(wrap);
@@ -641,7 +753,7 @@ function openMulti(prefill) {
   };
   $('mAdd').onclick = () => {
     let n = 0;
-    for (const r of rows) { if (!r.cands.length) continue; const c = r.cands[r.sel]; addEntry(c, defaultAmt(c, r.p), $('mealSel').value); n++; }
+    for (const r of rows) { if (!r.cands.length) continue; const c = r.cands[r.sel]; if (c.t === 'set') { addSet(c.set, defaultAmt(c, r.p), $('mealSel').value); n++; continue; } addEntry(c, defaultAmt(c, r.p), $('mealSel').value); n++; }
     closeModal(); toast(`${n}件を追加しました`);
   };
   $('mCancel').onclick = closeModal;
@@ -649,6 +761,7 @@ function openMulti(prefill) {
   if (prefill) { $('mText').value = prefill; $('mGo').click(); } else $('mText').focus();
 }
 function defaultAmt(c, p) {
+  if (c.t === 'set') return p.serv || S.last[c.key] || 1;
   if (c.t === 'food') return p.grams || (p.serv ? p.serv * (({ '12004': 50 })[c.id] || 100) : (S.last[c.key] || 100));
   if (p.grams && c.g) return Math.round(p.grams / c.g * 10) / 10 || 1;
   return p.serv || S.last[c.key] || 1;
@@ -708,7 +821,7 @@ function barChart(days, tg) {
 }
 function lastDays(n) { const o = []; for (let i = n - 1; i >= 0; i--) o.push(addDays(ymd(new Date()), -i)); return o; }
 function renderStat() {
-  renderDietStat(); renderWeightChart();
+  renderDietStat(); renderWeightChart(); renderWeekNut();
   const d7 = lastDays(7), d30 = lastDays(30), tg = S.settings.target;
   $('chart7').innerHTML = barChart(d7, tg); $('chart30').innerHTML = barChart(d30, tg);
   const rec = d7.filter(d => dayEntries(d).length), avg = rec.length ? rec.reduce((t, d) => t + totals(dayEntries(d)).kcal, 0) / rec.length : 0;
@@ -718,6 +831,110 @@ function renderStat() {
   for (const d of days) { const t = totals(dayEntries(d)); h += `<tr data-d="${d}" style="cursor:pointer"><td>${dayLabel(d).replace(' 今日', '')}</td><td>${Math.round(t.kcal)}</td><td>${t.p.toFixed(0)}</td><td>${t.f.toFixed(0)}</td><td>${t.c.toFixed(0)}</td><td>${t.s.toFixed(1)}</td></tr>`; }
   $('histTable').innerHTML = days.length ? h + '</table>' : '<div class="note" style="margin-top:0">まだ記録がありません。</div>';
   $('histTable').querySelectorAll('tr[data-d]').forEach(tr => tr.onclick = () => { cur = tr.dataset.d; show('Log'); renderLog(); window.scrollTo(0, 0); });
+}
+
+/* ---------- くわしい栄養素・1週間チェック ---------- */
+// [キー, 名前, 単位, 小数, 区分]（data.js の並びと同じ）
+const NUTS = [['fib', '食物繊維', 'g', 1, 'その他'], ['k', 'カリウム', 'mg', 0, 'ミネラル'], ['ca', 'カルシウム', 'mg', 0, 'ミネラル'], ['mg', 'マグネシウム', 'mg', 0, 'ミネラル'], ['ph', 'リン', 'mg', 0, 'ミネラル'], ['fe', '鉄', 'mg', 1, 'ミネラル'], ['zn', '亜鉛', 'mg', 1, 'ミネラル'],
+  ['va', 'ビタミンA', 'μg', 0, 'ビタミン'], ['vd', 'ビタミンD', 'μg', 1, 'ビタミン'], ['ve', 'ビタミンE', 'mg', 1, 'ビタミン'], ['vk', 'ビタミンK', 'μg', 0, 'ビタミン'], ['b1', 'ビタミンB1', 'mg', 2, 'ビタミン'], ['b2', 'ビタミンB2', 'mg', 2, 'ビタミン'],
+  ['ne', 'ナイアシン', 'mgNE', 1, 'ビタミン'], ['b6', 'ビタミンB6', 'mg', 2, 'ビタミン'], ['b12', 'ビタミンB12', 'μg', 1, 'ビタミン'], ['fol', '葉酸', 'μg', 0, 'ビタミン'], ['pa', 'パントテン酸', 'mg', 2, 'ビタミン'], ['vc', 'ビタミンC', 'mg', 0, 'ビタミン'], ['chol', 'コレステロール', 'mg', 0, 'その他']];
+const BASE_ROWS = [['kcal', 'エネルギー', 'kcal', 0, '基本'], ['p', 'たんぱく質', 'g', 0, '基本'], ['f', '脂質', 'g', 0, '基本'], ['c', '炭水化物', 'g', 0, '基本'], ['s', '食塩相当量', 'g', 1, '基本']];
+const ALL_ROWS = [...BASE_ROWS, ...NUTS];
+const same = v => ({ m: [v, v, v], f: [v, v, v] });
+// 成人の目安（日本人の食事摂取基準2020年版の推奨量・目安量・目標量を、代表的な値にまとめたもの）[50歳未満, 50〜64歳, 65歳以上]
+const DRI = { p: { m: [65, 65, 60], f: [50, 50, 50] }, fib: { m: [21, 21, 20], f: [18, 18, 17] }, k: { m: [3000, 3000, 3000], f: [2600, 2600, 2600] }, ca: { m: [750, 750, 750], f: [650, 650, 650] }, mg: { m: [380, 380, 350], f: [290, 290, 280] },
+  ph: { m: [1000, 1000, 1000], f: [800, 800, 800] }, fe: { m: [7.5, 7.5, 7.5], f: [10.5, 11, 6] }, zn: { m: [11, 11, 11], f: [8, 8, 8] }, va: { m: [900, 900, 850], f: [700, 700, 700] }, vd: same(8.5), ve: { m: [6, 7, 7], f: [5.5, 6, 6] }, vk: same(150),
+  b1: { m: [1.4, 1.3, 1.3], f: [1.1, 1.1, 1.1] }, b2: { m: [1.6, 1.5, 1.5], f: [1.2, 1.2, 1.2] }, ne: { m: [15, 14, 13], f: [12, 11, 10] }, b6: { m: [1.4, 1.4, 1.4], f: [1.1, 1.1, 1.1] }, b12: same(2.4), fol: same(240), pa: { m: [5, 6, 6], f: [5, 5, 5] }, vc: same(100) };
+function refBand() { const p = prof(); return { sex: p ? p.sex : 'f', band: p ? (p.age < 50 ? 0 : p.age < 65 ? 1 : 2) : 0 }; }
+function refVal(key) {
+  const o = S.settings.ref && S.settings.ref[key]; if (o > 0) return o;
+  if (key === 'kcal') return S.settings.target; if (key === 's') return S.settings.salt;
+  const d = DRI[key]; if (!d) return null; const { sex, band } = refBand(); return d[sex][band];
+}
+function entryX(e) {
+  if (Array.isArray(e.x) && e.x.length === 20) return e.x;
+  const it = byKey(e.key); if (it && it.x) { const k = e.kind === 'food' ? e.amount / 100 : e.amount; return it.x.map(v => v * k); }
+  return null;                                                         // 古い記録で、元の食品も見つからないもの
+}
+function xSum(list) { const s = new Array(20).fill(0); let miss = 0; for (const e of list) { const x = entryX(e); if (!x) { miss++; continue; } for (let i = 0; i < 20; i++) s[i] += x[i]; } return { s, miss }; }
+function dayTot(list) { const t = totals(list), { s, miss } = xSum(list); return { t, xs: s, miss }; }
+function valOf(key, dt) { if (key === 'kcal' || key === 'p' || key === 'f' || key === 'c' || key === 's') return dt.t[key]; return dt.xs[NUTS.findIndex(n => n[0] === key)]; }
+function fmtV(v, dec) { return v == null || isNaN(v) ? '–' : (dec === 0 ? Math.round(v).toLocaleString() : v.toFixed(dec)); }
+function stClass(key, v) {
+  if (key === 'kcal' || key === 'f' || key === 'c' || key === 'chol') return '';
+  const r = refVal(key); if (!r) return ''; const q = v / r;
+  if (key === 's') return q <= 1 ? 's-ok' : 's-low';
+  return q >= 1 ? 's-ok' : q >= 0.7 ? 's-mid' : 's-low';
+}
+let nutOpen = false, weekView = 'day';
+function renderNutDay() {
+  const det = $('nutDet'); if (!det) return;
+  det.open = nutOpen; det.ontoggle = () => { nutOpen = det.open; };
+  const list = dayEntries(cur), body = $('nutBody');
+  if (!list.length) { body.innerHTML = '<div class="note">食べたものを入れると、ここに栄養素が出ます。</div>'; return; }
+  const dt = dayTot(list); let h = '<div class="scrollx"><table class="ntab"><tr><th>栄養素</th><th>摂取</th><th>目安</th><th>達成率</th></tr>', grp = '';
+  for (const [k, n, u, dec, g] of ALL_ROWS) {
+    if (k === 'kcal' || k === 'f' || k === 'c') continue;
+    if (g !== grp) { grp = g; h += `<tr class="grp"><td colspan="4">${g}</td></tr>`; }
+    const v = valOf(k, dt), r = refVal(k), cls = stClass(k, v), pct = r ? Math.round(v / r * 100) : null;
+    h += `<tr><td>${n}</td><td>${fmtV(v, dec)} ${u}</td><td>${r ? fmtV(r, dec) + (k === 's' ? ' 未満' : '') : '–'}</td><td>${pct == null ? '–' : `<span class="nbar"><i class="${cls}" style="width:${Math.min(100, pct)}%"></i></span> ${pct}%`}</td></tr>`;
+  }
+  body.innerHTML = h + '</table></div><div class="note">目安は、性別・年齢（設定）から決めた成人の値です（未設定の間は、成人女性の値）。1日の合計に対する割合で、1食だけでは低く出ます。成分表に値がない項目は、0として数えています。' + (dt.miss ? `<br>栄養素のデータがない記録が ${dt.miss} 件あり、数えていません。` : '') + '</div>';
+}
+function renderWeekNut() {
+  const box = $('weekNut'); if (!box) return;
+  const days = lastDays(7), data = days.map(d => ({ d, list: dayEntries(d), ...dayTot(dayEntries(d)) })), recAll = data.filter(x => x.list.length), doneD = recAll.filter(x => dayInfo(x.d).done), rec = doneD.length ? doneD : recAll;   // 「記録は完了」の日があれば、その日だけで平均する
+  let h = `<div class="chips"><button class="chip${weekView === 'day' ? ' on' : ''}" data-v="day">日ごと</button><button class="chip${weekView === 'meal' ? ' on' : ''}" data-v="meal">食事ごと（朝・昼・夕・間食）</button></div>`;
+  if (!rec.length) { box.innerHTML = h + '<div class="note">この7日間の記録がまだありません。</div>'; wireWeek(box); return; }
+  const avgDt = { t: { kcal: 0, p: 0, f: 0, c: 0, s: 0 }, xs: new Array(20).fill(0) };
+  for (const x of rec) { for (const k of ['kcal', 'p', 'f', 'c', 's']) avgDt.t[k] += x.t[k] / rec.length; x.xs.forEach((v, i) => avgDt.xs[i] += v / rec.length); }
+  h += '<div class="scrollx" style="margin-top:8px"><table class="ntab">';
+  if (weekView === 'day') {
+    h += '<tr><th>栄養素</th>' + data.map(x => { const dt = parseYmd(x.d); return `<th>${dt.getMonth() + 1}/${dt.getDate()}<br>(${WD[dt.getDay()]})</th>`; }).join('') + '<th>平均</th><th>目安</th></tr>';
+    let grp = '';
+    for (const [k, n, u, dec, g] of ALL_ROWS) {
+      if (g !== grp) { grp = g; h += `<tr class="grp"><td colspan="10">${g}</td></tr>`; }
+      h += `<tr><td>${n}<span class="sub">（${u}）</span></td>` + data.map(x => x.list.length ? `<td class="${stClass(k, valOf(k, x))}">${fmtV(valOf(k, x), dec)}</td>` : '<td>–</td>').join('')
+        + `<td class="${stClass(k, valOf(k, avgDt))}"><b>${fmtV(valOf(k, avgDt), dec)}</b></td><td>${refVal(k) ? fmtV(refVal(k), dec) + (k === 's' ? '未満' : '') : '–'}</td></tr>`;
+    }
+  } else {
+    const meals = MEALS.map(([mk, mn]) => { const dt = { t: { kcal: 0, p: 0, f: 0, c: 0, s: 0 }, xs: new Array(20).fill(0) }; for (const x of rec) { const m = dayTot(x.list.filter(e => e.meal === mk)); for (const k of ['kcal', 'p', 'f', 'c', 's']) dt.t[k] += m.t[k] / rec.length; m.xs.forEach((v, i) => dt.xs[i] += v / rec.length); } return { mk, mn, dt }; });
+    h += '<tr><th>1日あたりの平均</th>' + meals.map(m => `<th>${m.mn}</th>`).join('') + '<th>合計</th><th>目安</th></tr>';
+    let grp = '';
+    for (const [k, n, u, dec, g] of ALL_ROWS) {
+      if (g !== grp) { grp = g; h += `<tr class="grp"><td colspan="7">${g}</td></tr>`; }
+      const tot = valOf(k, avgDt);
+      h += `<tr><td>${n}<span class="sub">（${u}）</span></td>` + meals.map(m => { const v = valOf(k, m.dt); return `<td>${fmtV(v, dec)}<span class="sub"> ${tot > 0 ? Math.round(v / tot * 100) : 0}%</span></td>`; }).join('')
+        + `<td class="${stClass(k, tot)}"><b>${fmtV(tot, dec)}</b></td><td>${refVal(k) ? fmtV(refVal(k), dec) + (k === 's' ? '未満' : '') : '–'}</td></tr>`;
+    }
+  }
+  h += '</table></div>';
+  // 足りなそうな栄養素
+  const low = NUTS.map(([k, n, u, dec], i) => ({ k, n, u, dec, i, r: refVal(k), v: avgDt.xs[i] })).filter(x => x.r && x.k !== 'chol' && x.v / x.r < 0.7).sort((a, b) => a.v / a.r - b.v / b.r);
+  h += `<div class="note" style="margin-top:10px">${doneD.length ? `「記録は完了」にした ${rec.length} 日` : `記録のある ${rec.length} 日`}の平均です（${doneD.length ? '完了にしていない日と、' : ''}記録のない日は入れていません）。色：<span class="s-ok" style="padding:0 6px">目安の100%以上</span> <span class="s-mid" style="padding:0 6px">70〜99%</span> <span class="s-low" style="padding:0 6px">70%未満（食塩は超えた日）</span></div>`;
+  if (low.length) {
+    h += `<h3 style="margin:14px 0 6px;font-size:.9rem">不足しがちな栄養素（平均が目安の70%未満）</h3><div class="note" style="margin-top:0">${low.map(x => `${x.n} ${Math.round(x.v / x.r * 100)}%`).join('、')}</div>`;
+    for (const x of low.slice(0, 3)) {
+      const top = ITEMS.filter(it => it.t === 'dish' && it.cat !== 'その他' && it.cat !== '飲み物' && it.x).sort((a, b) => b.x[x.i] - a.x[x.i]).slice(0, 5);
+      h += `<div class="note"><b>${x.n}</b>を多く含む料理の例：${top.map(it => `${it.name}（${fmtV(it.x[x.i], x.dec)}${x.u}）`).join('、')}</div>`;
+    }
+  } else h += '<div class="note ok" style="color:var(--acc)">この7日間の平均では、目安の70%を下回る栄養素はありませんでした。</div>';
+  box.innerHTML = h; wireWeek(box);
+}
+function wireWeek(box) { box.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { weekView = b.dataset.v; renderWeekNut(); }); }
+function renderRefList() {
+  const box = $('refList'); if (!box) return; box.textContent = '';
+  const { sex, band } = refBand(), lab = (prof() ? `${sex === 'm' ? '男性' : '女性'}・${['50歳未満', '50〜64歳', '65歳以上'][band]}` : '成人女性（設定で性別・年齢を入れると変わります）');
+  $('refWho').textContent = `いまの目安：${lab}`;
+  for (const [k, n, u, dec] of [['p', 'たんぱく質', 'g', 0], ...NUTS.filter(x => x[0] !== 'chol')]) {
+    const r = document.createElement('div'); r.className = 'row'; r.style.cssText = 'justify-content:space-between;margin-top:6px';
+    r.innerHTML = `<span></span><input type="number" step="any" inputmode="decimal" style="width:120px">`;
+    r.querySelector('span').textContent = `${n}（${u}）`;
+    const inp = r.querySelector('input'); inp.value = refVal(k);
+    inp.oninput = () => { const v = parseFloat(inp.value); S.settings.ref = S.settings.ref || {}; if (v > 0) S.settings.ref[k] = v; else delete S.settings.ref[k]; save(); renderLog(); renderStat(); };
+    box.appendChild(r);
+  }
+  attachMics(box);
 }
 
 /* ---------- ダイエット計算 ---------- */
@@ -843,9 +1060,10 @@ $('tgMaint').onclick = () => setTargetFromProfile(0); $('tgSlow').onclick = () =
 
 /* ---------- 設定・バックアップ ---------- */
 function renderSettings() {
-  $('setTarget').value = S.settings.target; $('setSalt').value = S.settings.salt; renderCustomList(); updPersist();
-  const p = S.profile || {}; $('pSex').value = p.sex || ''; $('pAge').value = p.age || ''; $('pH').value = p.h || ''; $('pW').value = p.w || ''; $('pPal').value = String(p.pal || 1.375); profInfo();
+  $('setTarget').value = S.settings.target; $('setSalt').value = S.settings.salt; renderCustomList(); renderSetList(); updPersist();
+  const p = S.profile || {}; $('pSex').value = p.sex || ''; $('pAge').value = p.age || ''; $('pH').value = p.h || ''; $('pW').value = p.w || ''; $('pPal').value = String(p.pal || 1.375); profInfo(); renderRefList();
 }
+$('refReset').onclick = () => { delete S.settings.ref; save(); renderRefList(); renderLog(); renderStat(); toast('初期値に戻しました'); };
 $('setTarget').oninput = () => { const v = +$('setTarget').value; if (v >= 800) { S.settings.target = v; save(); renderLog(); renderStat(); } };
 $('setSalt').oninput = () => { const v = +$('setSalt').value; if (v > 0) { S.settings.salt = v; save(); renderLog(); } };
 $('exportBtn').onclick = () => {
@@ -912,7 +1130,7 @@ async function onMeta(raw) {
   if (raw && remoteMetaUpd > (S.metaUpd || 0)) {
     const u = await kit.unpack(raw);
     if (u) {
-      S.settings = Object.assign(blank().settings, u.settings || {}); S.customs = u.customs || []; S.usage = u.usage || {}; S.last = u.last || {}; S.profile = u.profile || null;
+      S.settings = Object.assign(blank().settings, u.settings || {}); S.customs = u.customs || []; S.usage = u.usage || {}; S.last = u.last || {}; S.profile = u.profile || null; if (Array.isArray(u.sets)) S.sets = u.sets;
       S.metaUpd = remoteMetaUpd; snapMeta = metaJSON();
       save(); buildIndex(); renderLog(); renderStat(); renderSettings();
     }
@@ -931,7 +1149,7 @@ async function pushLocal() {
   }
   if ((S.metaUpd || 0) > remoteMetaUpd) {
     const prev = remoteMetaUpd; remoteMetaUpd = S.metaUpd;
-    try { await kit.put('meta', 'calorie', { upd: S.metaUpd }, { settings: S.settings, customs: S.customs, usage: S.usage, last: S.last, profile: S.profile }); }
+    try { await kit.put('meta', 'calorie', { upd: S.metaUpd }, { settings: S.settings, customs: S.customs, usage: S.usage, last: S.last, profile: S.profile, sets: S.sets }); }
     catch (err) { remoteMetaUpd = prev; throw err; }
   }
   kit.done();
