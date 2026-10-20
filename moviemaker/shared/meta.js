@@ -101,6 +101,19 @@
       enWhy: [],
       enNote: ['*Please make sure you have the rights to the source video and music before posting.']
     },
+    'stereo-3d': {
+      motion: true, tags: ['立体視', '裸眼3D', '平行法', 'Shorts'], enTags: ['Stereogram', 'Stereoscopic', 'Parallel', 'Shorts'],
+      jpTitles: ['【裸眼3D】眼鏡なしで、光の粒が浮かんで見える（平行法）{t}', '【立体視】2つの画面を重ねると、3Dで動き出す{t}', '【裸眼立体視】平行法で見る、光のうずまき{t}', '見えたら才能？ 裸眼3Dの光の粒{t}'],
+      jpHook: '左右2つの画面を、眼鏡なしで重ねて見ると、光の粒が奥行きをもって浮かんで見える立体視の動画です。',
+      jpHow: ['画面から少し離れて、目の力をぬき、画面のずっと向こうを見るようにします（平行法）。', '上の丸が、左右で重なって3つに見えたら、真ん中の丸に注目してください。', '見えにくいときは、画面を小さくする、または少し離れてみてください。'],
+      jpWhy: ['左右の目に少しだけ違う絵を見せると、脳が奥行きを感じ取ります（両眼視差）。2つの画面を重ねて見ることで、眼鏡なしでも立体的に見えます。'],
+      jpNote: ['※立体の見え方には個人差があり、見えない人もいます。これは病気や能力とは関係ありません。'],
+      enTitles: ['Naked-Eye 3D: Glowing Particles Float Without Glasses (Parallel View) {t}', 'Stereoscopic Video: Fuse the Two Images in 3D {t}', 'Can You See It in 3D? Parallel Viewing {t}'],
+      enHook: 'A side-by-side stereoscopic video. Fuse the two images without glasses and the particles appear to float in depth.',
+      enHow: ['Sit a little back, relax your eyes, and look "through" the screen (parallel viewing).', 'When the circles on top merge into three, focus on the middle one.', 'If it is hard, make the video smaller or move farther away.'],
+      enWhy: ['Showing each eye a slightly different image lets the brain perceive depth (binocular disparity).'],
+      enNote: ['*Some people cannot see stereo images. This is not related to any illness or ability.']
+    },
     'silhouette-illusion': {
       motion: true, tags: ['錯視', 'シルエット', '回転', 'Shorts'], enTags: ['OpticalIllusion', 'SpinningDancer', 'Shorts'],
       jpTitles: ['【錯視】このシルエット、右回り？ 左回り？{t}', '見るたびに回る向きが変わる…？【回転シルエット錯視】{t}', '【錯視】同じ動画なのに、逆回転に見える{t}'],

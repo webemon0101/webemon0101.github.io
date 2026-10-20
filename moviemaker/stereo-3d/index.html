@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>立体視3Dメーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#7fa8ff;--acc2:#6690f0;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:14px}
+  button,a.btn{background:var(--acc);color:#0b1a40;font-weight:600;border:0;border-radius:8px;padding:10px 18px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:70vh;margin:0 auto}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.85rem;margin-top:10px}
+  .warn{background:#2a2412;border:1px solid #5a4a1a;color:#ffe9a8;border-radius:8px;padding:10px 12px;font-size:.85rem;margin-top:12px}
+  .err{color:var(--err)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← MovieMaker 一覧</a></p>
+  <h1>立体視3Dメーカー</h1>
+  <p class="lead">光の粒が回る3Dの動画を、左右2つの画面（裸眼立体視）で作ります。眼鏡なしで、2つの画面を「ぼんやり重ねて」見ると、粒が奥行きをもって浮かんで見えます。動画の書き出しもブラウザ内で行われ、何もアップロードされません。</p>
+
+  <div class="panel">
+    <h2>見た目</h2>
+    <div class="grid">
+      <div><label>模様</label><select id="scene">
+        <option value="galaxy">うずまき銀河</option>
+        <option value="sphere">光の球（波うつ）</option>
+        <option value="tunnel">トンネルを進む</option>
+        <option value="torus">ドーナツ（トーラス）</option>
+        <option value="cloud">ただよう粒の雲</option>
+        <option value="helix">二重らせん</option>
+      </select></div>
+      <div><label>色</label><select id="pal">
+        <option value="violet">むらさき・青</option>
+        <option value="rainbow">にじ色</option>
+        <option value="warm">あたたかい色</option>
+        <option value="cool">すずしい色</option>
+        <option value="mono">白</option>
+      </select></div>
+      <div><label>立体の強さ：<span id="depthV">50</span></label><input type="range" id="depth" min="10" max="100" value="50"></div>
+      <div><label>動く速さ：<span id="speedV">1.0</span></label><input type="range" id="speed" min="0.2" max="3" step="0.1" value="1"></div>
+    </div>
+    <div class="grid">
+      <div><label>粒の数：<span id="countV">1500</span></label><input type="range" id="count" min="300" max="4000" step="100" value="1500"></div>
+      <div><label>粒の大きさ：<span id="sizeV">1.0</span></label><input type="range" id="size" min="0.4" max="2.5" step="0.1" value="1"></div>
+      <div><label>ぼかし（手前の粒）：<span id="blurV">50</span></label><input type="range" id="blur" min="0" max="100" value="50"></div>
+      <div><label>全体の大きさ：<span id="zoomV">1.0</span></label><input type="range" id="zoom" min="0.5" max="1.4" step="0.05" value="1"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>見かたと書き出し</h2>
+    <div class="grid">
+      <div><label>見かた</label><select id="view">
+        <option value="par">平行法（画面の向こうを見るように）</option>
+        <option value="cross">交差法（寄り目で見る）</option>
+      </select></div>
+      <div><label>画面の形</label><select id="fmt">
+        <option value="169">横長 16:9（1280×720）</option>
+        <option value="916">縦長 9:16（720×1280・Shorts）</option>
+        <option value="11">正方形（1080×1080）</option>
+      </select></div>
+      <div><label>長さ（秒）：<span id="durV">30</span></label><input type="range" id="dur" min="5" max="120" step="5" value="30"></div>
+      <div><label class="chk"><input type="checkbox" id="dot" checked> 上に目印の丸（ピント合わせ）をつける</label>
+        <label class="chk" style="margin-top:8px"><input type="checkbox" id="guide" checked> 見かたの文字をつける</label></div>
+    </div>
+    <div class="warn" id="viewInfo"></div>
+    <div class="info">目がつかれる・気分が悪くなったら、すぐにやめてください。立体の見え方には個人差があり、見えない人もいます。</div>
+  </div>
+
+  <div class="panel">
+    <canvas id="cv" width="1280" height="720"></canvas>
+    <div class="bar"><i id="prog"></i></div>
+    <div class="row top">
+      <button id="play">プレビュー再生</button>
+      <button id="stop" class="sec hidden">停止</button>
+      <button id="rec" class="sec">動画に書き出す</button>
+    </div>
+    <div id="status"></div>
+    <div id="result" class="row top hidden"><a id="dl" class="btn" href="#">動画をダウンロード</a></div>
+  </div>
+</main>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id), cv = $('cv'), cx = cv.getContext('2d');
+const SIZES = { '169': [1280, 720], '916': [720, 1280], '11': [1080, 1080] };
+
+/* ---------- 色 ---------- */
+const PAL = {
+  violet: [[270, 80, 70], [285, 85, 75], [215, 80, 70], [190, 70, 75], [0, 0, 100]],
+  rainbow: [[0, 85, 65], [45, 90, 65], [120, 70, 60], [200, 85, 65], [290, 80, 70]],
+  warm: [[10, 90, 62], [30, 95, 62], [48, 95, 65], [340, 80, 68], [0, 0, 100]],
+  cool: [[180, 70, 62], [200, 80, 65], [225, 80, 70], [160, 60, 65], [0, 0, 100]],
+  mono: [[0, 0, 100], [0, 0, 88], [0, 0, 75]]
+};
+
+/* ---------- 点群 ---------- */
+// 乱数は固定（見た目がいつも同じ順になるように）
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+let pts = [], sceneKey = '', pCount = 0, palKey = '';
+function build() {
+  const sc = $('scene').value, n = +$('count').value, pk = $('pal').value;
+  if (sc === sceneKey && n === pCount && pk === palKey) return;
+  sceneKey = sc; pCount = n; palKey = pk;
+  const r = rng(12345), pal = PAL[pk]; pts = [];
+  for (let i = 0; i < n; i++) {
+    const c = pal[Math.floor(r() * pal.length)];
+    pts.push({ u: r(), v: r(), w: r(), s: 0.5 + r() * 1.3, h: c[0] + (r() - .5) * 18, sa: c[1], l: c[2], ph: r() * 6.283 });
+  }
+}
+// 各粒の 3D 位置（単位：だいたい -1〜1）を返す。t は秒。
+function place(sc, p, t, i, n) {
+  const T = 6.283185307;
+  switch (sc) {
+    case 'galaxy': {
+      const arms = 5, a = Math.floor(p.u * arms) / arms, rr = Math.pow(p.v, .7), th = a * T + rr * 5.2 - t * .35 + (p.w - .5) * .35;
+      const rad = rr * .95; return [Math.cos(th) * rad, Math.sin(th) * rad, (p.w - .5) * .25 * (1 - rr) + Math.sin(t * .8 + rr * 9 + a * 6) * .12];
+    }
+    case 'sphere': {
+      const th = p.u * T + t * .25, ph = Math.acos(1 - 2 * p.v), w = 1 + Math.sin(ph * 5 + t * 1.2 + th * 2) * .12 + Math.sin(t * .9) * .05;
+      return [Math.sin(ph) * Math.cos(th) * .85 * w, Math.cos(ph) * .85 * w, Math.sin(ph) * Math.sin(th) * .85 * w];
+    }
+    case 'tunnel': {
+      const th = p.u * T + p.v * 3, z = ((p.w - t * .12) % 1 + 1) % 1, rad = .55 + .35 * Math.sin(z * 12 + t) * .3 + p.v * .25;
+      return [Math.cos(th + z * 2) * rad, Math.sin(th + z * 2) * rad, (z - .5) * 2];
+    }
+    case 'torus': {
+      const u = p.u * T + t * .3, v = p.v * T * 3 - t * .6, R = .62, r = .26 + .05 * Math.sin(u * 3 + t);
+      return [(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)];
+    }
+    case 'cloud': {
+      const a = p.u * T, b = Math.acos(1 - 2 * p.v), r = Math.cbrt(p.w) * .95; return [Math.sin(b) * Math.cos(a + t * .08) * r + Math.sin(t * .5 * p.s + p.ph) * .04, Math.cos(b) * r * .8 + Math.cos(t * .45 * p.s + p.ph) * .04, Math.sin(b) * Math.sin(a + t * .08) * r];
+    }
+    case 'helix': {
+      const k = i % 2, y = (p.v - .5) * 1.9, th = y * 5 + t * .7 + k * 3.1416, rad = .42 + (p.w - .5) * .12;
+      return [Math.cos(th) * rad, y, Math.sin(th) * rad];
+    }
+  }
+  return [0, 0, 0];
+}
+
+/* ---------- 描画 ---------- */
+function hsl(h, s, l, a) { return `hsla(${((h % 360) + 360) % 360},${s}%,${l}%,${a})`; }
+// 柔らかい粒のスプライト（ぼかしの強さ別に使いまわす）
+const sprites = new Map();
+function sprite(h, s, l, blur) {
+  const key = `${Math.round(h / 6)}|${s}|${l}|${blur}`;
+  let c = sprites.get(key); if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32), core = 1 - blur;
+  gr.addColorStop(0, hsl(h, s, Math.min(100, l + 14), 1)); gr.addColorStop(Math.max(.05, core * .75), hsl(h, s, l, .95)); gr.addColorStop(1, hsl(h, s, l, 0));
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); sprites.set(key, c); return c;
+}
+function drawEye(g, ox, oy, vw, vh, eye, t, P) {
+  // 視点を左右にずらして、2枚の絵をつくる（eye = -1 左目、+1 右目）
+  g.save(); g.beginPath(); g.rect(ox, oy, vw, vh); g.clip();
+  g.fillStyle = '#000'; g.fillRect(ox, oy, vw, vh);
+  const f = Math.min(vw, vh) * 0.62 * P.zoom, zc = 3.2, b = P.depth * 0.0036 * 3.2, rotY = t * 0.22 * P.speedRot;
+  const cy = Math.cos(rotY), sy = Math.sin(rotY), cxr = oy + vh * 0.5 + (P.dot ? vh * 0.03 : 0), cxs = ox + vw * 0.5;
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i], q = place(P.scene, p, t * P.speed, i, pts.length);
+    // 全体を、ゆっくり左右に回す
+    const x = q[0] * cy + q[2] * sy, z = q[2] * cy - q[0] * sy, y = q[1], zz = z + zc;
+    if (zz < 0.8) continue;
+    const sx = (x - eye * b) * f / zz + eye * b * f / zc, sy2 = y * f / zz;
+    out.push([zz, sx, sy2, p, z]);
+  }
+  out.sort((a, b2) => b2[0] - a[0]);   // 奥から手前へ
+  g.globalCompositeOperation = 'lighter';
+  for (const [zz, sx, sy2, p, z] of out) {
+    const near = Math.max(0, Math.min(1, (0.9 - z) / 1.8)), sz = P.size * p.s * f * 0.0042 * zc / zz * (1 + near * 1.8 * P.blur);
+    const blur = Math.min(.9, .06 + near * .8 * P.blur), spr = sprite(p.h, p.sa, p.l, Math.round(blur * 10) / 10);
+    g.globalAlpha = 0.38 + near * .3;
+    const d = sz * 2.6; g.drawImage(spr, cxs + sx - d / 2, cxr + sy2 - d / 2, d, d);
+  }
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  if (P.dot) { g.fillStyle = 'rgba(150,150,150,.95)'; g.beginPath(); g.arc(cxs, oy + vh * 0.085, Math.max(7, vh * 0.04), 0, 6.283); g.fill(); }
+  g.restore();
+}
+function params() {
+  return { scene: $('scene').value, depth: +$('depth').value, speed: +$('speed').value, speedRot: +$('speed').value, size: +$('size').value, blur: +$('blur').value / 100, zoom: +$('zoom').value,
+    dot: $('dot').checked, guide: $('guide').checked, view: $('view').value, dur: +$('dur').value, fmt: $('fmt').value };
+}
+function frame(t, P) {
+  const [W, H] = SIZES[P.fmt]; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  build();
+  cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+  // 2つの画面。縦長のときは、左右を小さくして中央に置く
+  let vw = W / 2, vh = H, oy = 0;
+  if (P.fmt === '916') { vw = W / 2; vh = Math.min(H, vw * 1.15); oy = (H - vh) / 2; }
+  if (P.fmt === '11') { vh = H * 0.62; oy = (H - vh) / 2; }
+  const left = P.view === 'par' ? -1 : 1, right = -left;   // 平行法：左の絵は左目用
+  drawEye(cx, 0, oy, vw, vh, left, t, P);
+  drawEye(cx, vw, oy, vw, vh, right, t, P);
+  if (P.guide) {
+    cx.fillStyle = 'rgba(200,205,220,.85)'; cx.textAlign = 'center'; cx.font = `${Math.round(W * 0.022)}px system-ui,"Yu Gothic",sans-serif`;
+    const msg = P.view === 'par' ? '画面の向こうを見るように、2つの丸を重ねて（平行法）' : '寄り目で、2つの丸を重ねて（交差法）';
+    if (t < 6 || P.fmt !== '169') cx.fillText(msg, W / 2, H - Math.round(W * 0.03));
+    if (t < 6 && P.fmt === '916') { /* 縦長は、下に出すだけ */ }
+  }
+}
+
+/* ---------- 再生・録画 ---------- */
+let playing = false, raf = 0, startAt = 0, curP = null, onEnd = null, recorder = null, outUrl = null, stopTick = null;
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+function makeTicker(cb) {
+  const w = new Worker(URL.createObjectURL(new Blob(['let id;onmessage=e=>{if(e.data==="start")id=setInterval(()=>postMessage(0),1000/60);else clearInterval(id)}'], { type: 'text/javascript' })));
+  w.onmessage = () => cb(performance.now()); w.postMessage('start');
+  return () => { w.postMessage('stop'); w.terminate(); };
+}
+function loop(now) {
+  if (!playing) return;
+  const t = (now - startAt) / 1000;
+  frame(Math.max(t, 0), curP);
+  $('prog').style.width = Math.min(100, Math.max(0, t) / curP.dur * 100) + '%';
+  if (t >= curP.dur) { const f = onEnd; finish(); if (f) f(); return; }
+  if (!stopTick) raf = requestAnimationFrame(loop);
+}
+function start(rec, end) {
+  finish(); curP = params(); onEnd = end || null; playing = true;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden'); startAt = performance.now() + 100;
+  if (rec) stopTick = makeTicker(loop); else raf = requestAnimationFrame(loop);
+}
+function finish() {
+  if (raf) cancelAnimationFrame(raf); raf = 0; playing = false; onEnd = null;
+  if (stopTick) { stopTick(); stopTick = null; }
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('prog').style.width = '0';
+}
+function idle() { if (!playing && !recorder) frame(2, params()); }
+$('play').onclick = () => start(false);
+$('stop').onclick = () => { if (recorder && recorder !== true) { const r = recorder; finish(); r.stop(); } else { finish(); idle(); } };
+$('rec').onclick = () => {
+  finish();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '', ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm', chunks = [];
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  start(true, () => { if (recorder && recorder !== true) setTimeout(() => recorder && recorder.state !== 'inactive' && recorder.stop(), 300); });
+  const rc = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  rc.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rc.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob); $('dl').href = outUrl; $('dl').download = `stereo-3d_${curP.scene}.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden'); $('rec').disabled = false; setStatus('録画が完了しました。'); recorder = null; idle();
+  };
+  recorder = rc; rc.start();
+  setStatus(`録画中…（約 ${Math.round(curP.dur)} 秒。このタブを表示したままにしてください）`);
+};
+
+/* ---------- UI ---------- */
+function viewInfo() {
+  $('viewInfo').textContent = $('view').value === 'par'
+    ? '【平行法】画面に近づきすぎず、目の力をぬいて「画面のずっと向こう」を見るようにすると、左右の丸が3つに見えます。真ん中の丸が、ほかの粒といっしょに浮かんで見えます。'
+    : '【交差法】2つの丸の真ん中あたりに指を立て、指を見つめたまま画面へ…、または軽く寄り目にして、左右の丸を重ねます。平行法とは奥行きが逆（凹凸が反対）になります。';
+}
+[['depth', ''], ['speed', ''], ['count', ''], ['size', ''], ['blur', ''], ['zoom', ''], ['dur', '']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
+['scene', 'pal', 'view', 'fmt', 'dot', 'guide'].forEach(i => $(i).addEventListener('input', () => { viewInfo(); idle(); }));
+viewInfo(); idle();
+})();
+</script>
+<script src="../shared/meta.js"></script>
+</body>
+</html>
