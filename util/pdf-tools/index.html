@@ -83,6 +83,7 @@
       <button class="sec sm" id="rev">順番を逆にする</button>
       <button class="sm" id="edit">✎ 書き込む（1ページ選択）</button>
     </div>
+    <div class="row top"><label style="margin:0">ページ番号で選ぶ</label><input type="text" id="pgRange" placeholder="例：5-12　または　1,3,5-8" style="width:220px"><button class="sec sm" id="pgSel">この範囲を選ぶ</button><button class="sec sm" id="pgAdd">いまの選択に追加</button><span class="info" id="pgMsg" style="margin:0"></span></div>
     <div class="info">ページをドラッグして順番を入れかえられます（スマホは各ページの ◀ ▶ で）。クリックで選択します。書き込み済みのページには「書込」の印が付きます。</div>
     <div id="pages"></div>
   </div>
@@ -257,6 +258,27 @@ $('dup').onclick = () => { const out = []; pages.forEach(p => { out.push(p); if 
 $('del').onclick = () => { const s = selPages(); if (!s.length) return toast('消すページを選んでください。'); if (!confirm(`${s.length} ページを削除します。よろしいですか？`)) return; pages = pages.filter(p => !p.sel); render(); };
 $('rev').onclick = () => { pages.reverse(); render(); };
 function toast(t) { setStatus(t); }
+// 「5-12」「1,3,5-8」「10-」「-3」のような指定を読む（全角の数字・記号もOK）
+function parseRange(str, max) {
+  const t = str.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 65248)).replace(/[－‐–—ー〜～~]/g, '-').replace(/[、，\s]+/g, ',').replace(/p/gi, '');
+  const set = new Set(); if (!t.replace(/,/g, '')) return null;
+  for (const part of t.split(',').filter(Boolean)) {
+    const m = part.match(/^(\d*)-(\d*)$/), one = part.match(/^\d+$/);
+    if (one) { const n = +part; if (n < 1 || n > max) return { err: `${n} ページは、ありません（1〜${max}）` }; set.add(n); }
+    else if (m && (m[1] || m[2])) { const a = m[1] ? +m[1] : 1, b = m[2] ? +m[2] : max; if (a < 1 || b > max) return { err: `「${part}」は、ページ数（1〜${max}）をこえています` }; if (a > b) return { err: `「${part}」は、小さい数を先に書いてください（例：${b}-${a}）` }; for (let k = a; k <= b; k++) set.add(k); }
+    else return { err: `「${part}」が読めません。例：5-12 または 1,3,5-8` };
+  }
+  return { set };
+}
+function selByRange(add) {
+  const r = parseRange($('pgRange').value, pages.length), msg = $('pgMsg'); msg.classList.remove('err');
+  if (!r) { msg.textContent = 'ページ番号を入れてください。'; msg.classList.add('err'); return; }
+  if (r.err) { msg.textContent = r.err; msg.classList.add('err'); return; }
+  pages.forEach((p, i) => { const on = r.set.has(i + 1); p.sel = add ? (p.sel || on) : on; });
+  msg.textContent = `${r.set.size} ページを選びました。`; render();
+}
+$('pgSel').onclick = () => selByRange(false); $('pgAdd').onclick = () => selByRange(true);
+$('pgRange').onkeydown = e => { if (e.key === 'Enter') selByRange(false); };
 
 /* ---------- 書き込みエディタ ---------- */
 let E = null;   // {pg, ov, base(canvas), tool, sel, drag, cur(img for tool)}
