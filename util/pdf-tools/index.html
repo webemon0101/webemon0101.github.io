@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDFいじるくん</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#7fa8ff;--acc2:#6690f0;--err:#ff6b6b;--ok:#6ee7a8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:1000px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text],textarea{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  input[type=range]{width:100%}
+  .chk{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.92rem;margin:0}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:12px}
+  button,a.btn,label.btn{background:var(--acc);color:#0b1a40;font-weight:600;border:0;border-radius:8px;padding:9px 16px;font-size:.95rem;cursor:pointer;text-decoration:none;display:inline-block;margin:0;font-family:inherit}
+  button:hover,a.btn:hover,label.btn:hover{background:var(--acc2)}
+  button.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover{background:#383d52}
+  button.sm{padding:5px 10px;font-size:.82rem}
+  button.on{outline:2px solid var(--acc)}
+  button:disabled{opacity:.45;cursor:default}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--sub)}
+  .drop.over{border-color:var(--acc);color:var(--fg)}
+  #pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:14px}
+  .pg{background:#12141a;border:2px solid var(--line);border-radius:10px;padding:6px;position:relative;cursor:grab;user-select:none}
+  .pg.sel{border-color:var(--acc);background:#182036}
+  .pg.dragover{outline:2px dashed var(--acc)}
+  .pg .th{height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:6px;background:#0c0d12}
+  .pg canvas{max-width:100%;max-height:100%;background:#fff}
+  .pg .no{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.7);border-radius:6px;font-size:.72rem;padding:0 6px}
+  .pg .ov{position:absolute;right:8px;top:8px;background:#6ee7a8;color:#0a2a18;border-radius:6px;font-size:.7rem;padding:0 6px}
+  .pg .nm{font-size:.7rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+  .pg .mv{display:flex;justify-content:space-between;margin-top:4px}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status{color:var(--sub);font-size:.88rem;margin-top:8px;min-height:1.3em}
+  .info{color:var(--sub);font-size:.82rem;margin-top:8px}
+  .warn{background:#2a2412;border:1px solid #5a4a1a;color:#ffe9a8;border-radius:8px;padding:10px 12px;font-size:.85rem;margin-top:12px}
+  .err{color:var(--err)}.ok{color:var(--ok)}
+  .hidden{display:none}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+  .seg{display:flex;gap:0;flex-wrap:wrap}
+  .seg label{margin:0;flex:1 1 auto}
+  .seg input{display:none}
+  .seg span{display:block;text-align:center;padding:9px 12px;border:1px solid var(--line);color:var(--fg);cursor:pointer;font-size:.9rem;background:#12141a}
+  .seg label:first-child span{border-radius:8px 0 0 8px}.seg label:last-child span{border-radius:0 8px 8px 0}
+  .seg input:checked+span{background:var(--acc);color:#0b1a40;font-weight:600}
+  /* editor */
+  #ed{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:50;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:12px}
+  #ed .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;width:100%;max-width:760px}
+  #edcv{display:block;margin:10px auto 0;max-width:100%;touch-action:none;background:#fff;cursor:crosshair}
+  #sig{touch-action:none;background:#fff;border-radius:8px;width:100%;max-width:420px;height:150px;display:block;margin:8px 0}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← UTIL 一覧</a></p>
+  <h1>PDFいじるくん</h1>
+  <p class="lead">PDFの結合・分割・並べ替え・回転・削除、文字や署名や黒塗りの書き込み、そして容量を小さくする（メール添付用）ことができます。すべてこの端末のブラウザの中で処理し、ファイルはどこにも送られません。</p>
+
+  <div class="panel">
+    <h2>1. ファイルを入れる（PDF・画像）</h2>
+    <div class="drop" id="drop">ここにPDFや画像（JPEG / PNG）をドラッグ、または
+      <label class="btn" style="margin-left:6px">ファイルを選ぶ<input type="file" id="file" accept="application/pdf,.pdf,image/*" multiple hidden></label>
+      <div class="info">複数入れると、続けて1つに結合されます。画像は1枚が1ページになります。</div></div>
+    <div id="loadStatus" class="info"></div>
+  </div>
+
+  <div class="panel hidden" id="pnl">
+    <h2>2. ページを整理する <span id="cnt" style="font-weight:400"></span></h2>
+    <div class="row">
+      <button class="sec sm" id="selAll">すべて選ぶ</button><button class="sec sm" id="selNone">選択をはずす</button>
+      <button class="sec sm" id="rotL">↺ 左に回す</button><button class="sec sm" id="rotR">↻ 右に回す</button>
+      <button class="sec sm" id="dup">複製</button><button class="sec sm" id="del">削除</button>
+      <button class="sec sm" id="rev">順番を逆にする</button>
+      <button class="sm" id="edit">✎ 書き込む（1ページ選択）</button>
+    </div>
+    <div class="info">ページをドラッグして順番を入れかえられます（スマホは各ページの ◀ ▶ で）。クリックで選択します。書き込み済みのページには「書込」の印が付きます。</div>
+    <div id="pages"></div>
+  </div>
+
+  <div class="panel hidden" id="out">
+    <h2>3. 保存する</h2>
+    <div class="grid">
+      <div><label>保存するページ</label><div class="seg"><label><input type="radio" name="scope" value="all" checked><span>すべて</span></label><label><input type="radio" name="scope" value="sel"><span>選んだページだけ（分割）</span></label></div></div>
+      <div><label>やりかた</label><div class="seg"><label><input type="radio" name="mode" value="keep" checked><span>そのまま（文字を残す）</span></label><label><input type="radio" name="mode" value="img"><span>容量を小さくする</span></label></div></div>
+    </div>
+    <div id="cmp" class="hidden" style="margin-top:14px">
+      <div class="grid">
+        <div><label>目標の容量</label><select id="target">
+          <option value="2">2MB以下（厳しい相手向け）</option><option value="5" selected>5MB以下（ふつう）</option><option value="10">10MB以下</option>
+          <option value="custom">自由に入力</option><option value="q">容量は決めず、画質で選ぶ</option></select></div>
+        <div id="custW" class="hidden"><label>目標（MB）</label><input type="number" id="custom" min="0.1" step="0.1" value="3"></div>
+        <div id="qW" class="hidden"><label>画質</label><select id="qual"><option value="0">高（きれい・大きめ）</option><option value="1" selected>中</option><option value="2">低（小さい・粗い）</option></select></div>
+      </div>
+      <div class="warn">「容量を小さくする」は、各ページを画像にして組み直します。<b>文字を選択・コピー・検索できなくなります。</b>文字だけのPDFは、もともと軽いので、あまり小さくならないことがあります（小さくならなければ、そのままの方を使えます）。</div>
+    </div>
+    <div class="row top"><button id="go">PDFを作る</button></div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="status"></div>
+    <div id="result" class="row top hidden"><a id="dl" class="btn" href="#">ダウンロード</a><span id="resTxt" class="info" style="margin:0"></span></div>
+    <div class="info">黒塗り・白消しをしたページは、下の文字が残らないよう、自動で画像にして保存します。</div>
+  </div>
+</main>
+
+<div id="ed" class="hidden">
+  <div class="box">
+    <div class="row">
+      <b id="edTitle" style="flex:1"></b>
+      <button class="sec sm" id="edUndo">ひとつ戻す</button><button class="sec sm" id="edClear">全部消す</button>
+      <button class="sec sm" id="edCancel">キャンセル</button><button class="sm" id="edOk">完了</button>
+    </div>
+    <div class="row top" id="tools">
+      <button class="sec sm on" data-t="move">移動・選択</button>
+      <button class="sec sm" data-t="text">テキスト</button>
+      <button class="sec sm" data-t="black">黒塗り</button>
+      <button class="sec sm" data-t="white">白消し</button>
+      <button class="sec sm" data-t="hl">蛍光ペン</button>
+      <button class="sec sm" data-t="img">署名・画像</button>
+      <button class="sec sm" id="edDel">選んだものを消す</button>
+    </div>
+    <div id="opt" class="row top"></div>
+    <div class="info" id="edHint"></div>
+    <canvas id="edcv"></canvas>
+  </div>
+  <div class="box hidden" id="sigBox" style="margin-top:10px">
+    <b>署名をかく</b>
+    <canvas id="sig" width="840" height="300"></canvas>
+    <div class="row"><button class="sec sm" id="sigClear">消す</button><button class="sm" id="sigUse">この署名を使う</button><button class="sec sm" id="sigX">やめる</button>
+      <label class="btn sec sm" style="font-weight:400">画像ファイルから<input type="file" id="sigFile" accept="image/*" hidden></label></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const FONT = '"Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif';
+const docs = [];            // {kind:'pdf'|'img', name, size, bytes?, pdf?(pdf.js), lib?(pdf-lib), bmp?, w?, h?}
+let pages = [];             // {doc, i, rot, intr, sel, ov:[], vw, vh}  vw/vh = 向きをそろえる前の大きさ（pt）
+let workerReady = null;
+function setStatus(t, e) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!e); }
+const yieldUI = () => new Promise(r => setTimeout(r, 0));
+const mb = n => (n / 1048576).toFixed(n < 1048576 * 10 ? 2 : 1) + ' MB';
+
+/* ---------- pdf.js の準備（Worker は別ドメインからだと動かないので Blob に包む） ---------- */
+function initPdfjs() {
+  if (workerReady) return workerReady;
+  workerReady = fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js').then(r => r.blob())
+    .then(b => { pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(b); });
+  return workerReady;
+}
+
+/* ---------- 取り込み ---------- */
+async function addFiles(files) {
+  const ok = [...files].filter(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) || /^image\/(jpeg|png|webp|gif|bmp)$/.test(f.type));
+  if (!ok.length) { $('loadStatus').textContent = 'PDF か画像（JPEG / PNG）を選んでください。'; return; }
+  await initPdfjs();
+  for (const f of ok) {
+    $('loadStatus').textContent = `読みこみ中… ${f.name}`; $('loadStatus').classList.remove('err'); await yieldUI();
+    try {
+      if (/image/.test(f.type)) {
+        const bmp = await createImageBitmap(f), d = { kind: 'img', name: f.name, size: f.size, blob: f, bmp, w: bmp.width, h: bmp.height };
+        docs.push(d); let w = bmp.width * .75, h = bmp.height * .75; const k = Math.min(1, 842 / Math.max(w, h)); w *= k; h *= k;
+        pages.push({ doc: d, i: 0, rot: 0, intr: 0, sel: false, ov: [], vw: w, vh: h });
+      } else {
+        const bytes = new Uint8Array(await f.arrayBuffer());
+        const pdf = await pdfjsLib.getDocument({ data: bytes.slice(), cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true }).promise;
+        const d = { kind: 'pdf', name: f.name, size: f.size, bytes, pdf };
+        docs.push(d);
+        for (let i = 0; i < pdf.numPages; i++) {
+          const p = await pdf.getPage(i + 1), vp = p.getViewport({ scale: 1, rotation: 0 });
+          pages.push({ doc: d, i, rot: 0, intr: p.rotate || 0, sel: false, ov: [], vw: vp.width, vh: vp.height });
+        }
+      }
+    } catch (e) { console.error(e); $('loadStatus').textContent = `「${f.name}」を読みこめませんでした（パスワード付きや壊れたファイルかもしれません）。`; $('loadStatus').classList.add('err'); }
+  }
+  if (!$('loadStatus').classList.contains('err')) $('loadStatus').textContent = `${docs.length} 個のファイルを読みこみました。`;
+  render();
+}
+$('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+const drop = $('drop');
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); }; drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); };
+
+/* ---------- 1ページを canvas に描く（書き込み込み） ---------- */
+const finalRot = pg => (pg.intr + pg.rot) % 360;
+function viewSizeOf(pg) { const r = pg.doc.kind === 'img' ? pg.rot : finalRot(pg); return r % 180 === 0 ? [pg.vw, pg.vh] : [pg.vh, pg.vw]; }
+async function renderPage(pg, scale, withOv) {
+  const c = document.createElement('canvas'), [vw, vh] = viewSizeOf(pg);
+  c.width = Math.max(1, Math.round(vw * scale)); c.height = Math.max(1, Math.round(vh * scale));
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  if (pg.doc.kind === 'pdf') {
+    const p = await pg.doc.pdf.getPage(pg.i + 1), vp = p.getViewport({ scale, rotation: finalRot(pg) });
+    c.width = Math.round(vp.width); c.height = Math.round(vp.height); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    await p.render({ canvasContext: g, viewport: vp }).promise;
+  } else {
+    g.save(); g.translate(c.width / 2, c.height / 2); g.rotate(pg.rot * Math.PI / 180);
+    const w = pg.rot % 180 === 0 ? c.width : c.height, h = pg.rot % 180 === 0 ? c.height : c.width; g.drawImage(pg.doc.bmp, -w / 2, -h / 2, w, h); g.restore();
+  }
+  if (withOv && pg.ov.length) drawOverlays(g, pg.ov, c.width, c.height);
+  return c;
+}
+function drawOverlays(g, items, W, H, selItem) {
+  for (const it of items) {
+    if (it.t === 'rect') {
+      g.save(); g.globalAlpha = it.c === 'hl' ? .4 : 1; g.fillStyle = it.c === 'black' ? '#000' : it.c === 'white' ? '#fff' : '#ffe600';
+      g.fillRect(it.x * W, it.y * H, it.w * W, it.h * H); g.restore();
+    } else if (it.t === 'text') {
+      g.save(); g.font = `${it.s * W}px ${FONT}`; g.fillStyle = it.c; g.textBaseline = 'top';
+      it.txt.split('\n').forEach((ln, k) => g.fillText(ln, it.x * W, it.y * H + k * it.s * W * 1.2)); g.restore();
+    } else if (it.t === 'img') g.drawImage(it.el, it.x * W, it.y * H, it.w * W, it.w * W * it.ar);
+  }
+  if (selItem) { const b = bbox(selItem, g, W, H); g.save(); g.strokeStyle = '#3a7bff'; g.lineWidth = 2; g.setLineDash([6, 4]); g.strokeRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4); g.restore(); }
+}
+function bbox(it, g, W, H) {
+  if (it.t === 'text') { g.save(); g.font = `${it.s * W}px ${FONT}`; const ls = it.txt.split('\n'), w = Math.max(...ls.map(l => g.measureText(l).width)); g.restore(); return { x: it.x * W, y: it.y * H, w, h: ls.length * it.s * W * 1.2 }; }
+  if (it.t === 'img') return { x: it.x * W, y: it.y * H, w: it.w * W, h: it.w * W * it.ar };
+  return { x: it.x * W, y: it.y * H, w: it.w * W, h: it.h * H };
+}
+
+/* ---------- ページ一覧 ---------- */
+let dragFrom = -1;
+function render() {
+  $('pnl').classList.toggle('hidden', !pages.length); $('out').classList.toggle('hidden', !pages.length);
+  $('cnt').textContent = pages.length ? `（${pages.length} ページ・選択 ${pages.filter(p => p.sel).length}）` : '';
+  const box = $('pages'); box.textContent = '';
+  pages.forEach((pg, n) => {
+    const d = document.createElement('div'); d.className = 'pg' + (pg.sel ? ' sel' : ''); d.draggable = true;
+    d.innerHTML = `<span class="no">${n + 1}</span>${pg.ov.length ? '<span class="ov">書込</span>' : ''}<div class="th"></div><div class="nm"></div><div class="mv"><button class="sec sm" data-m="-1">◀</button><button class="sec sm" data-m="1">▶</button></div>`;
+    d.querySelector('.nm').textContent = pg.doc.name + (pg.doc.kind === 'pdf' ? ` p.${pg.i + 1}` : '');
+    const th = d.querySelector('.th');
+    if (pg._th && pg._thRot === pg.rot && pg._thOv === pg.ov.length) th.appendChild(pg._th);
+    else renderPage(pg, Math.min(1.2, 300 / Math.max(pg.vw, pg.vh)), true).then(c => { c.style.width = c.style.height = ''; pg._th = c; pg._thRot = pg.rot; pg._thOv = pg.ov.length; th.textContent = ''; th.appendChild(c); });
+    d.onclick = e => { if (e.target.closest('button')) return; pg.sel = !pg.sel; d.classList.toggle('sel', pg.sel); $('cnt').textContent = `（${pages.length} ページ・選択 ${pages.filter(p => p.sel).length}）`; };
+    d.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const k = n + +b.dataset.m; if (k < 0 || k >= pages.length) return; [pages[n], pages[k]] = [pages[k], pages[n]]; render(); });
+    d.ondragstart = () => { dragFrom = n; }; d.ondragover = e => { e.preventDefault(); d.classList.add('dragover'); }; d.ondragleave = () => d.classList.remove('dragover');
+    d.ondrop = e => { e.preventDefault(); e.stopPropagation(); d.classList.remove('dragover'); if (dragFrom < 0 || dragFrom === n) return; const [m] = pages.splice(dragFrom, 1); pages.splice(n, 0, m); dragFrom = -1; render(); };
+    box.appendChild(d);
+  });
+}
+const selPages = () => pages.filter(p => p.sel);
+$('selAll').onclick = () => { pages.forEach(p => p.sel = true); render(); }; $('selNone').onclick = () => { pages.forEach(p => p.sel = false); render(); };
+function rotSel(d) { const s = selPages(); if (!s.length) return toast('回すページを選んでください。'); if (s.some(p => p.ov.length)) return toast('書き込みのあるページは回せません。先に書き込みを消してください。'); s.forEach(p => p.rot = (p.rot + d + 360) % 360); render(); }
+$('rotL').onclick = () => rotSel(-90); $('rotR').onclick = () => rotSel(90);
+$('dup').onclick = () => { const out = []; pages.forEach(p => { out.push(p); if (p.sel) out.push(Object.assign({}, p, { sel: false, ov: p.ov.map(o => Object.assign({}, o)) })); }); pages = out; render(); };
+$('del').onclick = () => { const s = selPages(); if (!s.length) return toast('消すページを選んでください。'); if (!confirm(`${s.length} ページを削除します。よろしいですか？`)) return; pages = pages.filter(p => !p.sel); render(); };
+$('rev').onclick = () => { pages.reverse(); render(); };
+function toast(t) { setStatus(t); }
+
+/* ---------- 書き込みエディタ ---------- */
+let E = null;   // {pg, ov, base(canvas), tool, sel, drag, cur(img for tool)}
+const ecv = $('edcv'), eg = ecv.getContext('2d');
+$('edit').onclick = async () => {
+  const s = selPages(); if (s.length !== 1) return toast('書き込むページを1つだけ選んでください。');
+  const pg = s[0];
+  $('edTitle').textContent = `${pg.doc.name}${pg.doc.kind === 'pdf' ? ' p.' + (pg.i + 1) : ''}`;
+  const base = await renderPage(pg, Math.min(2.2, Math.max(1.2, 1000 / viewSizeOf(pg)[0])), false);
+  E = { pg, base, ov: pg.ov.map(o => Object.assign({}, o)), tool: 'move', sel: null, drag: null, cur: E && E.cur, text: '', size: 0.04, color: '#d02020', imgW: 0.25 };
+  ecv.width = base.width; ecv.height = base.height; setTool('move'); redraw();
+  $('ed').classList.remove('hidden'); document.body.style.overflow = 'hidden'; $('ed').scrollTop = 0;
+};
+const toolHints = { move: '動かしたいものをドラッグします。クリックで選択、下の「選んだものを消す」で削除できます。', text: '文字を入れて、置きたい場所をクリック（タップ）します。', black: '隠したい範囲をドラッグします。', white: '消したい範囲をドラッグします（白で塗りつぶし）。', hl: '線を引きたい範囲をドラッグします。', img: '署名や画像を選び、置きたい場所をクリックします。' };
+function setTool(t) {
+  E.tool = t; document.querySelectorAll('#tools [data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  $('edHint').textContent = toolHints[t]; const o = $('opt'); o.textContent = '';
+  if (t === 'text') {
+    o.innerHTML = '<div style="flex:1;min-width:200px"><textarea id="otxt" rows="2" placeholder="入れる文字（改行できます）"></textarea></div><div><label>大きさ</label><input type="range" id="osz" min="0.015" max="0.12" step="0.005"></div><div><label>色</label><input type="color" id="ocol"></div>';
+    $('otxt').value = E.text; $('osz').value = E.size; $('ocol').value = E.color;
+    $('otxt').oninput = e => { E.text = e.target.value; if (E.sel && E.sel.t === 'text') { E.sel.txt = E.text || ' '; redraw(); } };
+    $('osz').oninput = e => { E.size = +e.target.value; if (E.sel && E.sel.t === 'text') { E.sel.s = E.size; redraw(); } };
+    $('ocol').oninput = e => { E.color = e.target.value; if (E.sel && E.sel.t === 'text') { E.sel.c = E.color; redraw(); } };
+  } else if (t === 'img') {
+    o.innerHTML = '<button class="sec sm" id="oSig">署名をかく／画像を選ぶ</button><div><label>大きさ</label><input type="range" id="oiw" min="0.05" max="0.8" step="0.01"></div><span class="info" id="oiInfo" style="margin:0"></span>';
+    $('oiw').value = E.imgW; $('oiInfo').textContent = E.cur ? '準備できました。ページをクリックして置きます。' : '先に署名か画像を用意してください。';
+    $('oiw').oninput = e => { E.imgW = +e.target.value; if (E.sel && E.sel.t === 'img') { E.sel.w = E.imgW; redraw(); } };
+    $('oSig').onclick = () => { $('sigBox').classList.remove('hidden'); sigClear(); };
+  }
+}
+document.querySelectorAll('#tools [data-t]').forEach(b => b.onclick = () => setTool(b.dataset.t));
+function redraw() { eg.clearRect(0, 0, ecv.width, ecv.height); eg.drawImage(E.base, 0, 0); drawOverlays(eg, E.ov, ecv.width, ecv.height, E.sel); }
+function pos(e) { const r = ecv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }; }
+function hit(p) { for (let k = E.ov.length - 1; k >= 0; k--) { const b = bbox(E.ov[k], eg, ecv.width, ecv.height), x = p.x * ecv.width, y = p.y * ecv.height; if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return E.ov[k]; } return null; }
+ecv.onpointerdown = e => {
+  if (!E) return; ecv.setPointerCapture(e.pointerId); const p = pos(e), t = E.tool;
+  if (t === 'move') { const h = hit(p); E.sel = h; if (h) E.drag = { dx: p.x - h.x, dy: p.y - h.y }; redraw(); return; }
+  if (t === 'text') { if (!E.text.trim()) { $('edHint').textContent = '先に、入れる文字を入力してください。'; return; } const it = { t: 'text', x: p.x, y: p.y, s: E.size, c: E.color, txt: E.text }; E.ov.push(it); E.sel = it; redraw(); return; }
+  if (t === 'img') { if (!E.cur) { $('edHint').textContent = '先に署名か画像を用意してください。'; return; } const it = { t: 'img', x: p.x - E.imgW / 2, y: p.y, w: E.imgW, el: E.cur.el, ar: E.cur.ar, src: E.cur.src }; E.ov.push(it); E.sel = it; redraw(); return; }
+  const it = { t: 'rect', x: p.x, y: p.y, w: 0, h: 0, c: t }; E.ov.push(it); E.sel = null; E.drag = { rect: it, x0: p.x, y0: p.y };
+};
+ecv.onpointermove = e => {
+  if (!E || !E.drag) return; const p = pos(e), d = E.drag;
+  if (d.rect) { d.rect.x = Math.min(d.x0, p.x); d.rect.y = Math.min(d.y0, p.y); d.rect.w = Math.abs(p.x - d.x0); d.rect.h = Math.abs(p.y - d.y0); }
+  else if (E.sel) { E.sel.x = p.x - d.dx; E.sel.y = p.y - d.dy; }
+  redraw();
+};
+ecv.onpointerup = () => { if (E && E.drag && E.drag.rect && (E.drag.rect.w < .004 || E.drag.rect.h < .004)) E.ov.pop(); if (E) { E.drag = null; redraw(); } };
+$('edDel').onclick = () => { if (E.sel) { E.ov = E.ov.filter(o => o !== E.sel); E.sel = null; redraw(); } };
+$('edUndo').onclick = () => { E.ov.pop(); E.sel = null; redraw(); };
+$('edClear').onclick = () => { E.ov = []; E.sel = null; redraw(); };
+function closeEd() { $('ed').classList.add('hidden'); $('sigBox').classList.add('hidden'); document.body.style.overflow = ''; E = null; }
+$('edCancel').onclick = closeEd;
+$('edOk').onclick = () => { E.pg.ov = E.ov; E.pg._th = null; closeEd(); render(); };
+addEventListener('keydown', e => { if (E && (e.key === 'Delete' || e.key === 'Backspace') && !/TEXTAREA|INPUT/.test(document.activeElement.tagName)) $('edDel').click(); });
+
+/* 署名 */
+const sc = $('sig'), sg = sc.getContext('2d'); let sdraw = false;
+function sigClear() { sg.fillStyle = '#fff'; sg.fillRect(0, 0, sc.width, sc.height); sg.strokeStyle = '#111'; sg.lineWidth = 6; sg.lineCap = sg.lineJoin = 'round'; }
+const sp = e => { const r = sc.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * sc.width, (e.clientY - r.top) / r.height * sc.height]; };
+sc.onpointerdown = e => { sc.setPointerCapture(e.pointerId); sdraw = true; const [x, y] = sp(e); sg.beginPath(); sg.moveTo(x, y); sg.lineTo(x + .1, y + .1); sg.stroke(); };
+sc.onpointermove = e => { if (!sdraw) return; const [x, y] = sp(e); sg.lineTo(x, y); sg.stroke(); }; sc.onpointerup = () => sdraw = false;
+$('sigClear').onclick = sigClear; $('sigX').onclick = () => $('sigBox').classList.add('hidden');
+function useCanvasAsImg(c) {
+  // 白い背景を透明にして、余白を切りとる
+  const g = c.getContext('2d'), id = g.getImageData(0, 0, c.width, c.height), d = id.data; let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4, lum = (d[i] + d[i + 1] + d[i + 2]) / 3; if (lum > 245) d[i + 3] = 0; else { d[i + 3] = Math.min(255, (255 - lum) * 2 + 40); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+  if (x1 <= x0 || y1 <= y0) return false;
+  const t = document.createElement('canvas'); t.width = x1 - x0 + 1; t.height = y1 - y0 + 1; t.getContext('2d').putImageData(id, -x0, -y0);
+  E.cur = { el: t, ar: t.height / t.width, src: t.toDataURL('image/png') }; return true;
+}
+$('sigUse').onclick = () => { if (!useCanvasAsImg(sc)) { $('edHint').textContent = '署名が空です。'; return; } $('sigBox').classList.add('hidden'); setTool('img'); };
+$('sigFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const bmp = await createImageBitmap(f), c = document.createElement('canvas'), k = Math.min(1, 900 / bmp.width); c.width = bmp.width * k; c.height = bmp.height * k; c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  E.cur = { el: c, ar: c.height / c.width, src: c.toDataURL('image/png') }; $('sigBox').classList.add('hidden'); setTool('img'); };
+
+/* ---------- 保存 ---------- */
+document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => $('cmp').classList.toggle('hidden', document.querySelector('input[name=mode]:checked').value !== 'img'));
+$('target').onchange = () => { const v = $('target').value; $('custW').classList.toggle('hidden', v !== 'custom'); $('qW').classList.toggle('hidden', v !== 'q'); };
+const hasRedact = pg => pg.ov.some(o => o.t === 'rect' && o.c !== 'hl');
+const needsRaster = pg => pg.ov.length && pg.doc.kind === 'pdf' && (hasRedact(pg) || finalRot(pg) !== 0) || pg.ov.length && pg.doc.kind === 'img' && (hasRedact(pg) || pg.rot !== 0);
+const dataToBytes = u => Uint8Array.from(atob(u.split(',')[1]), c => c.charCodeAt(0));
+const canvasBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
+const LEVELS = [[150, .82], [130, .7], [110, .62], [96, .55], [80, .5], [72, .42], [60, .36], [50, .3]];
+
+async function buildKeep(list) {
+  const { PDFDocument, degrees } = PDFLib, out = await PDFDocument.create();
+  for (let n = 0; n < list.length; n++) {
+    const pg = list[n]; $('prog').style.width = (n / list.length * 100) + '%'; setStatus(`作成中… ${n + 1} / ${list.length}`); await yieldUI();
+    if (needsRaster(pg)) { await addRaster(out, pg, 150 / 72, .88); continue; }
+    if (pg.doc.kind === 'img') {
+      const isPng = pg.doc.blob.type === 'image/png', buf = new Uint8Array(await pg.doc.blob.arrayBuffer());
+      let im; try { im = isPng ? await out.embedPng(buf) : await out.embedJpg(buf); } catch { await addRaster(out, pg, 1.5, .9); continue; }
+      const page = out.addPage([pg.rot % 180 === 0 ? pg.vw : pg.vh, pg.rot % 180 === 0 ? pg.vh : pg.vw]);
+      // 画像の向きを回す（回したあとの見た目の大きさにページをそろえる）
+      const W = pg.vw, H = pg.vh;
+      if (pg.rot === 0) page.drawImage(im, { x: 0, y: 0, width: W, height: H });
+      else if (pg.rot === 90) page.drawImage(im, { x: 0, y: W, width: W, height: H, rotate: degrees(-90) });
+      else if (pg.rot === 180) page.drawImage(im, { x: W, y: H, width: W, height: H, rotate: degrees(180) });
+      else page.drawImage(im, { x: H, y: 0, width: W, height: H, rotate: degrees(90) });
+      if (pg.ov.length) await drawNative(out, page, pg, 0, W, H, 0, 0);
+      continue;
+    }
+    if (!pg.doc.lib) pg.doc.lib = await PDFDocument.load(pg.doc.bytes, { ignoreEncryption: true });
+    const [cp] = await out.copyPages(pg.doc.lib, [pg.i]);
+    if (pg.ov.length) { const cb = cp.getCropBox(); await drawNative(out, cp, pg, 0, cb.width, cb.height, cb.x, cb.y); }
+    if (pg.rot) cp.setRotation(degrees((cp.getRotation().angle + pg.rot) % 360));
+    out.addPage(cp);
+  }
+  return out;
+}
+// 向きが0のページに、書き込みをひとまとめの透明な画像として重ねる
+async function drawNative(out, page, pg, _r, W, H, ox, oy) {
+  const sc = Math.min(3, 2400 / Math.max(W, H)) , c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(H * sc);
+  drawOverlays(c.getContext('2d'), pg.ov, c.width, c.height);
+  const im = await out.embedPng(dataToBytes(c.toDataURL('image/png'))); page.drawImage(im, { x: ox, y: oy, width: W, height: H });
+}
+async function addRaster(out, pg, scale, q) {
+  const c = await renderPage(pg, scale, true), b = await canvasBlob(c, 'image/jpeg', q), im = await out.embedJpg(new Uint8Array(await b.arrayBuffer()));
+  const [vw, vh] = viewSizeOf(pg), page = out.addPage([vw, vh]); page.drawImage(im, { x: 0, y: 0, width: vw, height: vh });
+}
+async function buildImg(list, level, keepBlobs) {
+  const { PDFDocument } = PDFLib; const blobs = []; let total = 0;
+  for (let n = 0; n < list.length; n++) {
+    const c = await renderPage(list[n], level[0] / 72, true), b = await canvasBlob(c, 'image/jpeg', level[1]); blobs.push(b); total += b.size + 400;
+    $('prog').style.width = (n / list.length * 100) + '%'; await yieldUI();
+  }
+  return { total, blobs };
+}
+async function assemble(list, blobs) {
+  const { PDFDocument } = PDFLib, out = await PDFDocument.create();
+  for (let n = 0; n < list.length; n++) { const im = await out.embedJpg(new Uint8Array(await blobs[n].arrayBuffer())), [vw, vh] = viewSizeOf(list[n]), p = out.addPage([vw, vh]); p.drawImage(im, { x: 0, y: 0, width: vw, height: vh }); }
+  return out;
+}
+let outUrl = null;
+$('go').onclick = async () => {
+  const scope = document.querySelector('input[name=scope]:checked').value, mode = document.querySelector('input[name=mode]:checked').value;
+  const list = scope === 'sel' ? selPages() : pages.slice();
+  if (!list.length) return setStatus(scope === 'sel' ? '保存するページを選んでください。' : 'ページがありません。', true);
+  $('go').disabled = true; $('result').classList.add('hidden'); setStatus('作成中…'); await yieldUI();
+  try {
+    const usedDocs = [...new Set(list.map(p => p.doc))], orig = usedDocs.reduce((a, d) => a + d.size, 0);
+    let bytes, note = '';
+    if (mode === 'keep') { const pdf = await buildKeep(list); bytes = await pdf.save({ useObjectStreams: true }); }
+    else {
+      const tv = $('target').value; let blobs;
+      if (tv === 'q') { const r = await buildImg(list, LEVELS[[0, 3, 5][+$('qual').value]]); blobs = r.blobs; }
+      else {
+        const tgt = (tv === 'custom' ? Math.max(0.1, +$('custom').value || 1) : +tv) * 1048576 * 0.97, cache = new Map(); let lo = 0, hi = LEVELS.length - 1, best = -1;
+        while (lo <= hi) { const mid = (lo + hi) >> 1; setStatus(`画質を調整中…（${LEVELS[mid][0]}dpi・品質${Math.round(LEVELS[mid][1] * 100)}）`);
+          const r = await buildImg(list, LEVELS[mid]); cache.set(mid, r); if (r.total <= tgt) { best = mid; hi = mid - 1; } else lo = mid + 1; }
+        if (best < 0) { best = LEVELS.length - 1; if (!cache.has(best)) cache.set(best, await buildImg(list, LEVELS[best])); note = '目標の容量までは小さくできませんでした（最も小さい設定で作りました）。ページ数を減らすと小さくなります。'; }
+        blobs = cache.get(best).blobs;
+      }
+      const pdf = await assemble(list, blobs); bytes = await pdf.save();
+    }
+    $('prog').style.width = '100%';
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const base = (list[0].doc.name || 'edited').replace(/\.[^.]+$/, ''), nm = mode === 'img' ? `${base}_small.pdf` : scope === 'sel' ? `${base}_part.pdf` : docs.length > 1 ? 'merged.pdf' : `${base}_edited.pdf`;
+    $('dl').href = outUrl; $('dl').download = nm; $('dl').textContent = `ダウンロード（${mb(bytes.length)}）`;
+    let t = `${list.length} ページ`; if (usedDocs.every(d => d.kind === 'pdf')) t += `／元のファイル ${mb(orig)} → ${mb(bytes.length)}`;
+    if (mode === 'img' && usedDocs.every(d => d.kind === 'pdf') && bytes.length >= orig) t += '（元より大きいので、「そのまま」で保存する方がよいです）';
+    $('resTxt').textContent = t + (note ? '　' + note : ''); $('result').classList.remove('hidden'); setStatus('できました。');
+  } catch (e) { console.error(e); setStatus('作成に失敗しました：' + (e && e.message || e), true); }
+  $('go').disabled = false;
+};
+})();
+</script>
+</body>
+</html>
