@@ -85,6 +85,7 @@
         <option value="11">正方形（1080×1080）</option>
       </select></div>
       <div><label>長さ（秒）：<span id="durV">30</span></label><input type="range" id="dur" min="5" max="120" step="5" value="30"></div>
+      <div><label>書き出しの大きさ</label><select id="qs"><option value="1">ふつう</option><option value="0.75">小さめ（動きがなめらかに）</option><option value="0.5">もっと小さく</option></select></div>
       <div><label class="chk"><input type="checkbox" id="dot" checked> 上に目印の丸（ピント合わせ）をつける</label>
         <label class="chk" style="margin-top:8px"><input type="checkbox" id="guide" checked> 見かたの文字をつける</label></div>
     </div>
@@ -130,38 +131,39 @@ function build() {
   const r = rng(12345), pal = PAL[pk]; pts = [];
   for (let i = 0; i < n; i++) {
     const c = pal[Math.floor(r() * pal.length)];
-    pts.push({ u: r(), v: r(), w: r(), s: 0.5 + r() * 1.3, h: c[0] + (r() - .5) * 18, sa: c[1], l: c[2], ph: r() * 6.283 });
+    pts.push({ u: r(), v: r(), w: r(), s: 0.5 + r() * 1.3, h: c[0] + (r() - .5) * 18, sa: c[1], l: c[2], ph: r() * 6.283, spr: [] });
   }
 }
 // 各粒の 3D 位置（単位：だいたい -1〜1）を返す。t は秒。
+const Q = [0, 0, 0]; function S(a, b, c) { Q[0] = a; Q[1] = b; Q[2] = c; return Q; }
 function place(sc, p, t, i, n) {
   const T = 6.283185307;
   switch (sc) {
     case 'galaxy': {
       const arms = 5, a = Math.floor(p.u * arms) / arms, rr = Math.pow(p.v, .7), th = a * T + rr * 5.2 - t * .35 + (p.w - .5) * .35;
-      const rad = rr * .95; return [Math.cos(th) * rad, Math.sin(th) * rad, (p.w - .5) * .25 * (1 - rr) + Math.sin(t * .8 + rr * 9 + a * 6) * .12];
+      const rad = rr * .95; return S(Math.cos(th) * rad, Math.sin(th) * rad, (p.w - .5) * .25 * (1 - rr) + Math.sin(t * .8 + rr * 9 + a * 6) * .12);
     }
     case 'sphere': {
       const th = p.u * T + t * .25, ph = Math.acos(1 - 2 * p.v), w = 1 + Math.sin(ph * 5 + t * 1.2 + th * 2) * .12 + Math.sin(t * .9) * .05;
-      return [Math.sin(ph) * Math.cos(th) * .85 * w, Math.cos(ph) * .85 * w, Math.sin(ph) * Math.sin(th) * .85 * w];
+      return S(Math.sin(ph) * Math.cos(th) * .85 * w, Math.cos(ph) * .85 * w, Math.sin(ph) * Math.sin(th) * .85 * w);
     }
     case 'tunnel': {
       const th = p.u * T + p.v * 3, z = ((p.w - t * .12) % 1 + 1) % 1, rad = .55 + .35 * Math.sin(z * 12 + t) * .3 + p.v * .25;
-      return [Math.cos(th + z * 2) * rad, Math.sin(th + z * 2) * rad, (z - .5) * 2];
+      return S(Math.cos(th + z * 2) * rad, Math.sin(th + z * 2) * rad, (z - .5) * 2);
     }
     case 'torus': {
       const u = p.u * T + t * .3, v = p.v * T * 3 - t * .6, R = .62, r = .26 + .05 * Math.sin(u * 3 + t);
-      return [(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)];
+      return S((R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v));
     }
     case 'cloud': {
-      const a = p.u * T, b = Math.acos(1 - 2 * p.v), r = Math.cbrt(p.w) * .95; return [Math.sin(b) * Math.cos(a + t * .08) * r + Math.sin(t * .5 * p.s + p.ph) * .04, Math.cos(b) * r * .8 + Math.cos(t * .45 * p.s + p.ph) * .04, Math.sin(b) * Math.sin(a + t * .08) * r];
+      const a = p.u * T, b = Math.acos(1 - 2 * p.v), r = Math.cbrt(p.w) * .95; return S(Math.sin(b) * Math.cos(a + t * .08) * r + Math.sin(t * .5 * p.s + p.ph) * .04, Math.cos(b) * r * .8 + Math.cos(t * .45 * p.s + p.ph) * .04, Math.sin(b) * Math.sin(a + t * .08) * r);
     }
     case 'helix': {
       const k = i % 2, y = (p.v - .5) * 1.9, th = y * 5 + t * .7 + k * 3.1416, rad = .42 + (p.w - .5) * .12;
-      return [Math.cos(th) * rad, y, Math.sin(th) * rad];
+      return S(Math.cos(th) * rad, y, Math.sin(th) * rad);
     }
   }
-  return [0, 0, 0];
+  return S(0, 0, 0);
 }
 
 /* ---------- 描画 ---------- */
@@ -176,28 +178,30 @@ function sprite(h, s, l, blur) {
   gr.addColorStop(0, hsl(h, s, Math.min(100, l + 14), 1)); gr.addColorStop(Math.max(.05, core * .75), hsl(h, s, l, .95)); gr.addColorStop(1, hsl(h, s, l, 0));
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64); sprites.set(key, c); return c;
 }
-function drawEye(g, ox, oy, vw, vh, eye, t, P) {
+// 1コマぶんの粒の位置・大きさ・色を、左右の目で共通に1回だけ計算する（録画が重くならないように）
+let FX = new Float32Array(0), FY, FZ, FS, FA, FL, ORD;
+function prepare(t, P) {
+  const N = pts.length; if (FX.length < N) { FX = new Float32Array(N); FY = new Float32Array(N); FZ = new Float32Array(N); FS = new Float32Array(N); FA = new Float32Array(N); FL = new Uint8Array(N); ORD = new Uint32Array(N); }
+  const rotY = t * 0.22 * P.speedRot, cy = Math.cos(rotY), sy = Math.sin(rotY), zc = 3.2; let m = 0;
+  for (let i = 0; i < N; i++) {
+    const p = pts[i], q = place(P.scene, p, t * P.speed, i, N), x = q[0] * cy + q[2] * sy, z = q[2] * cy - q[0] * sy, zz = z + zc;
+    if (zz < 0.8) continue;
+    const near = Math.max(0, Math.min(1, (0.9 - z) / 1.8)), blur = Math.min(.9, .06 + near * .8 * P.blur);
+    FX[i] = x; FY[i] = q[1]; FZ[i] = zz; FS[i] = P.size * p.s * 0.0042 * zc / zz * (1 + near * 1.8 * P.blur) * 2.6; FA[i] = 0.38 + near * .3; FL[i] = Math.round(blur * 10);
+    ORD[m++] = i;
+  }
+  const o = ORD.subarray(0, m); o.sort((a, b) => FZ[b] - FZ[a]);   // 奥から手前へ
+  return o;
+}
+function drawEye(g, ox, oy, vw, vh, eye, P, order) {
   // 視点を左右にずらして、2枚の絵をつくる（eye = -1 左目、+1 右目）
   g.save(); g.beginPath(); g.rect(ox, oy, vw, vh); g.clip();
   g.fillStyle = '#000'; g.fillRect(ox, oy, vw, vh);
-  const f = Math.min(vw, vh) * 0.62 * P.zoom, zc = 3.2, b = P.depth * 0.0036 * 3.2, rotY = t * 0.22 * P.speedRot;
-  const cy = Math.cos(rotY), sy = Math.sin(rotY), cxr = oy + vh * 0.5 + (P.dot ? vh * 0.03 : 0), cxs = ox + vw * 0.5;
-  const out = [];
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i], q = place(P.scene, p, t * P.speed, i, pts.length);
-    // 全体を、ゆっくり左右に回す
-    const x = q[0] * cy + q[2] * sy, z = q[2] * cy - q[0] * sy, y = q[1], zz = z + zc;
-    if (zz < 0.8) continue;
-    const sx = (x - eye * b) * f / zz + eye * b * f / zc, sy2 = y * f / zz;
-    out.push([zz, sx, sy2, p, z]);
-  }
-  out.sort((a, b2) => b2[0] - a[0]);   // 奥から手前へ
+  const f = Math.min(vw, vh) * 0.62 * P.zoom, zc = 3.2, b = P.depth * 0.0036 * 3.2, cyy = oy + vh * 0.5 + (P.dot ? vh * 0.03 : 0), cxs = ox + vw * 0.5, sh = eye * b * f / zc;
   g.globalCompositeOperation = 'lighter';
-  for (const [zz, sx, sy2, p, z] of out) {
-    const near = Math.max(0, Math.min(1, (0.9 - z) / 1.8)), sz = P.size * p.s * f * 0.0042 * zc / zz * (1 + near * 1.8 * P.blur);
-    const blur = Math.min(.9, .06 + near * .8 * P.blur), spr = sprite(p.h, p.sa, p.l, Math.round(blur * 10) / 10);
-    g.globalAlpha = 0.38 + near * .3;
-    const d = sz * 2.6; g.drawImage(spr, cxs + sx - d / 2, cxr + sy2 - d / 2, d, d);
+  for (let k = 0; k < order.length; k++) {
+    const i = order[k], inv = f / FZ[i], d = FS[i] * f, p = pts[i], lv = FL[i], spr = p.spr[lv] || (p.spr[lv] = sprite(p.h, p.sa, p.l, lv / 10));
+    g.globalAlpha = FA[i]; g.drawImage(spr, cxs + (FX[i] - eye * b) * inv + sh - d / 2, cyy + FY[i] * inv - d / 2, d, d);
   }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   if (P.dot) { g.fillStyle = 'rgba(150,150,150,.95)'; g.beginPath(); g.arc(cxs, oy + vh * 0.085, Math.max(7, vh * 0.04), 0, 6.283); g.fill(); }
@@ -205,10 +209,10 @@ function drawEye(g, ox, oy, vw, vh, eye, t, P) {
 }
 function params() {
   return { scene: $('scene').value, depth: +$('depth').value, speed: +$('speed').value, speedRot: +$('speed').value, size: +$('size').value, blur: +$('blur').value / 100, zoom: +$('zoom').value,
-    dot: $('dot').checked, guide: $('guide').checked, view: $('view').value, dur: +$('dur').value, fmt: $('fmt').value };
+    dot: $('dot').checked, guide: $('guide').checked, view: $('view').value, dur: +$('dur').value, fmt: $('fmt').value, qs: +$('qs').value };
 }
 function frame(t, P) {
-  const [W, H] = SIZES[P.fmt]; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const [W0, H0] = SIZES[P.fmt], W = Math.round(W0 * P.qs / 2) * 2, H = Math.round(H0 * P.qs / 2) * 2; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   build();
   cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
   // 2つの画面。縦長のときは、左右を小さくして中央に置く
@@ -216,8 +220,9 @@ function frame(t, P) {
   if (P.fmt === '916') { vw = W / 2; vh = Math.min(H, vw * 1.15); oy = (H - vh) / 2; }
   if (P.fmt === '11') { vh = H * 0.62; oy = (H - vh) / 2; }
   const left = P.view === 'par' ? -1 : 1, right = -left;   // 平行法：左の絵は左目用
-  drawEye(cx, 0, oy, vw, vh, left, t, P);
-  drawEye(cx, vw, oy, vw, vh, right, t, P);
+  const order = prepare(t, P);
+  drawEye(cx, 0, oy, vw, vh, left, P, order);
+  drawEye(cx, vw, oy, vw, vh, right, P, order);
   if (P.guide) {
     cx.fillStyle = 'rgba(200,205,220,.85)'; cx.textAlign = 'center'; cx.font = `${Math.round(W * 0.022)}px system-ui,"Yu Gothic",sans-serif`;
     const msg = P.view === 'par' ? '画面の向こうを見るように、2つの丸を重ねて（平行法）' : '寄り目で、2つの丸を重ねて（交差法）';
@@ -230,20 +235,24 @@ function frame(t, P) {
 let playing = false, raf = 0, startAt = 0, curP = null, onEnd = null, recorder = null, outUrl = null, stopTick = null;
 function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
 function makeTicker(cb) {
-  const w = new Worker(URL.createObjectURL(new Blob(['let id;onmessage=e=>{if(e.data==="start")id=setInterval(()=>postMessage(0),1000/60);else clearInterval(id)}'], { type: 'text/javascript' })));
+  const w = new Worker(URL.createObjectURL(new Blob(['let id;onmessage=e=>{if(e.data==="start")id=setInterval(()=>postMessage(0),1000/30);else clearInterval(id)}'], { type: 'text/javascript' })));
   w.onmessage = () => cb(performance.now()); w.postMessage('start');
   return () => { w.postMessage('stop'); w.terminate(); };
 }
+let lastDraw = 0, stat = null;
 function loop(now) {
   if (!playing) return;
-  const t = (now - startAt) / 1000;
+  if (stopTick && now - lastDraw < 20) return;   // 遅れているときは、たまった分を飛ばす
+  lastDraw = now;
+  const t = (now - startAt) / 1000, t0 = performance.now();
   frame(Math.max(t, 0), curP);
+  if (stat && t > 0) { stat.n++; stat.ms += performance.now() - t0; if (stat.last > 0 && now - stat.last > 55) stat.gaps++; stat.last = now; }
   $('prog').style.width = Math.min(100, Math.max(0, t) / curP.dur * 100) + '%';
   if (t >= curP.dur) { const f = onEnd; finish(); if (f) f(); return; }
   if (!stopTick) raf = requestAnimationFrame(loop);
 }
 function start(rec, end) {
-  finish(); curP = params(); onEnd = end || null; playing = true;
+  finish(); curP = params(); onEnd = end || null; playing = true; stat = rec ? { n: 0, ms: 0, gaps: 0, last: 0 } : null; lastDraw = 0;
   $('play').classList.add('hidden'); $('stop').classList.remove('hidden'); startAt = performance.now() + 100;
   if (rec) stopTick = makeTicker(loop); else raf = requestAnimationFrame(loop);
 }
@@ -269,7 +278,8 @@ $('rec').onclick = () => {
     if (outUrl) URL.revokeObjectURL(outUrl);
     outUrl = URL.createObjectURL(blob); $('dl').href = outUrl; $('dl').download = `stereo-3d_${curP.scene}.${ext}`;
     $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
-    $('result').classList.remove('hidden'); $('rec').disabled = false; setStatus('録画が完了しました。'); recorder = null; idle();
+    $('result').classList.remove('hidden'); $('rec').disabled = false; recorder = null; const st = stat; stat = null; idle();
+    if (st && st.n) { const avg = st.ms / st.n, fps = st.n / curP.dur; setStatus(`録画が完了しました。（1コマの描画 平均${avg.toFixed(0)}ms・描けたコマ数 毎秒${fps.toFixed(0)}コマ）` + (fps < 24 ? ' ※この端末では重いようです。「書き出しの大きさ」を小さくするか、粒の数を減らすと、なめらかになります。' : ''), fps < 24); } else setStatus('録画が完了しました。');
   };
   recorder = rc; rc.start();
   setStatus(`録画中…（約 ${Math.round(curP.dur)} 秒。このタブを表示したままにしてください）`);
@@ -282,7 +292,7 @@ function viewInfo() {
     : '【交差法】2つの丸の真ん中あたりに指を立て、指を見つめたまま画面へ…、または軽く寄り目にして、左右の丸を重ねます。平行法とは奥行きが逆（凹凸が反対）になります。';
 }
 [['depth', ''], ['speed', ''], ['count', ''], ['size', ''], ['blur', ''], ['zoom', ''], ['dur', '']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
-['scene', 'pal', 'view', 'fmt', 'dot', 'guide'].forEach(i => $(i).addEventListener('input', () => { viewInfo(); idle(); }));
+['scene', 'pal', 'view', 'fmt', 'qs', 'dot', 'guide'].forEach(i => $(i).addEventListener('input', () => { viewInfo(); idle(); }));
 viewInfo(); idle();
 })();
 </script>
