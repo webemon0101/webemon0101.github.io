@@ -1,0 +1,7 @@
+(function(root){
+ const units=Array.from({length:81},(_,i)=>Array.from({length:81},(_,j)=>j).filter(j=>j!==i&&(Math.floor(i/9)===Math.floor(j/9)||i%9===j%9||Math.floor(i/27)===Math.floor(j/27)&&Math.floor(i%9/3)===Math.floor(j%9/3))));
+ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+ function countSolutions(input,limit=2){const a=input.slice();let count=0;function solve(){let best=-1,opts=[];for(let i=0;i<81;i++){if(a[i])continue;const used=new Set(units[i].map(j=>a[j]));const cand=[1,2,3,4,5,6,7,8,9].filter(n=>!used.has(n));if(!cand.length)return;if(best<0||cand.length<opts.length){best=i;opts=cand;if(opts.length===1)break}}if(best<0){count++;return}for(const n of opts){a[best]=n;solve();if(count>=limit)break}a[best]=0}solve();return count}
+ function generate(level){const groups=()=>shuffle([0,1,2]).flatMap(g=>shuffle([0,1,2]).map(v=>g*3+v));const rows=groups(),cols=groups(),digits=shuffle([1,2,3,4,5,6,7,8,9]);const solution=rows.flatMap(r=>cols.map(c=>digits[(r*3+Math.floor(r/3)+c)%9]));const puzzle=solution.slice(),target={easy:44,normal:36,hard:29,expert:25}[level]||36;let clues=81;for(const i of shuffle(Array.from({length:81},(_,i)=>i))){const v=puzzle[i];puzzle[i]=0;if(countSolutions(puzzle)!==1)puzzle[i]=v;else clues--;if(clues<=target)break}return{puzzle,solution}}
+ root.Sudoku={units,countSolutions,generate};if(typeof module!=='undefined')module.exports=root.Sudoku;
+})(typeof window==='undefined'?globalThis:window);
