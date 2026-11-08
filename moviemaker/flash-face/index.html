@@ -81,6 +81,11 @@
       <div><label>中央からの距離：<span id="eccV">70</span></label><input type="range" id="ecc" min="20" max="100" value="70"></div>
     </div>
     <div class="grid">
+      <div><label>写真の使う範囲：ズーム <span id="tzV">100</span>%</label><input type="range" id="tz" min="50" max="200" step="5" value="100"></div>
+      <div><label>上下の位置：<span id="tyV">0</span>（＋で写真が下へ）</label><input type="range" id="ty" min="-40" max="40" step="1" value="0"></div>
+      <div><label>左右の位置：<span id="txV">0</span></label><input type="range" id="tx" min="-30" max="30" step="1" value="0"></div>
+    </div>
+    <div class="grid">
       <div><label>背景</label><select id="bg"><option value="#808080">灰色（効果が出やすい）</option><option value="#000000">黒</option><option value="#ffffff">白</option></select></div>
       <div><label>中央の目印</label><select id="fix"><option value="dot">赤い丸</option><option value="cross">赤い十字</option></select></div>
       <div><label>顔のふち</label><select id="mask"><option value="soft">やわらかい楕円</option><option value="none">四角のまま</option></select></div>
@@ -135,11 +140,12 @@ function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classLi
 function makeTile(img, eyes, soft) {
   const t = mk(TW, TH), g = t.getContext('2d'), iw = img.width, ih = img.height;
   g.fillStyle = '#808080'; g.fillRect(0, 0, TW, TH);
+  const zm = +$('tz').value / 100, oy = TH * (+$('ty').value / 100), ox = TW * (+$('tx').value / 100);
   if (eyes) {
-    const [lx, ly, rx, ry] = eyes, dx = rx - lx, dy = ry - ly, d = Math.hypot(dx, dy) || 1, k = (TW * EX * 2) / d, ang = Math.atan2(dy, dx);
-    g.save(); g.translate(TW / 2, TH * EY); g.rotate(-ang); g.scale(k, k); g.translate(-(lx + rx) / 2, -(ly + ry) / 2); g.drawImage(img, 0, 0); g.restore();
+    const [lx, ly, rx, ry] = eyes, dx = rx - lx, dy = ry - ly, d = Math.hypot(dx, dy) || 1, k = (TW * EX * 2) / d * zm, ang = Math.atan2(dy, dx);
+    g.save(); g.translate(TW / 2 + ox, TH * EY + oy); g.rotate(-ang); g.scale(k, k); g.translate(-(lx + rx) / 2, -(ly + ry) / 2); g.drawImage(img, 0, 0); g.restore();
   } else {
-    const k = Math.max(TW / iw, TH / ih); g.drawImage(img, (TW - iw * k) / 2, (TH - ih * k) / 2, iw * k, ih * k);
+    const k = Math.max(TW / iw, TH / ih) * zm; g.drawImage(img, (TW - iw * k) / 2 + ox, (TH - ih * k) / 2 + oy, iw * k, ih * k);
   }
   if (soft) {
     const m = mk(TW, TH), mg = m.getContext('2d'), gr = mg.createRadialGradient(TW / 2, TH * 0.5, TW * 0.22, TW / 2, TH * 0.5, TW * 0.56);
@@ -403,6 +409,7 @@ $('rec').onclick = () => {
 [['rate'], ['size'], ['ecc'], ['dur'], ['rev'], ['fs']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
 ['side', 'axis', 'bg', 'fix', 'fmt', 'hook', 'reveal', 'hookLen'].forEach(i => $(i).addEventListener('input', idle));
 $('mask').addEventListener('input', () => { retile(); idle(); });
+['tz', 'ty', 'tx'].forEach(id => $(id).addEventListener('input', () => { $(id + 'V').textContent = $(id).value; retile(); idle(); }));
 renderFaces(); idle();
 })();
 </script>
