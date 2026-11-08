@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>顔がゆがむ錯視メーカー</title>
+<style>
+  :root{--bg:#12141a;--panel:#1c1f29;--line:#2c3040;--fg:#e8eaf0;--sub:#9aa0b4;--acc:#7fa8ff;--acc2:#6690f0;--err:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.5}
+  main{max-width:960px;margin:0 auto;padding:24px 16px 56px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h2{font-size:.95rem;margin:0 0 10px;color:var(--sub);font-weight:600}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:.92rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .grid+.grid{margin-top:14px}
+  label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+  select,input[type=number],input[type=text]{width:100%;background:#12141a;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.95rem;font-family:inherit}
+  input[type=range]{width:100%}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row.top{margin-top:14px}
+  button,a.btn,label.btn{background:var(--acc);color:#0b1a40;font-weight:600;border:0;border-radius:8px;padding:10px 18px;font-size:1rem;cursor:pointer;text-decoration:none;display:inline-block;margin:0;font-family:inherit}
+  button:hover,a.btn:hover,label.btn:hover{background:var(--acc2)}
+  button.sec,label.btn.sec{background:#2c3040;color:var(--fg);font-weight:400}button.sec:hover,label.btn.sec:hover{background:#383d52}
+  button.sm{padding:4px 9px;font-size:.8rem}
+  button:disabled{opacity:.5;cursor:default}
+  canvas{display:block;background:#000;border-radius:8px;max-width:100%;max-height:70vh;margin:0 auto}
+  .bar{height:8px;background:#12141a;border-radius:6px;overflow:hidden;margin-top:12px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc)}
+  #status,.info{color:var(--sub);font-size:.85rem}
+  #status{margin-top:8px;min-height:1.3em;font-size:.88rem}
+  .info{margin-top:8px}
+  .warn{background:#2a2412;border:1px solid #5a4a1a;color:#ffe9a8;border-radius:8px;padding:10px 12px;font-size:.85rem;margin-top:12px}
+  .err{color:var(--err)}
+  .hidden{display:none !important}
+  .back{color:var(--sub);font-size:.85rem;text-decoration:none}
+  #faces{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:12px}
+  .fc{background:#12141a;border:1px solid var(--line);border-radius:8px;padding:4px;position:relative;text-align:center}
+  .fc canvas{width:100%;height:auto;max-height:none;border-radius:4px;background:#808080;cursor:pointer}
+  .fc .x{position:absolute;right:2px;top:2px;background:rgba(0,0,0,.7);color:#fff;border:0;border-radius:50%;width:20px;height:20px;padding:0;font-size:.75rem;line-height:20px;cursor:pointer}
+  .fc .w{position:absolute;left:4px;top:4px;background:#e29a1c;color:#201400;border-radius:4px;font-size:.65rem;padding:0 4px}
+  #eyeBox{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:50;display:flex;align-items:center;justify-content:center;padding:12px;overflow:auto}
+  #eyeBox .in{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;max-width:640px;width:100%}
+  #eyeCv{cursor:crosshair;max-height:60vh}
+</style>
+</head>
+<body>
+<main>
+  <p style="margin:0 0 8px"><a class="back" href="../">← MovieMaker 一覧</a></p>
+  <h1>顔がゆがむ錯視メーカー</h1>
+  <p class="lead">「フラッシュ・フェイス・ディストーション効果」の動画を作ります。画面の真ん中の点を見つめたまま、すみで、目の位置をそろえた顔写真を次々に切りかえると、ふつうの顔が、ゆがんで怪物のように見える錯視です。画像の処理も動画の書き出しもブラウザ内で行われ、何もアップロードされません。</p>
+
+  <div class="panel">
+    <h2>1. 顔写真を入れる（6枚以上がおすすめ）</h2>
+    <div class="row">
+      <label class="btn">顔写真を選ぶ<input type="file" id="file" accept="image/*" multiple hidden></label>
+      <button class="sec" id="sample">サンプルの顔を8人ぶん入れる（簡易イラスト）</button>
+      <button class="sec" id="clear">全部消す</button>
+    </div>
+    <div class="info">顔が1つだけ写っている、正面の写真が向いています。目の位置を自動で見つけて、全部の顔の目をそろえます（見つからないときは、⚠の顔をクリックして、左右の目を指定します）。</div>
+    <div class="warn">写っている人の許可がある写真だけを使ってください（肖像権）。他人の顔を、ゆがんで怖く見える動画にして公開するのは、トラブルになりやすいので、自分や、許可をもらった人の写真にしましょう。</div>
+    <div id="faces"></div>
+    <div id="dstat" class="info"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2. 見せかた</h2>
+    <div class="grid">
+      <div><label>顔を出す場所</label><select id="side"><option value="both">左右に、別々の顔</option><option value="right">右がわだけ</option><option value="left">左がわだけ</option></select></div>
+      <div><label>切りかえの速さ：<span id="rateV">4</span> 回/秒</label><input type="range" id="rate" min="2" max="8" step="0.5" value="4"></div>
+      <div><label>顔の大きさ：<span id="sizeV">55</span></label><input type="range" id="size" min="25" max="85" value="55"></div>
+      <div><label>中央からの距離：<span id="eccV">70</span></label><input type="range" id="ecc" min="20" max="100" value="70"></div>
+    </div>
+    <div class="grid">
+      <div><label>背景</label><select id="bg"><option value="#808080">灰色（効果が出やすい）</option><option value="#000000">黒</option><option value="#ffffff">白</option></select></div>
+      <div><label>中央の目印</label><select id="fix"><option value="dot">赤い丸</option><option value="cross">赤い十字</option></select></div>
+      <div><label>顔のふち</label><select id="mask"><option value="soft">やわらかい楕円</option><option value="none">四角のまま</option></select></div>
+      <div><label>画面の形</label><select id="fmt"><option value="169">横長 16:9（1280×720）</option><option value="916">縦長 9:16（720×1280・Shorts）</option><option value="11">正方形（900×900）</option></select></div>
+    </div>
+    <div class="grid">
+      <div><label>長さ（秒）：<span id="durV">30</span></label><input type="range" id="dur" min="10" max="120" step="5" value="30"></div>
+      <div><label>最後の種明かし（秒）：<span id="revV">4</span></label><input type="range" id="rev" min="0" max="8" step="1" value="4"></div>
+      <div style="grid-column:span 2"><label>最初の呼びかけ（空なら出しません）</label><input type="text" id="hook" value="中央の赤い点だけを見つめて。両はしの顔が、どう見えますか？"></div>
+    </div>
+    <div class="grid">
+      <div style="grid-column:span 2"><label>種明かしのときの文字（空なら出しません）</label><input type="text" id="reveal" value="ふつうの顔の写真です"></div>
+    </div>
+    <div class="warn">顔が次々に切りかわってチカチカします。目がつかれたり、気分が悪くなったら、すぐにやめてください。光の点滅に敏感な方は、「切りかえの速さ」を3回/秒以下にするか、使わないでください。見え方には個人差があります。</div>
+  </div>
+
+  <div class="panel">
+    <canvas id="cv" width="1280" height="720"></canvas>
+    <div class="bar"><i id="prog"></i></div>
+    <div class="row top">
+      <button id="play">プレビュー再生</button>
+      <button id="stop" class="sec hidden">停止</button>
+      <button id="rec" class="sec">動画に書き出す</button>
+    </div>
+    <div id="status"></div>
+    <div id="result" class="row top hidden"><a id="dl" class="btn" href="#">動画をダウンロード</a></div>
+  </div>
+</main>
+
+<div id="eyeBox" class="hidden"><div class="in">
+  <b id="eyeT">目の位置を指定</b>
+  <div class="info" id="eyeMsg"></div>
+  <canvas id="eyeCv"></canvas>
+  <div class="row top"><button class="sec sm" id="eyeReset">やりなおす</button><button class="sec sm" id="eyeCancel">キャンセル</button></div>
+</div></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id), cv = $('cv'), cx = cv.getContext('2d');
+const TW = 300, TH = 400, EY = 0.40, EX = 0.15;             // 顔タイル：目は縦40%、左右の目は中央から±15%
+const SIZES = { '169': [1280, 720], '916': [720, 1280], '11': [900, 900] };
+const BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+let faces = [], detector = null, detLoading = null;
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+
+/* ---------- 目の位置をそろえた顔タイルを作る ---------- */
+function makeTile(img, eyes, soft) {
+  const t = mk(TW, TH), g = t.getContext('2d'), iw = img.width, ih = img.height;
+  g.fillStyle = '#808080'; g.fillRect(0, 0, TW, TH);
+  if (eyes) {
+    const [lx, ly, rx, ry] = eyes, dx = rx - lx, dy = ry - ly, d = Math.hypot(dx, dy) || 1, k = (TW * EX * 2) / d, ang = Math.atan2(dy, dx);
+    g.save(); g.translate(TW / 2, TH * EY); g.rotate(-ang); g.scale(k, k); g.translate(-(lx + rx) / 2, -(ly + ry) / 2); g.drawImage(img, 0, 0); g.restore();
+  } else {
+    const k = Math.max(TW / iw, TH / ih); g.drawImage(img, (TW - iw * k) / 2, (TH - ih * k) / 2, iw * k, ih * k);
+  }
+  if (soft) {
+    const m = mk(TW, TH), mg = m.getContext('2d'), gr = mg.createRadialGradient(TW / 2, TH * 0.5, TW * 0.22, TW / 2, TH * 0.5, TW * 0.56);
+    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.7, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    mg.save(); mg.translate(TW / 2, TH * 0.5); mg.scale(1, TH / TW * 0.92); mg.translate(-TW / 2, -TH * 0.5); mg.fillStyle = gr; mg.fillRect(0, -TH, TW, TH * 3); mg.restore();
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(m, 0, 0); g.globalCompositeOperation = 'source-over';
+  }
+  return t;
+}
+function retile() { faces.forEach(f => { f.tile = makeTile(f.img, f.eyes, $('mask').value === 'soft'); }); renderFaces(); }
+
+/* ---------- 顔検出（目の位置） ---------- */
+async function ensureDetector() {
+  if (detector) return detector; if (detLoading) return detLoading;
+  detLoading = (async () => {
+    const lib = await import(BASE + '/vision_bundle.mjs'), fs = await lib.FilesetResolver.forVisionTasks(BASE + '/wasm');
+    detector = await lib.FaceDetector.createFromOptions(fs, { baseOptions: { modelAssetPath: MODEL, delegate: 'CPU' }, runningMode: 'IMAGE', minDetectionConfidence: 0.4 });
+    return detector;
+  })().catch(e => { detLoading = null; throw e; });
+  return detLoading;
+}
+async function detectEyes(img) {
+  try {
+    const d = await ensureDetector(), r = d.detect(img), det = r.detections && r.detections[0];
+    if (!det || !det.keypoints || det.keypoints.length < 2) return null;
+    const a = det.keypoints[0], b = det.keypoints[1], p = [[a.x * img.width, a.y * img.height], [b.x * img.width, b.y * img.height]].sort((u, v) => u[0] - v[0]);
+    return [p[0][0], p[0][1], p[1][0], p[1][1]];
+  } catch (e) { console.error(e); return undefined; }   // undefined = 検出器が使えなかった
+}
+
+/* ---------- 取り込み ---------- */
+async function addImages(files) {
+  const list = [...files].filter(f => f.type.startsWith('image/')); if (!list.length) return;
+  let noDet = false;
+  for (let n = 0; n < list.length; n++) {
+    setStatus(`顔を探しています… ${n + 1} / ${list.length}`);
+    try {
+      const bmp = await createImageBitmap(list[n]), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), img = mk(Math.round(bmp.width * k), Math.round(bmp.height * k));
+      img.getContext('2d').drawImage(bmp, 0, 0, img.width, img.height);
+      const eyes = await detectEyes(img); if (eyes === undefined) noDet = true;
+      faces.push({ name: list[n].name, img, eyes: eyes || null, auto: !!eyes });
+    } catch (e) { console.error(e); }
+  }
+  setStatus(noDet ? '顔の自動検出が使えませんでした（ネットワークを確認）。⚠の顔は、クリックして、目を指定してください。' : '');
+  retile(); idle();
+}
+$('file').onchange = e => { addImages(e.target.files); e.target.value = ''; };
+$('clear').onclick = () => { faces = []; renderFaces(); idle(); };
+
+/* サンプル：簡易イラストの顔（目の位置が分かっているので、そのままそろえられる） */
+function sampleFace(i) {
+  const W = 400, H = 500, c = mk(W, H), g = c.getContext('2d'), r = (a, b) => a + Math.random() * (b - a);
+  g.fillStyle = `hsl(${r(0, 360)},20%,${r(55, 80)}%)`; g.fillRect(0, 0, W, H);
+  const skin = `hsl(${r(15, 35)},${r(35, 55)}%,${r(55, 82)}%)`, fw = r(120, 150), fh = r(165, 195), ey = r(190, 215), ed = r(48, 66), ex = r(-8, 8);
+  g.fillStyle = `hsl(${r(0, 50)},${r(30, 60)}%,${r(10, 40)}%)`; g.beginPath(); g.ellipse(W / 2, 230, fw + 14, fh + 8, 0, Math.PI, 0); g.fill();
+  g.fillStyle = skin; g.beginPath(); g.ellipse(W / 2, 260, fw, fh, 0, 0, 7); g.fill();
+  const lx = W / 2 - ed + ex, rx = W / 2 + ed + ex;
+  g.fillStyle = '#fff'; for (const x of [lx, rx]) { g.beginPath(); g.ellipse(x, ey, r(18, 24), r(9, 14), 0, 0, 7); g.fill(); }
+  g.fillStyle = `hsl(${r(20, 220)},40%,25%)`; for (const x of [lx, rx]) { g.beginPath(); g.arc(x, ey, r(7, 10), 0, 7); g.fill(); }
+  g.strokeStyle = '#3a2418'; g.lineWidth = r(3, 6); for (const x of [lx, rx]) { g.beginPath(); g.moveTo(x - 24, ey - r(22, 32)); g.lineTo(x + 24, ey - r(22, 32)); g.stroke(); }
+  g.beginPath(); g.moveTo(W / 2 + ex, ey + 20); g.lineTo(W / 2 + ex - 10, ey + r(60, 80)); g.lineTo(W / 2 + ex + 10, ey + r(60, 80)); g.stroke();
+  g.strokeStyle = '#a03030'; g.lineWidth = r(4, 7); g.beginPath(); g.arc(W / 2 + ex, ey + r(95, 115), r(24, 44), 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+  return { name: 'sample' + (i + 1), img: c, eyes: [lx, ey, rx, ey], auto: true };
+}
+$('sample').onclick = () => { for (let i = 0; i < 8; i++) faces.push(sampleFace(faces.length)); retile(); idle(); };
+
+/* ---------- 一覧 ---------- */
+function renderFaces() {
+  const box = $('faces'); box.textContent = '';
+  faces.forEach((f, n) => {
+    const d = document.createElement('div'); d.className = 'fc';
+    const c = mk(TW, TH); c.getContext('2d').drawImage(f.tile, 0, 0); d.appendChild(c);
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '×'; x.onclick = e => { e.stopPropagation(); faces.splice(n, 1); renderFaces(); idle(); }; d.appendChild(x);
+    if (!f.auto) { const w = document.createElement('span'); w.className = 'w'; w.textContent = '⚠ 目を指定'; d.appendChild(w); }
+    c.onclick = () => openEye(f);
+    box.appendChild(d);
+  });
+  const bad = faces.filter(f => !f.auto).length;
+  $('dstat').textContent = faces.length ? `${faces.length} 人ぶん${bad ? `（目の位置を指定していない顔が ${bad} 枚あります。⚠ の顔をクリックしてください）` : '。目の位置をそろえました。顔をクリックすると、目の位置を直せます。'}` : '';
+}
+
+/* ---------- 目を手で指定 ---------- */
+const ecv = $('eyeCv'), eg = ecv.getContext('2d'); let ef = null, ep = [];
+function openEye(f) {
+  ef = f; ep = []; const k = Math.min(1, 900 / Math.max(f.img.width, f.img.height)); ecv.width = Math.round(f.img.width * k); ecv.height = Math.round(f.img.height * k);
+  $('eyeBox').classList.remove('hidden'); eyeDraw();
+}
+function eyeDraw() {
+  eg.drawImage(ef.img, 0, 0, ecv.width, ecv.height);
+  $('eyeMsg').textContent = ep.length === 0 ? '写真の中の、向かって左の目をクリック' : '次に、向かって右の目をクリック';
+  eg.fillStyle = '#ff3b3b'; ep.forEach(p => { eg.beginPath(); eg.arc(p[0], p[1], Math.max(4, ecv.width * 0.008), 0, 7); eg.fill(); });
+}
+ecv.onclick = e => {
+  const r = ecv.getBoundingClientRect(); ep.push([(e.clientX - r.left) / r.width * ecv.width, (e.clientY - r.top) / r.height * ecv.height]); eyeDraw();
+  if (ep.length === 2) { const k = ef.img.width / ecv.width, p = ep.slice().sort((a, b) => a[0] - b[0]); ef.eyes = [p[0][0] * k, p[0][1] * k, p[1][0] * k, p[1][1] * k]; ef.auto = true; $('eyeBox').classList.add('hidden'); retile(); idle(); }
+};
+$('eyeReset').onclick = () => { ep = []; eyeDraw(); }; $('eyeCancel').onclick = () => $('eyeBox').classList.add('hidden');
+
+/* ---------- 描画 ---------- */
+function params() {
+  return { side: $('side').value, rate: +$('rate').value, size: +$('size').value / 100, ecc: +$('ecc').value / 100, bg: $('bg').value, fix: $('fix').value, fmt: $('fmt').value,
+    dur: +$('dur').value, rev: +$('rev').value, hook: $('hook').value.trim(), reveal: $('reveal').value.trim() };
+}
+// 同じ顔が続かない、ランダムな並び（左右で別の顔になる）
+function makeSeq(n, count, seed, avoid) {
+  let s = seed >>> 0; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296, out = []; let prev = -1;
+  for (let i = 0; i < count; i++) { let k, g = 0; do { k = Math.floor(rnd() * n); g++; } while ((k === prev || (avoid && avoid[i] === k)) && n > 2 && g < 20); out.push(k); prev = k; }
+  return out;
+}
+let seqL = [], seqR = [], seqKey = '';
+function prepSeq(P) {
+  const count = Math.ceil(P.dur * P.rate) + 2, key = faces.length + '|' + count; if (key === seqKey) return; seqKey = key;
+  seqL = makeSeq(faces.length, count, 1234); seqR = makeSeq(faces.length, count, 9876, seqL);
+}
+function fixation(g, x, y, kind, u) {
+  g.fillStyle = g.strokeStyle = '#ff2a2a';
+  if (kind === 'dot') { g.beginPath(); g.arc(x, y, u * 0.012, 0, 7); g.fill(); }
+  else { g.lineWidth = u * 0.006; g.beginPath(); g.moveTo(x - u * 0.016, y); g.lineTo(x + u * 0.016, y); g.moveTo(x, y - u * 0.016); g.lineTo(x, y + u * 0.016); g.stroke(); }
+}
+function frame(t, P) {
+  const [W, H] = SIZES[P.fmt]; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  cx.fillStyle = P.bg; cx.fillRect(0, 0, W, H);
+  const u = Math.min(W, H), cxm = W / 2, cym = H / 2;
+  let fh = u * P.size, fw = fh * TW / TH; if (fw > W * 0.4) { fw = W * 0.4; fh = fw * TH / TW; }   // 細長い画面でも、顔が中央にはみ出さない
+  const revealing = P.rev > 0 && t >= P.dur - P.rev && faces.length > 0, light = P.bg === '#ffffff';
+  if (faces.length) {
+    prepSeq(P);
+    if (revealing) {
+      // 種明かし：顔を並べて、止めて見せる
+      const n = Math.min(faces.length, W > H ? 4 : 2), w2 = Math.min(fw, W / (n + 0.6)), h2 = w2 * TH / TW;
+      for (let i = 0; i < n; i++) cx.drawImage(faces[i].tile, cxm + (i - (n - 1) / 2) * w2 * 1.08 - w2 / 2, cym - h2 / 2, w2, h2);
+    } else {
+      const idx = Math.max(0, Math.floor(t * P.rate)), reach = Math.max((W / 2 - fw / 2) * P.ecc, fw / 2 + u * 0.05);
+      if (P.side !== 'left') { const f = faces[seqR[idx] % faces.length]; cx.drawImage(f.tile, cxm + reach - fw / 2, cym - fh / 2, fw, fh); }
+      if (P.side !== 'right') { const f = faces[(P.side === 'left' ? seqR[idx] : seqL[idx]) % faces.length]; cx.drawImage(f.tile, cxm - reach - fw / 2, cym - fh / 2, fw, fh); }
+    }
+  } else { cx.fillStyle = light ? '#555' : '#ccc'; cx.textAlign = 'center'; cx.font = `${Math.round(u * 0.04)}px system-ui,"Yu Gothic",sans-serif`; cx.fillText('顔写真を入れてください', cxm, cym); }
+  if (!revealing) fixation(cx, cxm, cym, P.fix, u);
+  // 文字
+  const txt = (s, y, a) => { if (!s) return; cx.save(); cx.globalAlpha = a; cx.textAlign = 'center'; cx.textBaseline = 'middle'; const fs = Math.round(u * (W > H ? 0.045 : 0.05)); cx.font = `700 ${fs}px system-ui,"Yu Gothic","Hiragino Sans",sans-serif`;
+    cx.lineWidth = fs * 0.2; cx.strokeStyle = light ? '#fff' : '#000'; cx.fillStyle = light ? '#111' : '#fff'; cx.lineJoin = 'round';
+    const max = W * 0.9, lines = []; let cur = ''; for (const ch of [...s]) { if (cx.measureText(cur + ch).width > max) { lines.push(cur); cur = ch; } else cur += ch; } lines.push(cur);
+    lines.forEach((l, i) => { const yy = y + (i - (lines.length - 1) / 2) * fs * 1.25; cx.strokeText(l, W / 2, yy); cx.fillText(l, W / 2, yy); }); cx.restore(); };
+  if (P.hook && t < 5) txt(P.hook, H * 0.12, t < 4 ? 1 : 5 - t);
+  if (revealing && P.reveal) txt(P.reveal, H * 0.9, Math.min(1, (t - (P.dur - P.rev)) * 2));
+}
+
+/* ---------- 再生・録画 ---------- */
+let playing = false, raf = 0, startAt = 0, curP = null, onEnd = null, recorder = null, outUrl = null, stopTick = null, lastDraw = 0;
+function makeTicker(cb) {
+  const w = new Worker(URL.createObjectURL(new Blob(['let id;onmessage=e=>{if(e.data==="start")id=setInterval(()=>postMessage(0),1000/30);else clearInterval(id)}'], { type: 'text/javascript' })));
+  w.onmessage = () => cb(performance.now()); w.postMessage('start');
+  return () => { w.postMessage('stop'); w.terminate(); };
+}
+function loop(now) {
+  if (!playing) return;
+  if (stopTick && now - lastDraw < 20) return; lastDraw = now;
+  const t = (now - startAt) / 1000; frame(Math.max(t, 0), curP);
+  $('prog').style.width = Math.min(100, Math.max(0, t) / curP.dur * 100) + '%';
+  if (t >= curP.dur) { const f = onEnd; finish(); if (f) f(); return; }
+  if (!stopTick) raf = requestAnimationFrame(loop);
+}
+function start(rec, end) {
+  if (!faces.length) { setStatus('顔写真を入れてください（サンプルの顔でも試せます）。', true); return false; }
+  finish(); curP = params(); onEnd = end || null; playing = true; lastDraw = 0;
+  $('play').classList.add('hidden'); $('stop').classList.remove('hidden'); startAt = performance.now() + 100;
+  if (rec) stopTick = makeTicker(loop); else raf = requestAnimationFrame(loop); return true;
+}
+function finish() {
+  if (raf) cancelAnimationFrame(raf); raf = 0; playing = false; onEnd = null;
+  if (stopTick) { stopTick(); stopTick = null; }
+  $('play').classList.remove('hidden'); $('stop').classList.add('hidden'); $('prog').style.width = '0';
+}
+function idle() { if (!playing && !recorder) frame(0.1, params()); }
+$('play').onclick = () => start(false);
+$('stop').onclick = () => { if (recorder && recorder !== true) { const r = recorder; finish(); r.stop(); } else { finish(); idle(); } };
+$('rec').onclick = () => {
+  finish();
+  if (!window.MediaRecorder) { setStatus('このブラウザは録画に対応していません（Chrome / Edge をお使いください）。', true); return; }
+  const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '', ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm', chunks = [];
+  $('rec').disabled = true; $('result').classList.add('hidden');
+  if (!start(true, () => { if (recorder && recorder !== true) setTimeout(() => recorder && recorder.state !== 'inactive' && recorder.stop(), 300); })) { $('rec').disabled = false; return; }
+  const rc = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  rc.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rc.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    if (outUrl) URL.revokeObjectURL(outUrl);
+    outUrl = URL.createObjectURL(blob); $('dl').href = outUrl; $('dl').download = `flash-face.${ext}`;
+    $('dl').textContent = `動画をダウンロード（.${ext} / ${(blob.size / 1048576).toFixed(1)} MB）`;
+    $('result').classList.remove('hidden'); $('rec').disabled = false; setStatus('録画が完了しました。'); recorder = null; idle();
+  };
+  recorder = rc; rc.start();
+  setStatus(`録画中…（約 ${Math.round(curP.dur)} 秒。このタブを表示したままにしてください）`);
+};
+
+/* ---------- UI ---------- */
+[['rate'], ['size'], ['ecc'], ['dur'], ['rev']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
+['side', 'bg', 'fix', 'fmt', 'hook', 'reveal'].forEach(i => $(i).addEventListener('input', idle));
+$('mask').addEventListener('input', () => { retile(); idle(); });
+renderFaces(); idle();
+})();
+</script>
+<script src="../shared/meta.js"></script>
+</body>
+</html>

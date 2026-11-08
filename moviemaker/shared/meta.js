@@ -101,6 +101,19 @@
       enWhy: [],
       enNote: ['*Please make sure you have the rights to the source video and music before posting.']
     },
+    'flash-face': {
+      motion: true, tags: ['錯視', 'フラッシュフェイス', '顔', 'Shorts'], enTags: ['OpticalIllusion', 'FlashFaceDistortion', 'Illusion', 'Shorts'],
+      jpTitles: ['【錯視】ふつうの顔が、怪物に見える？ フラッシュ・フェイス{t}', '【閲覧注意？】中央の点を見つめると、顔がゆがんで見える{t}', '顔がグニャッとゆがんで見える錯視【フラッシュ・フェイス効果】{t}', '【錯視】見つめるだけで、顔が変身する？{t}'],
+      jpHook: '画面の中央の赤い点だけを見つめて、両はしの顔を見てください。ふつうの顔が、ゆがんで見えるかもしれません。',
+      jpHow: ['最初から最後まで、中央の赤い点だけを見つめてください（目を動かさないのがコツです）。', '顔を直接見ようとせず、視界のすみでぼんやり見ます。', 'ゆがんで見えたか、コメントで教えてください。'],
+      jpWhy: ['目の位置をそろえた別々の顔が、視界の周辺で次々に切りかわると、脳が顔の特徴を平均化しきれず、顔が大きくゆがんで見えると言われています（フラッシュ・フェイス・ディストーション効果）。'],
+      jpNote: ['※顔が次々に切りかわってチカチカします。光の点滅に敏感な方や、気分が悪くなる方は、見るのをやめてください。', '※使用している顔は、すべて本人の許可を得たものです。'],
+      enTitles: ['Optical Illusion: Do Normal Faces Look Like Monsters? (Flash Face Distortion) {t}', 'Stare at the Dot - The Faces Start to Distort {t}', 'The Flash Face Distortion Effect: Try It! {t}'],
+      enHook: 'Stare only at the red dot in the center and watch the faces at the sides. Ordinary faces may look strangely distorted.',
+      enHow: ['Keep your eyes on the red dot from start to finish (do not move your eyes).', 'Do not look straight at the faces; just notice them in your peripheral vision.', 'Tell us in the comments if they looked distorted.'],
+      enWhy: ['When different eye-aligned faces flash in succession in the periphery, the brain cannot average their features, and the faces seem to distort (flash face distortion effect).'],
+      enNote: ['*The faces flash rapidly. If you are sensitive to flashing images or feel unwell, stop watching.', '*All faces used are shown with the permission of the people pictured.']
+    },
     'stereo-3d': {
       motion: true, tags: ['立体視', '裸眼3D', '平行法', 'Shorts'], enTags: ['Stereogram', 'Stereoscopic', 'Parallel', 'Shorts'],
       jpTitles: ['【裸眼3D】眼鏡なしで、光の粒が浮かんで見える（平行法）{t}', '【立体視】2つの画面を重ねると、3Dで動き出す{t}', '【裸眼立体視】平行法で見る、光のうずまき{t}', '見えたら才能？ 裸眼3Dの光の粒{t}'],
