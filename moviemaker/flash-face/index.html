@@ -89,6 +89,7 @@
       <div><label>背景</label><select id="bg"><option value="#808080">灰色（効果が出やすい）</option><option value="#000000">黒</option><option value="#ffffff">白</option></select></div>
       <div><label>中央の目印</label><select id="fix"><option value="dot">赤い丸</option><option value="cross">赤い十字</option></select></div>
       <div><label>顔のふち</label><select id="mask"><option value="soft">やわらかい楕円</option><option value="none">四角のまま</option></select></div>
+      <div><label>画質（大きいほど細かい）</label><select id="qual"><option value="1">標準（720p）</option><option value="1.5" selected>高（1080p）</option><option value="2">最高（1440p・重い）</option></select></div>
       <div><label>画面の形</label><select id="fmt"><option value="169">横長 16:9（1280×720）</option><option value="916">縦長 9:16（720×1280・Shorts）</option><option value="11">正方形（900×900）</option></select></div>
     </div>
     <div class="grid">
@@ -128,7 +129,7 @@
 (() => {
 'use strict';
 const $ = id => document.getElementById(id), cv = $('cv'), cx = cv.getContext('2d');
-const TW = 300, TH = 400, EY = 0.40, EX = 0.15;             // 顔タイル：目は縦40%、左右の目は中央から±15%
+const TW = 600, TH = 800, EY = 0.40, EX = 0.15;             // 顔タイル：目は縦40%、左右の目は中央から±15%
 const SIZES = { '169': [1280, 720], '916': [720, 1280], '11': [900, 900] };
 const BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
@@ -325,7 +326,7 @@ function fixation(g, x, y, kind, u) {
   else { g.lineWidth = u * 0.006; g.beginPath(); g.moveTo(x - u * 0.016, y); g.lineTo(x + u * 0.016, y); g.moveTo(x, y - u * 0.016); g.lineTo(x, y + u * 0.016); g.stroke(); }
 }
 function frame(t, P) {
-  const [W, H] = SIZES[P.fmt]; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const q = +$('qual').value, [W, H] = SIZES[P.fmt].map(v => Math.round(v * q / 2) * 2); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   cx.fillStyle = P.bg; cx.fillRect(0, 0, W, H);
   const u = Math.min(W, H), cxm = W / 2, cym = H / 2;
   const vert = P.axis === 'v' || (P.axis === 'auto' && H > W);   // 上下にならべるか
@@ -392,7 +393,7 @@ $('rec').onclick = () => {
   const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '', ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm', chunks = [];
   $('rec').disabled = true; $('result').classList.add('hidden');
   if (!start(true, () => { if (recorder && recorder !== true) setTimeout(() => recorder && recorder.state !== 'inactive' && recorder.stop(), 300); })) { $('rec').disabled = false; return; }
-  const rc = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: 8e6 });
+  const rc = new MediaRecorder(cv.captureStream(30), { mimeType: mime || undefined, videoBitsPerSecond: Math.round(12e6 * (+$('qual').value) ** 2) });
   rc.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
   rc.onstop = () => {
     const blob = new Blob(chunks, { type: mime || 'video/webm' });
@@ -407,7 +408,7 @@ $('rec').onclick = () => {
 
 /* ---------- UI ---------- */
 [['rate'], ['size'], ['ecc'], ['dur'], ['rev'], ['fs']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
-['side', 'axis', 'bg', 'fix', 'fmt', 'hook', 'reveal', 'hookLen'].forEach(i => $(i).addEventListener('input', idle));
+['side', 'axis', 'bg', 'fix', 'fmt', 'qual', 'hook', 'reveal', 'hookLen'].forEach(i => $(i).addEventListener('input', idle));
 $('mask').addEventListener('input', () => { retile(); idle(); });
 ['tz', 'ty', 'tx'].forEach(id => $(id).addEventListener('input', () => { $(id + 'V').textContent = $(id).value; retile(); idle(); }));
 renderFaces(); idle();
