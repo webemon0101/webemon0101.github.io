@@ -76,7 +76,7 @@
     <div class="grid">
       <div><label>顔を出す場所</label><select id="side"><option value="both">両側に、別々の顔</option><option value="right">片側だけ（右／下）</option><option value="left">片側だけ（左／上）</option></select></div>
       <div><label>顔をならべる向き</label><select id="axis"><option value="auto">自動（横長は左右、縦長は上下）</option><option value="h">左右</option><option value="v">上下</option></select></div>
-      <div><label>切りかえの速さ：<span id="rateV">4</span> 回/秒</label><input type="range" id="rate" min="2" max="8" step="0.5" value="4"></div>
+      <div><label>切りかえの速さ：<span id="rateV">4</span> 回/秒</label><input type="range" id="rate" min="0.5" max="8" step="0.5" value="4"></div>
       <div><label>顔の大きさ：<span id="sizeV">55</span></label><input type="range" id="size" min="25" max="85" value="55"></div>
       <div><label>中央からの距離：<span id="eccV">70</span></label><input type="range" id="ecc" min="20" max="100" value="70"></div>
     </div>
@@ -89,6 +89,8 @@
     <div class="grid">
       <div><label>長さ（秒）：<span id="durV">30</span></label><input type="range" id="dur" min="10" max="120" step="5" value="30"></div>
       <div><label>最後の種明かし（秒）：<span id="revV">4</span></label><input type="range" id="rev" min="0" max="8" step="1" value="4"></div>
+      <div><label>文字の大きさ：<span id="fsV">100</span>%</label><input type="range" id="fs" min="50" max="250" step="10" value="100"></div>
+      <div><label>呼びかけの表示</label><select id="hookLen"><option value="5">最初の5秒だけ</option><option value="all">種明かしまで、ずっと出す</option></select></div>
       <div style="grid-column:span 2"><label>最初の呼びかけ（空なら出しません）</label><input type="text" id="hook" value="中央の赤い点だけを見つめて。まわりの顔が、どう見えますか？"></div>
     </div>
     <div class="grid">
@@ -298,7 +300,7 @@ $('eyeReset').onclick = () => { ep = []; eyeDraw(); }; $('eyeCancel').onclick = 
 /* ---------- 描画 ---------- */
 function params() {
   return { side: $('side').value, axis: $('axis').value, rate: +$('rate').value, size: +$('size').value / 100, ecc: +$('ecc').value / 100, bg: $('bg').value, fix: $('fix').value, fmt: $('fmt').value,
-    dur: +$('dur').value, rev: +$('rev').value, hook: $('hook').value.trim(), reveal: $('reveal').value.trim() };
+    dur: +$('dur').value, rev: +$('rev').value, fs: +$('fs').value / 100, hookLen: $('hookLen').value, hook: $('hook').value.trim(), reveal: $('reveal').value.trim() };
 }
 // 同じ顔が続かない、ランダムな並び（左右で別の顔になる）
 function makeSeq(n, count, seed, avoid) {
@@ -339,11 +341,12 @@ function frame(t, P) {
   } else { cx.fillStyle = light ? '#555' : '#ccc'; cx.textAlign = 'center'; cx.font = `${Math.round(u * 0.04)}px system-ui,"Yu Gothic",sans-serif`; cx.fillText('顔写真を入れてください', cxm, cym); }
   if (!revealing) fixation(cx, cxm, cym, P.fix, u);
   // 文字
-  const txt = (s, y, a) => { if (!s) return; cx.save(); cx.globalAlpha = a; cx.textAlign = 'center'; cx.textBaseline = 'middle'; const fs = Math.round(u * (W > H ? 0.045 : 0.05)); cx.font = `700 ${fs}px system-ui,"Yu Gothic","Hiragino Sans",sans-serif`;
+  const txt = (s, y, a) => { if (!s) return; cx.save(); cx.globalAlpha = a; cx.textAlign = 'center'; cx.textBaseline = 'middle'; const fs = Math.round(u * (W > H ? 0.045 : 0.05) * P.fs); cx.font = `700 ${fs}px system-ui,"Yu Gothic","Hiragino Sans",sans-serif`;
     cx.lineWidth = fs * 0.2; cx.strokeStyle = light ? '#fff' : '#000'; cx.fillStyle = light ? '#111' : '#fff'; cx.lineJoin = 'round';
     const max = W * 0.9, lines = []; let cur = ''; for (const ch of [...s]) { if (cx.measureText(cur + ch).width > max) { lines.push(cur); cur = ch; } else cur += ch; } lines.push(cur);
-    lines.forEach((l, i) => { const yy = y + (i - (lines.length - 1) / 2) * fs * 1.25; cx.strokeText(l, W / 2, yy); cx.fillText(l, W / 2, yy); }); cx.restore(); };
-  if (P.hook && t < 5) txt(P.hook, vert ? H * 0.055 : H * 0.12, t < 4 ? 1 : 5 - t);
+    const blockH = (lines.length - 1) * fs * 1.25, yc = Math.max(fs * 0.9 + blockH / 2, Math.min(H - fs * 0.9 - blockH / 2, y));   // 文字が画面からはみ出さないように
+    lines.forEach((l, i) => { const yy = yc + (i - (lines.length - 1) / 2) * fs * 1.25; cx.strokeText(l, W / 2, yy); cx.fillText(l, W / 2, yy); }); cx.restore(); };
+  if (P.hook && !revealing && (P.hookLen === 'all' || t < 5)) txt(P.hook, vert ? H * 0.055 : H * 0.12, P.hookLen === 'all' || t < 4 ? 1 : 5 - t);
   if (revealing && P.reveal) txt(P.reveal, H * 0.9, Math.min(1, (t - (P.dur - P.rev)) * 2));
 }
 
@@ -397,8 +400,8 @@ $('rec').onclick = () => {
 };
 
 /* ---------- UI ---------- */
-[['rate'], ['size'], ['ecc'], ['dur'], ['rev']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
-['side', 'axis', 'bg', 'fix', 'fmt', 'hook', 'reveal'].forEach(i => $(i).addEventListener('input', idle));
+[['rate'], ['size'], ['ecc'], ['dur'], ['rev'], ['fs']].forEach(([i]) => $(i).addEventListener('input', () => { $(i + 'V').textContent = $(i).value; idle(); }));
+['side', 'axis', 'bg', 'fix', 'fmt', 'hook', 'reveal', 'hookLen'].forEach(i => $(i).addEventListener('input', idle));
 $('mask').addEventListener('input', () => { retile(); idle(); });
 renderFaces(); idle();
 })();
