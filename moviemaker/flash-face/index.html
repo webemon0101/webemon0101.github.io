@@ -59,6 +59,12 @@
       <button class="sec" id="sample">サンプルの顔を8人ぶん入れる（簡易イラスト）</button>
       <button class="sec" id="clear">全部消す</button>
     </div>
+    <div class="row top" style="gap:8px">
+      <label class="btn sec" style="margin:0">1枚にまとめた顔の絵（シート）を、切って取り込む<input type="file" id="sheet" accept="image/*" hidden></label>
+      <label class="btn sec" style="margin:0">顔を自動で見つけて切り出す（列・行の指定なし）<input type="file" id="sheetAuto" accept="image/*" hidden></label>
+      <span class="info" style="margin:0;flex-basis:100%"></span>
+      <span class="info" style="margin:0">横</span><input type="number" id="shC" min="1" max="10" value="4" style="width:64px"><span class="info" style="margin:0">列 ×</span><input type="number" id="shR" min="1" max="10" value="5" style="width:64px"><span class="info" style="margin:0">行（等分して、1マスを1人の顔にします）</span>
+    </div>
     <div class="info">顔が1つだけ写っている、正面の写真が向いています。目の位置を自動で見つけて、全部の顔の目をそろえます（見つからないときは、⚠の顔をクリックして、左右の目を指定します）。</div>
     <div class="warn">写っている人の許可がある写真だけを使ってください（肖像権）。他人の顔を、ゆがんで怖く見える動画にして公開するのは、トラブルになりやすいので、自分や、許可をもらった人の写真にしましょう。</div>
     <div id="faces"></div>
@@ -178,6 +184,65 @@ async function addImages(files) {
   retile(); idle();
 }
 $('file').onchange = e => { addImages(e.target.files); e.target.value = ''; };
+// 1枚に並べた顔の絵（シート）を、列×行に等分して、1マスずつ取り込む
+async function addSheet(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const C = Math.max(1, Math.min(10, +$('shC').value || 1)), R = Math.max(1, Math.min(10, +$('shR').value || 1)); let noDet = false, miss = 0;
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, 4000 / Math.max(bmp.width, bmp.height)), sw = bmp.width * k, sh = bmp.height * k, cw = sw / C, ch = sh / R;
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+      setStatus(`シートを切って、顔を探しています… ${r * C + c + 1} / ${C * R}`);
+      const cell = mk(Math.round(cw), Math.round(ch)); cell.getContext('2d').drawImage(bmp, c * cw / k, r * ch / k, cw / k, ch / k, 0, 0, cell.width, cell.height);
+      const eyes = await detectEyes(cell); if (eyes === undefined) noDet = true; else if (!eyes) miss++;
+      faces.push({ name: `${file.name} (${r + 1}行${c + 1}列)`, img: cell, eyes: eyes || null, auto: !!eyes });
+    }
+  } catch (e) { console.error(e); setStatus('シートを読みこめませんでした。', true); return; }
+  setStatus(noDet ? '顔の自動検出が使えませんでした（ネットワークを確認）。⚠の顔は、クリックして、目を指定してください。' : `${C * R} マスに切りました。${miss ? `顔が見つからなかった ${miss} マスは、⚠をクリックして、目を指定してください。` : ''}`, noDet || miss > 0);
+  retile(); idle();
+}
+$('sheet').onchange = e => { addSheet(e.target.files[0]); e.target.value = ''; };
+
+// 画像の中の顔を、全部、自動で見つける（大きさの違う窓をずらしながら探して、重なりを1つにまとめる）
+async function findFaces(img) {
+  const d = await ensureDetector(), W = img.width, H = img.height, m = Math.min(W, H), found = [];
+  const wins = [[0, 0, W, H]];
+  for (const f of [0.6, 0.38, 0.26]) { const s = Math.round(m * f), st = Math.max(1, Math.round(s / 2)); for (let y = 0; y + s <= H + st - 1; y += st) for (let x = 0; x + s <= W + st - 1; x += st) wins.push([Math.min(x, W - s), Math.min(y, H - s), s, s]); }
+  const tmp = mk(2, 2), tg = tmp.getContext('2d');
+  for (let i = 0; i < wins.length; i++) {
+    const [x, y, w, h] = wins[i]; tmp.width = w; tmp.height = h; tg.drawImage(img, x, y, w, h, 0, 0, w, h);
+    const r = d.detect(tmp); if (i % 12 === 0) { setStatus(`顔を探しています… ${Math.round(i / wins.length * 100)}%`); await new Promise(r => setTimeout(r, 0)); }
+    for (const det of r.detections || []) {
+      const b = det.boundingBox, k = det.keypoints; if (!b || !k || k.length < 2) continue;
+      const sc = det.categories && det.categories[0] ? det.categories[0].score : 0.5, ps = [[x + k[0].x * w, y + k[0].y * h], [x + k[1].x * w, y + k[1].y * h]].sort((u, v) => u[0] - v[0]);
+      found.push({ x: x + b.originX, y: y + b.originY, w: b.width, h: b.height, sc, eyes: [ps[0][0], ps[0][1], ps[1][0], ps[1][1]] });
+    }
+  }
+  found.sort((a, b) => b.sc - a.sc);
+  const keep = [], iou = (a, b) => { const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y), x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h), i = Math.max(0, x2 - x1) * Math.max(0, y2 - y1); return i / (a.w * a.h + b.w * b.h - i); };
+  for (const f of found) if (f.sc >= 0.5 && f.w > m * 0.03 && !keep.some(k => iou(k, f) > 0.25)) keep.push(f);
+  // 上の段から、左から右へ
+  const mh = keep.map(f => f.h).sort((a, b) => a - b)[Math.floor(keep.length / 2)] || 1;
+  keep.sort((a, b) => a.y + a.h / 2 - (b.y + b.h / 2)); const rows = []; for (const f of keep) { const cy = f.y + f.h / 2, row = rows.find(r => Math.abs(r.cy - cy) < mh * 0.6); if (row) row.f.push(f); else rows.push({ cy, f: [f] }); }
+  return rows.flatMap(r => r.f.sort((a, b) => a.x - b.x));
+}
+async function addSheetAuto(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, 3000 / Math.max(bmp.width, bmp.height)), img = mk(Math.round(bmp.width * k), Math.round(bmp.height * k));
+    img.getContext('2d').drawImage(bmp, 0, 0, img.width, img.height);
+    const list = await findFaces(img);
+    if (!list.length) { setStatus('顔が見つかりませんでした。顔がもっと大きく写った画像にするか、「列×行で切って取り込む」を使ってください。', true); return; }
+    list.forEach((f, n) => {
+      // 顔のまわり（顔の幅の2.6倍×3.4倍）を切り出して、1人ぶんの画像にする
+      const cw = f.w * 2.6, ch = f.h * 3.4, cxm = f.x + f.w / 2, cym = f.y + f.h * 0.55, x0 = Math.max(0, Math.round(cxm - cw / 2)), y0 = Math.max(0, Math.round(cym - ch / 2)), x1 = Math.min(img.width, Math.round(cxm + cw / 2)), y1 = Math.min(img.height, Math.round(cym + ch / 2));
+      const cell = mk(x1 - x0, y1 - y0); cell.getContext('2d').drawImage(img, x0, y0, cell.width, cell.height, 0, 0, cell.width, cell.height);
+      faces.push({ name: `${file.name} (${n + 1}人目)`, img: cell, eyes: [f.eyes[0] - x0, f.eyes[1] - y0, f.eyes[2] - x0, f.eyes[3] - y0], auto: true });
+    });
+    setStatus(`${list.length} 人の顔を見つけました（左上から右へ、上から下へ）。数や顔が違うときは、列×行の切り取りも試してください。`);
+    retile(); idle();
+  } catch (e) { console.error(e); setStatus('自動検出に失敗しました（ネットワークを確認してください）：' + (e.message || e), true); }
+}
+$('sheetAuto').onchange = e => { addSheetAuto(e.target.files[0]); e.target.value = ''; };
 $('clear').onclick = () => { faces = []; renderFaces(); idle(); };
 
 /* サンプル：簡易イラストの顔（目の位置が分かっているので、そのままそろえられる） */
