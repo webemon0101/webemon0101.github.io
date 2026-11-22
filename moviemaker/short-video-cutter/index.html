@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ショート動画カッター</title>
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+<main>
+  <header><nav><a class="back" href="../">MOVIE MAKER 一覧</a></nav><h1>ショート動画カッター</h1><p>末尾のロゴを切り取り、1.5倍速で書き出します。</p></header>
+  <div class="workspace">
+    <section class="preview" aria-label="動画プレビュー">
+      <div id="placeholder"><span aria-hidden="true">▶</span><p>動画プレビュー</p></div>
+      <video id="preview" controls playsinline hidden></video>
+    </section>
+    <div class="editor">
+      <label class="picker" id="picker">
+        <input id="file" type="file" accept="video/*,.mp4,.mov,.webm">
+        <strong>動画を選ぶ</strong><span>ここに動画をドロップ</span>
+      </label>
+      <p id="filename" class="filename" hidden></p>
+      <fieldset id="trim" disabled>
+        <legend>ロゴの開始位置</legend>
+        <p>プレビューをロゴが始まる位置に合わせて指定してください。</p>
+        <div class="position">
+          <input id="range" type="range" min="0" max="0" step="0.001" aria-label="ロゴの開始位置" aria-describedby="position">
+          <output id="position" for="range">0:00.000</output>
+        </div>
+        <button id="set" type="button" class="secondary">現在の再生位置を使う</button>
+      </fieldset>
+      <div class="export">
+        <div class="details"><span>再生速度 <strong>1.5×</strong></span><span>出力時間 <strong id="duration">—</strong></span></div>
+        <button id="export" type="button" disabled>1.5倍速で書き出す</button>
+        <progress id="progress" max="1" value="0" aria-label="書き出し進捗" hidden></progress>
+        <a id="download" hidden>書き出した動画を保存</a>
+        <p id="status" role="status"></p>
+      </div>
+    </div>
+  </div>
+</main>
+</html>
