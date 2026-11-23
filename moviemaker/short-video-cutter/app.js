@@ -11,6 +11,7 @@ const progress = get("progress");
 const exportButton = get("export");
 const speed = 1.5;
 const minimumCut = 0.15;
+const tailLength = 3.05;
 let inputUrl;
 let outputUrl;
 let filename;
@@ -112,6 +113,14 @@ range.addEventListener("input", () => {
 get("set").addEventListener("click", () => {
   preview.pause();
   setCut(preview.currentTime);
+});
+
+get("tail").addEventListener("click", () => {
+  if (!Number.isFinite(preview.duration)) return;
+  preview.pause();
+  const seconds = Math.max(0, preview.duration - tailLength);
+  preview.currentTime = seconds;
+  setCut(seconds);
 });
 
 function ready(video, url) {
