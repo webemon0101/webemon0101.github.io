@@ -51,3 +51,7 @@ progress { width: 100%; margin-top: 10px; accent-color: var(--accent) }
 }
 .export-source { position: fixed; right: 0; bottom: 0; width: 1px; height: 1px; opacity: .01; pointer-events: none }
 .back { display: inline-block; margin-bottom: 14px; color: var(--accent); font-size: .875rem }
+.field { display: grid; gap: 6px; margin-bottom: 10px; font-size: .875rem; color: var(--muted) }
+.field input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #12141d; color: #f5f5fa; font: inherit; min-width: 0 }
+.check { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .875rem; color: var(--muted); cursor: pointer }
+.check input { accent-color: var(--accent) }

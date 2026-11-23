@@ -31,6 +31,8 @@
       </fieldset>
       <div class="export">
         <div class="details"><span>再生速度 <strong>1.5×</strong></span><span>出力時間 <strong id="duration">—</strong></span></div>
+        <label class="field" for="outname">保存するファイル名<input id="outname" type="text" autocomplete="off" spellcheck="false" placeholder="動画を選ぶと元のファイル名が入ります" disabled></label>
+        <label class="check" id="pickRow" hidden><input id="pickDir" type="checkbox" checked>保存先を選んで保存する（Chrome / Edge）</label>
         <button id="export" type="button" disabled>1.5倍速で書き出す</button>
         <progress id="progress" max="1" value="0" aria-label="書き出し進捗" hidden></progress>
         <a id="download" hidden>書き出した動画を保存</a>

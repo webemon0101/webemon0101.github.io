@@ -12,6 +12,10 @@ const exportButton = get("export");
 const speed = 1.5;
 const minimumCut = 0.15;
 const tailLength = 3.05;
+const mimeTypes = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+const outname = get("outname");
+const canPick = typeof window.showSaveFilePicker === "function";
+get("pickRow").hidden = !canPick;
 let inputUrl;
 let outputUrl;
 let filename;
@@ -35,6 +39,7 @@ function clearDownload() {
 function updateControls() {
   get("trim").disabled = busy || preview.hidden;
   fileInput.disabled = busy;
+  outname.disabled = busy || preview.hidden;
   exportButton.disabled = busy || !Number.isFinite(cut) || cut < minimumCut;
   get("position").value = timestamp(cut ?? Number(range.value));
   get("duration").textContent = cut === undefined ? "—" : timestamp(cut / speed);
@@ -48,6 +53,7 @@ function load(file) {
   filename = file.name;
   get("filename").textContent = filename;
   get("filename").hidden = false;
+  outname.value = filename.replace(/\.[^.]+$/, "");
   range.value = "0";
   preview.hidden = true;
   get("placeholder").hidden = false;
@@ -121,6 +127,9 @@ get("tail").addEventListener("click", () => {
   const seconds = Math.max(0, preview.duration - tailLength);
   preview.currentTime = seconds;
   setCut(seconds);
+  status.textContent = preview.duration <= tailLength
+    ? "この動画は" + tailLength + "秒以下なので、先頭（0:00.000）に移動しました。"
+    : "終わりの" + tailLength + "秒前（" + timestamp(seconds) + "）に移動しました。";
 });
 
 function ready(video, url) {
@@ -161,8 +170,7 @@ async function convert(url, end, onProgress) {
     destination = audio.createMediaStreamDestination();
     audio.createMediaElementSource(video).connect(destination);
     const stream = new MediaStream([...canvasStream.getTracks(), ...destination.stream.getTracks()]);
-    const mimeType = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
-      .find((type) => MediaRecorder.isTypeSupported(type));
+    const mimeType = mimeTypes.find((type) => MediaRecorder.isTypeSupported(type));
     recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
     const chunks = [];
 
@@ -227,8 +235,28 @@ async function convert(url, end, onProgress) {
   }
 }
 
+function outputBase() {
+  const name = outname.value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").replace(/\.(mp4|webm)$/i, "").trim();
+  return name || filename.replace(/\.[^.]+$/, "");
+}
+
 exportButton.addEventListener("click", async () => {
   if (busy || cut === undefined || cut < minimumCut) return;
+  let handle;
+  if (canPick && get("pickDir").checked && window.MediaRecorder) {
+    // ファイルの保存先ダイアログは、ボタンを押した直後でないと開けないため、書き出しの前に開く
+    const mp4 = MediaRecorder.isTypeSupported("video/mp4");
+    const ext = mp4 ? "mp4" : "webm";
+    try {
+      handle = await window.showSaveFilePicker({
+        suggestedName: outputBase() + "." + ext,
+        types: [{ description: mp4 ? "MP4 動画" : "WebM 動画", accept: { [mp4 ? "video/mp4" : "video/webm"]: ["." + ext] } }]
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") { status.textContent = "保存先の選択をキャンセルしました。"; return; }
+      handle = undefined;
+    }
+  }
   busy = true;
   updateControls();
   preview.pause();
@@ -242,9 +270,19 @@ exportButton.addEventListener("click", async () => {
     const extension = blob.type.startsWith("video/mp4") ? "mp4" : "webm";
     outputUrl = URL.createObjectURL(blob);
     download.href = outputUrl;
-    download.download = filename.replace(/\.[^.]+$/, "") + "_cut_1.5x." + extension;
+    download.download = outputBase() + "." + extension;
     download.hidden = false;
     status.textContent = extension.toUpperCase() + "で書き出しました。";
+    if (handle) {
+      try {
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        status.textContent = extension.toUpperCase() + "で書き出し、「" + handle.name + "」に保存しました。";
+      } catch (error) {
+        status.textContent = "書き出しは完了しましたが、保存先への書き込みに失敗しました。下のボタンから保存してください。";
+      }
+    }
   } catch (error) {
     status.textContent = error?.message || "動画を書き出せませんでした。";
   } finally {
