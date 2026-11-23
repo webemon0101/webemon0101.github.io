@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>Git 体験</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --bg:#0d1220; --panel:#161d2f; --line:#2a3550; --text:#e8ecf7; --muted:#8f9ac0; --accent:#7be0a4;
+          --new:#9aa3bd; --mod:#ffb454; --stg:#7be0a4; --hist:#6cb6ff; --bad:#ff7a7a; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, "Yu Gothic", "Hiragino Sans", sans-serif; padding: 16px; max-width: 1200px; margin: 0 auto; }
+  a.back { color: var(--accent); font-size: 13px; text-decoration: none; }
+  h1 { margin: 8px 0 4px; font-size: clamp(20px, 5vw, 28px); }
+  .lead { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  button { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.pri { background: var(--accent); color: #0b2a1a; border-color: var(--accent); font-weight: 700; }
+  button.dng:hover { border-color: var(--bad); }
+
+  .areas { display: grid; grid-template-columns: 1fr 34px 1fr 34px 1.4fr; align-items: stretch; gap: 6px; margin-bottom: 14px; }
+  .arrow { display: grid; place-items: center; color: var(--muted); font-size: 11px; text-align: center; line-height: 1.3; }
+  .arrow b { display: block; font-size: 20px; color: var(--accent); }
+  .zone { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 132px; min-width: 0; }
+  .zone h2 { margin: 0 0 2px; font-size: 14px; }
+  .zone .sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .f { border: 1px solid var(--line); border-radius: 8px; padding: 4px 9px; font: 13px ui-monospace, Consolas, monospace; background: #0f1524; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .f i { font-style: normal; font-size: 10px; opacity: .9; }
+  .f.untracked { border-color: var(--new); color: var(--new); }
+  .f.modified { border-color: var(--mod); color: var(--mod); }
+  .f.clean { border-color: var(--line); color: var(--text); }
+  .f.staged { border-color: var(--stg); color: var(--stg); cursor: default; }
+  .f.sel { outline: 2px solid var(--accent); }
+  .empty { color: var(--muted); font-size: 12px; }
+  .addbar { margin-top: 8px; display: flex; gap: 6px; }
+  .addbar input { flex: 1; min-width: 0; padding: 5px 9px; border-radius: 8px; border: 1px solid var(--line); background: #0f1524; color: var(--text); font: 13px ui-monospace, Consolas, monospace; }
+  .chain { display: flex; flex-wrap: wrap; gap: 4px 0; align-items: center; }
+  .cm { display: flex; flex-direction: column; align-items: center; width: 74px; text-align: center; }
+  .cm .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--hist); border: 2px solid #0d1220; box-shadow: 0 0 0 2px var(--hist); }
+  .cm.head .dot { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .cm code { font-size: 11px; color: var(--hist); margin-top: 4px; }
+  .cm span { font-size: 11px; color: var(--muted); max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cm .tag { font-size: 10px; background: var(--accent); color: #0b2a1a; border-radius: 6px; padding: 0 5px; margin-bottom: 3px; font-weight: 700; }
+  .line { width: 18px; height: 2px; background: var(--hist); margin: 0 -2px; align-self: center; margin-top: 4px; }
+  .editor { display: none; margin-bottom: 14px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 12px; }
+  .editor.on { display: block; }
+  .editor .hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+  .editor textarea { width: 100%; height: 110px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #0f1524; color: var(--text); font: 14px/1.6 ui-monospace, Consolas, monospace; }
+
+  .main { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; display: flex; flex-direction: column; }
+  .box > .hd { padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  #term { height: 420px; overflow: auto; padding: 12px 14px; background: #080b14; font: 13px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  #term .cmd { color: #fff; }
+  #term .pr { color: var(--accent); }
+  #term .g { color: #56d364; } #term .r { color: #ff7b72; } #term .y { color: #e3b341; } #term .c { color: #6cb6ff; } #term .d { color: #8b95b0; }
+  #term .ex { display: block; margin: 4px 0 8px; padding: 6px 10px; border-left: 3px solid var(--accent); background: rgba(123,224,164,.08); color: #bfe9cf; font-family: system-ui, "Yu Gothic", sans-serif; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; }
+  .inrow { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); background: #080b14; }
+  .inrow .pr { color: var(--accent); font: 13px ui-monospace, Consolas, monospace; }
+  .inrow input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #fff; font: 14px ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .mis { padding: 6px 12px 12px; overflow: auto; max-height: 470px; }
+  .m { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line); opacity: .55; }
+  .m.cur { opacity: 1; }
+  .m.done { opacity: .8; }
+  .m .no { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+  .m.done .no { background: var(--accent); color: #0b2a1a; border-color: var(--accent); font-weight: 700; }
+  .m.cur .no { border-color: var(--accent); color: var(--accent); }
+  .m b { font-size: 14px; }
+  .m p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+  .m .try { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .m .try button { font: 12px ui-monospace, Consolas, monospace; padding: 4px 9px; border-radius: 8px; }
+  .clear { padding: 12px; margin: 10px 0 0; background: rgba(123,224,164,.1); border: 1px solid var(--accent); border-radius: 10px; font-size: 13px; line-height: 1.7; }
+  .hint { margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  @media (max-width: 820px) {
+    .areas { grid-template-columns: 1fr; }
+    .arrow { grid-auto-flow: column; gap: 6px; }
+    .arrow b { transform: rotate(90deg); display: inline-block; }
+    .main { grid-template-columns: 1fr; }
+    #term { height: 340px; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../">← LAB 一覧</a>
+<h1>Git 体験</h1>
+<p class="lead">ブラウザの中に、練習用の Git を用意しました。本物のファイルやリポジトリは壊れません。右の「ミッション」を上から順に進めると、Git の基本が一通り体験できます。</p>
+
+<div class="areas">
+  <div class="zone">
+    <h2>① 作業フォルダ</h2><div class="sub">ふだんファイルを書く場所</div>
+    <div class="chips" id="zWork"></div>
+    <div class="addbar"><input id="newName" placeholder="新しいファイル名（例: memo.txt）" maxlength="40"><button id="newBtn" type="button">作る</button></div>
+  </div>
+  <div class="arrow"><div><b>→</b>git add</div></div>
+  <div class="zone">
+    <h2>② ステージ</h2><div class="sub">次の記録に入れるものを置く場所</div>
+    <div class="chips" id="zStage"></div>
+  </div>
+  <div class="arrow"><div><b>→</b>git commit</div></div>
+  <div class="zone">
+    <h2>③ 履歴</h2><div class="sub">記録（コミット）が積み重なる場所</div>
+    <div class="chain" id="zHist"></div>
+  </div>
+</div>
+
+<div class="editor" id="ed">
+  <div class="hd"><span>✏️ <b id="edName"></b> を編集</span><span><button id="edSave" class="pri" type="button">保存</button> <button id="edDel" class="dng" type="button">ファイルを消す</button> <button id="edClose" type="button">閉じる</button></span></div>
+  <textarea id="edText" spellcheck="false"></textarea>
+</div>
+
+<div class="main">
+  <div class="box">
+    <div class="hd"><span>ターミナル（<code>help</code> でコマンド一覧）</span><button id="reset" type="button" class="dng">最初からやり直す</button></div>
+    <div id="term" aria-live="polite"></div>
+    <div class="inrow"><span class="pr">$</span><input id="in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ここにコマンドを入力して Enter"></div>
+  </div>
+  <div class="box">
+    <div class="hd"><span>ミッション</span><span id="prog"></span></div>
+    <div class="mis" id="mis"></div>
+  </div>
+</div>
+<p class="hint">左の ①〜③ の図は、コマンドを打つたびに変わります。①のファイルを押すと、中身を書き換えられます。色の意味: <span style="color:var(--new)">灰＝Git がまだ知らない</span> / <span style="color:var(--mod)">橙＝記録から変わった</span> / <span style="color:var(--stg)">緑＝次の記録に入れる予定</span></p>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const AUTHOR = 'あなた <you@example.com>';
+
+/* ================= 状態 ================= */
+let S;
+function fresh() { S = { fs: {}, repo: null, ev: {}, hist: [], hi: 0, sel: null }; }
+const headTree = () => (S.repo && S.repo.commits.length) ? S.repo.commits[S.repo.commits.length - 1].tree : {};
+const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+function hash(str, seed) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+}
+const sha = s => (hash(s, 1) + hash(s, 2) + hash(s, 3) + hash(s, 4) + hash(s, 5)).slice(0, 40);
+
+function setFile(name, content) { if (!has(S.fs, name)) S.ev.file = true; S.fs[name] = content; }
+function validName(n) { return /^[^\s\/\\:*?"<>|]+$/.test(n) && !n.startsWith('.') && n.length <= 40; }
+
+function model() {
+  const head = headTree(), idx = S.repo ? S.repo.index : {}, wk = S.fs;
+  const staged = [], unstaged = [], untracked = [];
+  if (!S.repo) return { staged, unstaged, untracked: [], head, idx };
+  new Set([...Object.keys(idx), ...Object.keys(head)]).forEach(n => {
+    if (has(idx, n) && !has(head, n)) staged.push([n, 'new file']);
+    else if (has(idx, n) && idx[n] !== head[n]) staged.push([n, 'modified']);
+    else if (!has(idx, n) && has(head, n)) staged.push([n, 'deleted']);
+  });
+  Object.keys(idx).forEach(n => { if (!has(wk, n)) unstaged.push([n, 'deleted']); else if (wk[n] !== idx[n]) unstaged.push([n, 'modified']); });
+  Object.keys(wk).forEach(n => { if (!has(idx, n)) untracked.push(n); });
+  [staged, unstaged].forEach(a => a.sort()); untracked.sort();
+  return { staged, unstaged, untracked, head, idx };
+}
+
+/* ================= 差分 ================= */
+function diffLines(a, b) {
+  const A = a === '' ? [] : a.replace(/\n$/, '').split('\n'), B = b === '' ? [] : b.replace(/\n$/, '').split('\n');
+  const n = A.length, m = B.length, t = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) t[i][j] = A[i] === B[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) { if (A[i] === B[j]) { out.push([' ', A[i]]); i++; j++; } else if (t[i + 1][j] >= t[i][j + 1]) out.push(['-', A[i++]]); else out.push(['+', B[j++]]); }
+  while (i < n) out.push(['-', A[i++]]); while (j < m) out.push(['+', B[j++]]);
+  return { out, n, m };
+}
+function diffText(name, from, to, kind) {
+  const L = [['b', 'diff --git a/' + name + ' b/' + name]];
+  if (kind === 'new') L.push(['b', 'new file mode 100644']); if (kind === 'del') L.push(['b', 'deleted file mode 100644']);
+  const d = diffLines(from || '', to || '');
+  L.push(['b', '--- ' + (kind === 'new' ? '/dev/null' : 'a/' + name)], ['b', '+++ ' + (kind === 'del' ? '/dev/null' : 'b/' + name)]);
+  L.push(['c', '@@ -' + (d.n ? '1,' + d.n : '0,0') + ' +' + (d.m ? '1,' + d.m : '0,0') + ' @@']);
+  d.out.forEach(([k, t]) => L.push([k === '+' ? 'g' : k === '-' ? 'r' : '', k + t]));
+  return L;
+}
+
+/* ================= ターミナル ================= */
+const term = $('term');
+function out(lines, ex) {
+  if (typeof lines === 'string') lines = lines.split('\n').map(t => ['', t]);
+  term.insertAdjacentHTML('beforeend', lines.map(([c, t]) => c ? '<span class="' + c + '">' + esc(t) + '</span>' : esc(t)).join('\n') + (lines.length ? '\n' : ''));
+  if (ex) term.insertAdjacentHTML('beforeend', '<span class="ex">💡 ' + esc(ex) + '</span>');
+  term.scrollTop = term.scrollHeight;
+}
+function tokenize(line) {
+  const re = /"([^"]*)"|'([^']*)'|(>>|>)|([^\s>"']+)/g, t = []; let m;
+  while ((m = re.exec(line))) t.push(m[3] ? { op: m[3] } : { s: m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[4] });
+  return t;
+}
+function short(id) { return id.slice(0, 7); }
+function dateStr(d) {
+  const D = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], p = n => String(n).padStart(2, '0');
+  return D[d.getDay()] + ' ' + M[d.getMonth()] + ' ' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + ' ' + d.getFullYear() + ' +0900';
+}
+
+const HELP = [
+  ['c', '【ファイルの操作】'],
+  ['', '  ls                 ファイルの一覧'],
+  ['', '  cat ファイル名     中身を表示'],
+  ['', '  touch ファイル名   空のファイルを作る'],
+  ['', '  echo "文字" > ファイル名    ファイルに書く（上書き）'],
+  ['', '  echo "文字" >> ファイル名   ファイルに書き足す'],
+  ['', '  rm ファイル名      ファイルを消す'],
+  ['c', '【Git】'],
+  ['', '  git init                    この場所で Git を始める'],
+  ['', '  git status                  いまの状態を見る'],
+  ['', '  git add ファイル名          ステージに載せる（. で全部）'],
+  ['', '  git commit -m "メッセージ"  記録する'],
+  ['', '  git log [--oneline]         記録の一覧を見る'],
+  ['', '  git diff [--staged]         変更点を見る'],
+  ['', '  git restore ファイル名      作業フォルダの変更を取り消す'],
+  ['', '  git restore --staged ファイル名   ステージから外す'],
+  ['c', '【その他】  clear  画面を消す / help  この一覧']
+];
+
+function git(args) {
+  const sub = args[0]; let ex = '';
+  if (!sub) return { o: [['', 'usage: git <command> [<args>]'], ['d', '（この体験では init / status / add / commit / log / diff / restore が使えます）']] };
+  if (sub === 'init') {
+    if (S.repo) return { o: [['', 'Reinitialized existing Git repository in /home/you/project/.git/']], ex: 'すでに Git が始まっています。' };
+    S.repo = { commits: [], index: {} }; S.ev.init = true;
+    return { o: [['', 'Initialized empty Git repository in /home/you/project/.git/']], ex: 'この場所を Git で管理し始めました。見えない .git という場所に、これから記録が貯まります。' };
+  }
+  if (!['status', 'add', 'commit', 'log', 'diff', 'restore'].includes(sub)) {
+    return { o: [['r', "git: '" + sub + "' is not a git command, or not available in this practice."], ['d', 'help でこの体験で使えるコマンドを見られます。']] };
+  }
+  if (!S.repo) return { o: [['r', 'fatal: not a git repository (or any of the parent directories): .git']], ex: 'まだ Git を始めていません。最初に git init を打ちます。' };
+  const mo = model(), rest = args.slice(1);
+
+  if (sub === 'status') {
+    S.ev.status = true; const o = [['', 'On branch main']];
+    if (!S.repo.commits.length) o.push(['', ''], ['', 'No commits yet']);
+    if (mo.staged.length) { o.push(['', ''], ['', 'Changes to be committed:'], ['d', '  (use "git restore --staged <file>..." to unstage)']); mo.staged.forEach(([n, k]) => o.push(['g', '\t' + k.padEnd(12) + n])); }
+    if (mo.unstaged.length) { o.push(['', ''], ['', 'Changes not staged for commit:'], ['d', '  (use "git add <file>..." to update what will be committed)'], ['d', '  (use "git restore <file>..." to discard changes in working directory)']); mo.unstaged.forEach(([n, k]) => o.push(['r', '\t' + (k + ':').padEnd(13) + n])); }
+    if (mo.untracked.length) { o.push(['', ''], ['', 'Untracked files:'], ['d', '  (use "git add <file>..." to include in what will be committed)']); mo.untracked.forEach(n => o.push(['r', '\t' + n])); }
+    o.push(['', '']);
+    if (mo.staged.length) { /* nothing */ }
+    else if (mo.unstaged.length) o.push(['', 'no changes added to commit (use "git add" and/or "git commit -a")']);
+    else if (mo.untracked.length) o.push(['', 'nothing added to commit but untracked files present (use "git add" to track)']);
+    else o.push(['', S.repo.commits.length ? 'nothing to commit, working tree clean' : 'nothing to commit (create/copy files and use "git add" to track)']);
+    ex = '赤い文字は「まだステージに載っていない」、緑の文字は「次の記録に入る」ものです。迷ったら git status、が合言葉です。';
+    return { o, ex };
+  }
+
+  if (sub === 'add') {
+    if (!rest.length) return { o: [['', 'Nothing specified, nothing added.'], ['d', 'hint: Maybe you wanted to say \'git add .\'?']] };
+    const all = rest.includes('.') || rest.includes('-A') || rest.includes('--all'); const names = rest.filter(x => !x.startsWith('-') && x !== '.');
+    if (all) {
+      Object.keys(S.fs).forEach(n => { S.repo.index[n] = S.fs[n]; });
+      Object.keys(S.repo.index).forEach(n => { if (!has(S.fs, n)) delete S.repo.index[n]; });
+    }
+    for (const n of names) {
+      if (has(S.fs, n)) S.repo.index[n] = S.fs[n];
+      else if (has(S.repo.index, n)) delete S.repo.index[n];
+      else return { o: [['r', "fatal: pathspec '" + n + "' did not match any files"]], ex: 'そのファイルはありません。ls でファイル名を確かめてみましょう。' };
+    }
+    S.ev.add = true;
+    return { o: [], ex: 'ファイルを②ステージに載せました。まだ記録はされていません。git status で、緑になったことを確かめられます。' };
+  }
+
+  if (sub === 'commit') {
+    let msg = null, a = false;
+    for (let i = 0; i < rest.length; i++) { if (rest[i] === '-m') { msg = rest[++i]; } else if (rest[i] === '-a' || rest[i] === '-am') { a = true; if (rest[i] === '-am') msg = rest[++i]; } else if (rest[i].startsWith('-m') && rest[i].length > 2) msg = rest[i].slice(2); }
+    if (a) { Object.keys(S.repo.index).forEach(n => { if (has(S.fs, n)) S.repo.index[n] = S.fs[n]; else delete S.repo.index[n]; }); }
+    const m2 = model();
+    if (!m2.staged.length) {
+      const o = [['', 'On branch main']]; if (!S.repo.commits.length) o.push(['', ''], ['', 'No commits yet']);
+      if (m2.unstaged.length || m2.untracked.length) o.push(['', ''], ['', m2.unstaged.length ? 'no changes added to commit (use "git add" and/or "git commit -a")' : 'nothing added to commit but untracked files present (use "git add" to track)']);
+      else o.push(['', 'nothing to commit, working tree clean']);
+      return { o, ex: '記録に入れるものがありません。先に git add でステージに載せます。' };
+    }
+    if (msg === null || msg === undefined || !String(msg).trim()) return { o: [['r', 'Aborting commit due to empty commit message.'], ['d', '（この体験では -m "メッセージ" を付けて書きます）']], ex: '記録には「何をしたか」のメッセージが必要です。例: git commit -m "最初のメモ"' };
+    const parent = S.repo.commits.length ? S.repo.commits[S.repo.commits.length - 1].id : '';
+    const now = new Date(), tree = Object.assign({}, S.repo.index);
+    const id = sha(parent + '|' + msg + '|' + now.getTime() + '|' + JSON.stringify(tree));
+    S.repo.commits.push({ id, msg: String(msg), tree, time: now, parent });
+    const ch = m2.staged.length, o = [['', '[main ' + (parent ? '' : '(root-commit) ') + short(id) + '] ' + msg], ['', ' ' + ch + ' file' + (ch > 1 ? 's' : '') + ' changed']];
+    m2.staged.forEach(([n, k]) => o.push(['', ' ' + (k === 'new file' ? 'create' : k === 'deleted' ? 'delete' : 'update') + ' mode 100644 ' + n]));
+    S.ev.commit = S.repo.commits.length;
+    return { o, ex: 'ステージにあったものが③履歴に記録されました（コミット ' + short(id) + '）。いつでもこの時点に戻れる「セーブポイント」ができた、と考えてください。' };
+  }
+
+  if (sub === 'log') {
+    if (!S.repo.commits.length) return { o: [['r', "fatal: your current branch 'main' does not have any commits yet"]], ex: 'まだ記録がありません。' };
+    S.ev.log = true; const one = rest.includes('--oneline'), o = [];
+    S.repo.commits.slice().reverse().forEach((c, i, arr) => {
+      if (one) o.push(['', (i === 0 ? '' : '') + short(c.id) + (i === 0 ? ' (HEAD -> main)' : '') + ' ' + c.msg]);
+      else { o.push(['y', 'commit ' + c.id + (i === 0 ? ' (HEAD -> main)' : '')], ['', 'Author: ' + AUTHOR], ['', 'Date:   ' + dateStr(c.time)], ['', ''], ['', '    ' + c.msg]); if (i < arr.length - 1) o.push(['', '']); }
+    });
+    return { o, ex: '新しい記録が上に出ます。長い英数字（ID）が、それぞれの記録の名前です。最初の7文字だけで呼べます。' };
+  }
+
+  if (sub === 'diff') {
+    S.ev.diffRun = true; const staged = rest.includes('--staged') || rest.includes('--cached'), o = [];
+    if (staged) {
+      mo.staged.forEach(([n, k]) => o.push(...diffText(n, mo.head[n], mo.idx[n], k === 'new file' ? 'new' : k === 'deleted' ? 'del' : '')));
+    } else {
+      mo.unstaged.forEach(([n, k]) => o.push(...diffText(n, mo.idx[n], S.fs[n], k === 'deleted' ? 'del' : '')));
+    }
+    if (!o.length) return { o: [], ex: staged ? 'ステージに載っている変更はありません。' : 'ステージに載っていない変更はありません（新しく作ったファイルは、add するまで diff には出ません）。' };
+    if (mo.unstaged.length && !staged) S.ev.diff = true;
+    return { o, ex: '赤の「-」が消えた行、緑の「+」が増えた行です。何を変えたかを、記録する前に確かめられます。' };
+  }
+
+  if (sub === 'restore') {
+    const st = rest.includes('--staged'), names = rest.filter(x => !x.startsWith('-'));
+    if (!names.length) return { o: [['r', 'fatal: you must specify path(s) to restore']] };
+    for (const n of names) {
+      if (st) { if (has(mo.head, n)) S.repo.index[n] = mo.head[n]; else if (has(S.repo.index, n)) delete S.repo.index[n]; else return { o: [['r', "error: pathspec '" + n + "' did not match any file(s) known to git"]] }; }
+      else { if (has(S.repo.index, n)) S.fs[n] = S.repo.index[n]; else return { o: [['r', "error: pathspec '" + n + "' did not match any file(s) known to git"]], ex: 'Git がまだ知らないファイルは、restore では戻せません。' }; }
+    }
+    return { o: [], ex: st ? 'ステージから外しました。ファイルの中身は、そのまま作業フォルダに残っています。' : '作業フォルダのファイルを、ステージ（なければ最後の記録）の状態に戻しました。書き換えた内容は消えます。' };
+  }
+}
+
+function shell(line) {
+  const t = tokenize(line); if (!t.length) return;
+  const w = t.filter(x => x.s !== undefined).map(x => x.s), cmd = w[0];
+  if (cmd === 'git') { const r = git(w.slice(1)); out(r.o, r.ex); return; }
+  if (cmd === 'help') return out(HELP);
+  if (cmd === 'clear') { term.innerHTML = ''; return; }
+  if (cmd === 'pwd') return out('/home/you/project');
+  if (cmd === 'ls') { const k = Object.keys(S.fs).sort(); return out(k.length ? k.join('  ') : ''); }
+  if (cmd === 'cat') { if (!w[1]) return out([['r', 'cat: ファイル名を指定してください']]); if (!has(S.fs, w[1])) return out([['r', 'cat: ' + w[1] + ': No such file or directory']]); return out(S.fs[w[1]].replace(/\n$/, '')); }
+  if (cmd === 'touch') { if (!w[1]) return out([['r', 'touch: ファイル名を指定してください']]); if (!validName(w[1])) return out([['r', 'touch: 使えないファイル名です']]); if (!has(S.fs, w[1])) setFile(w[1], ''); return; }
+  if (cmd === 'rm') { if (!w[1]) return out([['r', 'rm: ファイル名を指定してください']]); if (!has(S.fs, w[1])) return out([['r', "rm: cannot remove '" + w[1] + "': No such file or directory"]]); delete S.fs[w[1]]; return; }
+  if (cmd === 'echo') {
+    const ri = t.findIndex(x => x.op);
+    if (ri < 0) return out(w.slice(1).join(' '));
+    const text = t.slice(1, ri).filter(x => x.s !== undefined).map(x => x.s).join(' '), target = t[ri + 1] && t[ri + 1].s;
+    if (!target) return out([['r', 'echo: 書き込むファイル名を指定してください（例: echo "こんにちは" > memo.txt）']]);
+    if (!validName(target)) return out([['r', 'echo: 使えないファイル名です']]);
+    const base = t[ri].op === '>>' && has(S.fs, target) ? S.fs[target] : '';
+    setFile(target, base + text + '\n'); return;
+  }
+  out([['r', cmd + ': command not found'], ['d', 'help でコマンド一覧を見られます。']]);
+}
+
+/* ================= ミッション ================= */
+const MIS = [
+  { t: 'Git を始める', d: 'いま居る場所で Git を使い始めます。', cmd: ['git init'], ok: () => S.ev.init },
+  { t: 'ファイルを作る', d: '①の「新しいファイル名」から作るか、コマンドで作ります。中身を入れておくと分かりやすいです。', cmd: ['echo "はじめてのメモ" > memo.txt'], ok: () => S.ev.file && S.ev.init },
+  { t: '状態を見る', d: 'Git は、ファイルをまだ「知りません」。それを確かめます。', cmd: ['git status'], ok: () => S.ev.status && S.ev.file },
+  { t: 'ステージに載せる', d: '記録に入れたいファイルを、②ステージに載せます。', cmd: ['git add memo.txt'], ok: () => S.ev.add && S.ev.status },
+  { t: '最初の記録（コミット）', d: 'ステージにあるものを、③履歴に記録します。メッセージは「何をしたか」を書きます。', cmd: ['git commit -m "最初のメモ"'], ok: () => (S.ev.commit || 0) >= 1 },
+  { t: 'ファイルを書き換える', d: '記録したファイルの中身を変えます。①のファイルを押して編集するか、コマンドで書き足します。', cmd: ['echo "2行目を足した" >> memo.txt'], ok: () => (S.ev.commit || 0) >= 1 && S.ev.modified },
+  { t: '変更点を見る', d: '前の記録から、何が変わったかを確かめます。', cmd: ['git diff'], ok: () => S.ev.diff && S.ev.modified },
+  { t: '2つ目の記録', d: 'もう一度、ステージに載せて記録します。', cmd: ['git add memo.txt', 'git commit -m "2行目を追加"'], ok: () => (S.ev.commit || 0) >= 2 },
+  { t: '履歴を見る', d: '積み重なった記録を一覧で見ます。', cmd: ['git log', 'git log --oneline'], ok: () => S.ev.log && (S.ev.commit || 0) >= 2 }
+];
+function renderMissions() {
+  const done = MIS.map(m => !!m.ok()); let cur = done.indexOf(false); if (cur < 0) cur = MIS.length;
+  $('prog').textContent = done.filter(Boolean).length + ' / ' + MIS.length;
+  $('mis').innerHTML = MIS.map((m, i) => '<div class="m ' + (done[i] ? 'done' : i === cur ? 'cur' : '') + '"><div class="no">' + (done[i] ? '✓' : i + 1) + '</div><div><b>' + esc(m.t) + '</b>' +
+    (i <= cur ? '<p>' + esc(m.d) + '</p><div class="try">' + m.cmd.map((c, k) => '<button type="button" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' : '') + '</div></div>').join('') +
+    (cur === MIS.length ? '<div class="clear">🎉 ミッション完了です。ファイルを書き換えて、記録を増やしてみてください。<br>次の段階（ブランチと merge、コンフリクト）は、これから追加します。</div>' : '');
+  $('mis').querySelectorAll('button[data-c]').forEach(b => b.onclick = () => { $('in').value = b.dataset.c; $('in').focus(); });
+}
+
+/* ================= 図（3つの場所） ================= */
+function renderAreas() {
+  const mo = model(), sg = new Set(mo.staged.map(x => x[0])), names = Object.keys(S.fs).sort();
+  if (S.repo && S.repo.commits.length && mo.unstaged.some(x => x[1] === 'modified')) S.ev.modified = true;
+  $('zWork').innerHTML = names.length ? names.map(n => {
+    let cls = 'clean', tag = '';
+    if (S.repo) { if (!has(mo.idx, n)) { cls = 'untracked'; tag = '未追跡'; } else if (S.fs[n] !== mo.idx[n]) { cls = 'modified'; tag = '変更あり'; } }
+    return '<span class="f ' + cls + (S.sel === n ? ' sel' : '') + '" data-f="' + esc(n) + '">' + esc(n) + (tag ? '<i>' + tag + '</i>' : '') + '</span>';
+  }).join('') : '<span class="empty">ファイルがありません</span>';
+  $('zStage').innerHTML = !S.repo ? '<span class="empty">Git を始めると使えます</span>' : mo.staged.length ? mo.staged.map(([n, k]) => '<span class="f staged">' + esc(n) + '<i>' + (k === 'new file' ? '新規' : k === 'deleted' ? '削除' : '変更') + '</i></span>').join('') : '<span class="empty">空です</span>';
+  const cs = S.repo ? S.repo.commits : [];
+  $('zHist').innerHTML = !S.repo ? '<span class="empty">Git を始めると使えます</span>' : cs.length ? cs.map((c, i) => (i ? '<span class="line"></span>' : '') + '<div class="cm' + (i === cs.length - 1 ? ' head' : '') + '" title="' + esc(c.msg) + '">' + (i === cs.length - 1 ? '<span class="tag">HEAD</span>' : '') + '<div class="dot"></div><code>' + short(c.id) + '</code><span>' + esc(c.msg) + '</span></div>').join('') : '<span class="empty">まだ記録がありません</span>';
+  $('zWork').querySelectorAll('.f').forEach(e => e.onclick = () => openEd(e.dataset.f));
+  if (S.sel && !has(S.fs, S.sel)) closeEd();
+}
+function openEd(n) { S.sel = n; $('ed').classList.add('on'); $('edName').textContent = n; $('edText').value = S.fs[n]; renderAreas(); }
+function closeEd() { S.sel = null; $('ed').classList.remove('on'); renderAreas(); }
+function refresh() { renderAreas(); renderMissions(); }
+
+/* ================= 入力 ================= */
+function submit() {
+  const v = $('in').value; $('in').value = ''; if (!v.trim()) return;
+  S.hist.push(v); S.hi = S.hist.length;
+  term.insertAdjacentHTML('beforeend', '<span class="pr">$ </span><span class="cmd">' + esc(v) + '</span>\n');
+  shell(v); refresh();
+}
+$('in').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (S.hi > 0) $('in').value = S.hist[--S.hi]; }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (S.hi < S.hist.length - 1) $('in').value = S.hist[++S.hi]; else { S.hi = S.hist.length; $('in').value = ''; } }
+});
+$('newBtn').onclick = () => {
+  const n = $('newName').value.trim();
+  if (!n) return; if (!validName(n)) { out([['r', 'ファイル名に使えない文字が含まれています。']]); return; }
+  if (!has(S.fs, n)) setFile(n, ''); $('newName').value = ''; refresh(); openEd(n);
+};
+$('newName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('newBtn').click(); } });
+$('edSave').onclick = () => { if (S.sel) { S.fs[S.sel] = $('edText').value; refresh(); } };
+$('edDel').onclick = () => { if (S.sel) { delete S.fs[S.sel]; closeEd(); renderMissions(); } };
+$('edClose').onclick = closeEd;
+function start() {
+  fresh(); term.innerHTML = ''; $('ed').classList.remove('on');
+  out([['c', 'ようこそ。ここは練習用のターミナルです。'], ['d', 'help と打つと、使えるコマンドが出ます。右のミッションを上から順にどうぞ。']]);
+  refresh();
+}
+$('reset').onclick = () => { if (confirm('ファイルも記録も消えて、最初の状態に戻ります。よろしいですか？')) start(); };
+start();
+})();
+</script>
+</body>
+</html>
