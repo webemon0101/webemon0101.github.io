@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>GitHub風 体験</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --bg:#0d1220; --panel:#161d2f; --line:#2a3550; --text:#e8ecf7; --muted:#8f9ac0; --accent:#7be0a4;
+          --w-bg:#fff; --w-ink:#1f2733; --w-mut:#667085; --w-line:#d6dbe6; --w-soft:#f4f6fa; --w-pri:#1f8a70; --w-link:#2a63d4; --w-add:#e3f6ea; --w-del:#fde8e8; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, "Yu Gothic", "Hiragino Sans", sans-serif; padding: 16px; max-width: 1200px; margin: 0 auto; }
+  a.back { color: var(--accent); font-size: 13px; text-decoration: none; }
+  h1 { margin: 8px 0 4px; font-size: clamp(20px, 5vw, 28px); }
+  .lead { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .wrap { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+
+  .win { background: var(--w-bg); color: var(--w-ink); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); min-width: 0; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #e9edf5; border-bottom: 1px solid var(--w-line); font-size: 12px; color: var(--w-mut); }
+  .bar .dots { display: flex; gap: 5px; } .bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: #c3cad8; }
+  .bar .url { flex: 1; background: #fff; border-radius: 999px; padding: 4px 12px; border: 1px solid var(--w-line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pg { padding: 18px 20px 26px; min-height: 460px; font-size: 14px; line-height: 1.6; }
+  .pg button, .pg .btn { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--w-line); background: var(--w-soft); color: var(--w-ink); cursor: pointer; font-weight: 600; }
+  .pg button:hover { background: #e9edf5; }
+  .pg button.pri { background: var(--w-pri); border-color: var(--w-pri); color: #fff; }
+  .pg button.pri:hover { background: #187059; }
+  .pg button:disabled { opacity: .45; cursor: default; }
+  .pg button.lnk { background: none; border: 0; padding: 0; color: var(--w-link); font-weight: 400; }
+  .pg input[type=text], .pg textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--w-line); border-radius: 8px; font: 14px system-ui, "Yu Gothic", sans-serif; background: #fff; color: var(--w-ink); }
+  .pg textarea { font: 13px/1.6 ui-monospace, Consolas, monospace; min-height: 260px; resize: vertical; }
+  .pg label.f { display: block; margin: 12px 0 4px; font-weight: 700; font-size: 13px; }
+  .pg .sub { color: var(--w-mut); font-size: 12px; margin-top: 2px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--w-line); margin: 14px -20px 16px; padding: 0 20px; overflow-x: auto; }
+  .tabs a { padding: 8px 12px; font-size: 13px; color: var(--w-ink); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; text-decoration: none; }
+  .tabs a.on { border-bottom-color: #e77a2f; font-weight: 700; }
+  .tabs a.off { color: #a3abbb; cursor: default; }
+  .tabs small { margin-left: 4px; font-size: 10px; background: #eceff6; border-radius: 999px; padding: 1px 6px; color: var(--w-mut); }
+  .rt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .rt h2 { margin: 0; font-size: 20px; font-weight: 600; color: var(--w-link); }
+  .rt .badge { font-size: 11px; border: 1px solid var(--w-line); border-radius: 999px; padding: 1px 8px; color: var(--w-mut); }
+  .tbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 14px 0 10px; }
+  .br { display: inline-flex; gap: 6px; align-items: center; padding: 5px 10px; border: 1px solid var(--w-line); border-radius: 8px; background: var(--w-soft); font-size: 13px; font-weight: 600; }
+  .box { border: 1px solid var(--w-line); border-radius: 10px; overflow: hidden; }
+  .box .row { display: grid; grid-template-columns: minmax(90px, 220px) 1fr auto; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--w-line); align-items: center; font-size: 13px; }
+  .box .row:first-child { border-top: 0; }
+  .box .head { background: var(--w-soft); display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 9px 14px; font-size: 13px; }
+  .box .head b { font-weight: 600; }
+  .box .row .msg { color: var(--w-mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .box .row .tm { color: var(--w-mut); font-size: 12px; white-space: nowrap; }
+  @media (max-width: 560px) { .box .row { grid-template-columns: 1fr auto; } .box .row .msg { display: none; } }
+  .sha { font: 12px ui-monospace, Consolas, monospace; color: var(--w-mut); background: var(--w-soft); padding: 1px 6px; border-radius: 6px; }
+  .readme { margin-top: 16px; }
+  .readme .box > .body { padding: 6px 22px 16px; }
+  .readme h1 { font-size: 1.6em; border-bottom: 1px solid var(--w-line); padding-bottom: .25em; } .readme h2 { font-size: 1.3em; }
+  .readme code { background: var(--w-soft); padding: 1px 5px; border-radius: 5px; }
+  .code { font: 13px/1.6 ui-monospace, Consolas, monospace; overflow: auto; }
+  .code div { display: grid; grid-template-columns: 44px 1fr; } .code div span:first-child { text-align: right; padding-right: 10px; color: #a3abbb; user-select: none; }
+  .code div span:last-child { white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 10px; }
+  .df div { display: grid; grid-template-columns: 22px 1fr; font: 13px/1.6 ui-monospace, Consolas, monospace; } .df div span:last-child { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .df .a { background: var(--w-add); } .df .d { background: var(--w-del); } .df span:first-child { text-align: center; color: #667085; }
+  .empty { text-align: center; padding: 34px 10px; color: var(--w-mut); }
+  .note { margin-top: 12px; padding: 8px 12px; background: #fff7e6; border: 1px solid #f1d9a6; border-radius: 8px; font-size: 12.5px; color: #7a5a14; }
+  .commitbox { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--w-line); border-radius: 10px; background: var(--w-soft); }
+  .hl { display: flex; justify-content: space-between; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--w-line); }
+  .hl:first-of-type { border-top: 0; }
+  .crumbs { margin-bottom: 10px; font-size: 14px; }
+
+  .side { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .side .hd { padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .side button { font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
+  .side button:hover { border-color: #ff7a7a; }
+  .mis { padding: 4px 12px 12px; }
+  .m { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line); opacity: .55; }
+  .m.cur { opacity: 1; } .m.done { opacity: .8; }
+  .m .no { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+  .m.done .no { background: var(--accent); color: #0b2a1a; border-color: var(--accent); font-weight: 700; }
+  .m.cur .no { border-color: var(--accent); color: var(--accent); }
+  .m b { font-size: 14px; } .m p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+  .clear { padding: 12px; margin-top: 10px; background: rgba(123,224,164,.1); border: 1px solid var(--accent); border-radius: 10px; font-size: 13px; line-height: 1.7; }
+  .hint { margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+</style>
+</head>
+<body>
+<a class="back" href="../">← LAB 一覧</a>
+<h1>GitHub風 体験</h1>
+<p class="lead">ネット上の「Git の置き場」を、ボタンだけで体験できる練習用の画面です。本物の GitHub とは別物で、何をしても本物には影響しません。右の「ミッション」を上から順にどうぞ。</p>
+
+<div class="wrap">
+  <div class="win">
+    <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url" id="url"></span></div>
+    <div class="pg" id="app"></div>
+  </div>
+  <div class="side">
+    <div class="hd"><span>ミッション <b id="prog"></b></span><button id="reset" type="button">最初からやり直す</button></div>
+    <div class="mis" id="mis"></div>
+  </div>
+</div>
+<p class="hint">この画面は、仕組みを学ぶための練習用です。表示や名前は、本物のサービスとは異なります。</p>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const HOST = 'practice.example/';
+let S, V;
+
+function fresh() { S = { repo: null, ev: {} }; V = { v: 'home' }; }
+function hash(str, seed) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+}
+const sha = s => (hash(s, 1) + hash(s, 2) + hash(s, 3)).slice(0, 40);
+const short = id => id.slice(0, 7);
+const validName = n => /^[^\s\/\\:*?"<>|]+$/.test(n) && n.length <= 60;
+function ago(t) {
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  return s < 60 ? 'たった今' : s < 3600 ? Math.floor(s / 60) + '分前' : s < 86400 ? Math.floor(s / 3600) + '時間前' : Math.floor(s / 86400) + '日前';
+}
+const ymd = t => { const d = new Date(t); return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; };
+const tree = () => S.repo.commits.length ? S.repo.commits[S.repo.commits.length - 1].tree : {};
+
+/* ---------- 差分 ---------- */
+function diffLines(a, b) {
+  const A = a === '' ? [] : a.replace(/\n$/, '').split('\n'), B = b === '' ? [] : b.replace(/\n$/, '').split('\n');
+  const n = A.length, m = B.length, t = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) t[i][j] = A[i] === B[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) { if (A[i] === B[j]) { out.push([' ', A[i]]); i++; j++; } else if (t[i + 1][j] >= t[i][j + 1]) out.push(['-', A[i++]]); else out.push(['+', B[j++]]); }
+  while (i < n) out.push(['-', A[i++]]); while (j < m) out.push(['+', B[j++]]);
+  return out;
+}
+
+/* ---------- README の簡易表示 ---------- */
+function mdLite(src) {
+  const inl = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  const L = src.replace(/\r/g, '').split('\n'), o = []; let ul = false, p = [];
+  const fp = () => { if (p.length) { o.push('<p>' + p.map(inl).join('<br>') + '</p>'); p = []; } };
+  const fu = () => { if (ul) { o.push('</ul>'); ul = false; } };
+  L.forEach(l => {
+    let m;
+    if ((m = l.match(/^(#{1,3})\s+(.*)$/))) { fp(); fu(); o.push('<h' + m[1].length + '>' + inl(m[2]) + '</h' + m[1].length + '>'); }
+    else if ((m = l.match(/^[-*]\s+(.*)$/))) { fp(); if (!ul) { o.push('<ul>'); ul = true; } o.push('<li>' + inl(m[1]) + '</li>'); }
+    else if (!l.trim()) { fp(); fu(); }
+    else { fu(); p.push(l); }
+  });
+  fp(); fu(); return o.join('');
+}
+
+/* ---------- コミット ---------- */
+function commit(msg, newTree) {
+  const old = S.repo.commits.length ? tree() : {}, changes = [];
+  new Set([...Object.keys(old), ...Object.keys(newTree)]).forEach(p => {
+    if (!has(old, p)) changes.push({ p, k: 'add', before: '', after: newTree[p] });
+    else if (!has(newTree, p)) changes.push({ p, k: 'del', before: old[p], after: '' });
+    else if (old[p] !== newTree[p]) changes.push({ p, k: 'mod', before: old[p], after: newTree[p] });
+  });
+  changes.sort((a, b) => a.p.localeCompare(b.p));
+  const parent = S.repo.commits.length ? S.repo.commits[S.repo.commits.length - 1].id : '', time = Date.now();
+  const c = { id: sha(parent + '|' + msg + '|' + time + '|' + JSON.stringify(newTree)), msg, time, tree: newTree, changes, parent };
+  S.repo.commits.push(c); return c;
+}
+function lastChange(path) {
+  for (let i = S.repo.commits.length - 1; i >= 0; i--) if (S.repo.commits[i].changes.some(c => c.p === path)) return S.repo.commits[i];
+  return null;
+}
+
+/* ---------- 画面 ---------- */
+function head(active) {
+  const r = S.repo, off = t => '<a class="off" title="次の段階で体験できます">' + t + '<small>準備中</small></a>';
+  return '<div class="rt"><span>📁</span><h2>you / ' + esc(r.name) + '</h2><span class="badge">Public</span></div>' + (r.desc ? '<div class="sub">' + esc(r.desc) + '</div>' : '') +
+    '<div class="tabs"><a class="' + (active === 'code' ? 'on' : '') + '" data-act="home">&lt;&gt; Code</a>' + off('Issues') + off('Pull requests') + '</div>';
+}
+function vHome() {
+  if (!S.repo) {
+    return '<h2 style="margin:0 0 4px">新しいリポジトリを作る</h2><div class="sub">リポジトリとは、ファイルとその変更履歴をまとめて置く「プロジェクト用のフォルダ」です。</div>' +
+      '<label class="f" for="rName">リポジトリの名前</label><input type="text" id="rName" maxlength="40" placeholder="例: my-first-repo" autocomplete="off"><div class="sub">半角の英数字、-（ハイフン）、_（アンダーバー）が使えます。</div>' +
+      '<label class="f" for="rDesc">説明（なくても大丈夫です）</label><input type="text" id="rDesc" maxlength="80" placeholder="例: Git の練習用">' +
+      '<label class="f"><input type="checkbox" id="rReadme" checked> README ファイルを最初から作る</label><div class="sub">README は、このプロジェクトの説明書です。</div>' +
+      '<div style="margin-top:18px"><button class="pri" data-act="create">Create repository</button></div><div id="rErr" class="note" style="display:none"></div>';
+  }
+  const r = S.repo, t = tree(), names = Object.keys(t).sort(), lc = r.commits[r.commits.length - 1];
+  let h = head('code') + '<div class="tbar"><span class="br">⎇ main</span><span><button data-act="newfile">＋ ファイルを作る</button></span></div>';
+  if (!names.length) return h + '<div class="box"><div class="empty">このリポジトリは空です。<br>まず「ファイルを作る」を押して、1つ作ってみましょう。</div></div>';
+  h += '<div class="box"><div class="head"><span><b>you</b> <span style="color:var(--w-mut)">' + esc(lc.msg) + '</span></span><span><span class="sha">' + short(lc.id) + '</span> ・ ' + ago(lc.time) +
+       ' ・ <button class="lnk" data-act="hist">🕘 ' + r.commits.length + ' commit' + (r.commits.length > 1 ? 's' : '') + '</button></span></div>';
+  names.forEach(n => { const c = lastChange(n); h += '<div class="row"><span><button class="lnk" data-act="open" data-p="' + esc(n) + '">📄 ' + esc(n) + '</button></span><span class="msg">' + esc(c.msg) + '</span><span class="tm">' + ago(c.time) + '</span></div>'; });
+  h += '</div>';
+  const rd = names.find(n => /^readme(\.md|\.txt)?$/i.test(n));
+  if (rd) h += '<div class="readme"><div class="box"><div class="head"><b>📖 ' + esc(rd) + '</b></div><div class="body">' + mdLite(t[rd]) + '</div></div></div>';
+  return h;
+}
+function vFile() {
+  const t = tree(), p = V.path; if (!has(t, p)) { V = { v: 'home' }; return vHome(); }
+  const lines = t[p].replace(/\n$/, '').split('\n');
+  return head('code') + '<div class="crumbs"><button class="lnk" data-act="home">' + esc(S.repo.name) + '</button> / <b>' + esc(p) + '</b></div>' +
+    '<div class="box"><div class="head"><b>' + esc(p) + '</b><span><button data-act="edit" data-p="' + esc(p) + '">✏️ 編集</button> <button data-act="del" data-p="' + esc(p) + '">🗑 削除</button></span></div><div class="code">' +
+    (t[p] === '' ? '<div style="padding:12px;color:var(--w-mut)">（空のファイルです）</div>' : lines.map((l, i) => '<div><span>' + (i + 1) + '</span><span>' + esc(l) + '</span></div>').join('')) + '</div></div>';
+}
+function vEdit() {
+  const isNew = V.isNew;
+  if (V.del) {
+    return head('code') + '<h3 style="margin:0 0 6px">🗑 ' + esc(V.path) + ' を削除</h3><div class="sub">削除も「記録」として残ります。あとから履歴をたどれば、中身は確認できます。</div>' + commitBox('Delete ' + V.path);
+  }
+  return head('code') + '<div class="crumbs"><button class="lnk" data-act="home">' + esc(S.repo.name) + '</button> / ' +
+    (isNew ? '<input type="text" id="edPath" placeholder="ファイル名（例: memo.txt）" style="width:260px;display:inline-block" maxlength="60" value="' + esc(V.path || '') + '">' : '<b>' + esc(V.path) + '</b>') + '</div>' +
+    '<textarea id="edText" spellcheck="false" placeholder="ここにファイルの中身を書きます">' + esc(V.text || '') + '</textarea>' + commitBox(isNew ? null : 'Update ' + V.path);
+}
+function commitBox(defMsg) {
+  const msg = V.msg !== undefined ? V.msg : (defMsg || '');
+  return '<div class="commitbox"><b>Commit changes（変更を記録する）</b><label class="f" for="edMsg">記録のメッセージ</label><input type="text" id="edMsg" maxlength="80" value="' + esc(msg) + '" placeholder="何をしたかを書きます">' +
+    '<div class="sub">どのブランチに記録するか: <b>main</b>（いまは main だけです）</div>' +
+    '<div style="margin-top:12px"><button class="pri" id="edGo" data-act="docommit">Commit changes</button> <button data-act="' + (V.isNew || !V.path ? 'home' : 'open') + '" data-p="' + esc(V.path || '') + '">キャンセル</button></div><div id="edErr" class="note" style="display:none"></div></div>';
+}
+function vHist() {
+  const cs = S.repo.commits.slice().reverse(); let day = '', h = head('code') + '<h3 style="margin:0 0 8px">Commits（記録の一覧）</h3><div class="sub" style="margin-bottom:8px">記録を押すと、そのとき何が変わったかが見られます。</div><div class="box" style="padding:0 14px">';
+  cs.forEach(c => { const d = ymd(c.time); if (d !== day) { day = d; h += '<div style="padding:8px 0 2px;font-size:12px;color:var(--w-mut)">' + d + ' の記録</div>'; }
+    h += '<div class="hl"><span><button class="lnk" data-act="commitview" data-id="' + c.id + '"><b>' + esc(c.msg) + '</b></button><div class="sub">you ・ ' + ago(c.time) + '</div></span><span class="sha">' + short(c.id) + '</span></div>'; });
+  return h + '</div>';
+}
+function vCommit() {
+  const c = S.repo.commits.find(x => x.id === V.id); if (!c) { V = { v: 'home' }; return vHome(); }
+  let h = head('code') + '<div class="crumbs"><button class="lnk" data-act="hist">← Commits</button></div><h3 style="margin:0">' + esc(c.msg) + '</h3><div class="sub">you ・ ' + ago(c.time) + ' ・ <span class="sha">' + c.id.slice(0, 12) + '</span></div><div style="height:12px"></div>';
+  if (!c.changes.length) h += '<div class="box"><div class="empty">変更はありません。</div></div>';
+  c.changes.forEach(ch => {
+    const d = diffLines(ch.before, ch.after);
+    h += '<div class="box" style="margin-bottom:12px"><div class="head"><b>' + esc(ch.p) + '</b><span class="sha">' + (ch.k === 'add' ? '新規作成' : ch.k === 'del' ? '削除' : '変更') + '</span></div><div class="df">' +
+      (d.length ? d.map(([k, t]) => '<div class="' + (k === '+' ? 'a' : k === '-' ? 'd' : '') + '"><span>' + (k === ' ' ? '' : k) + '</span><span>' + esc(t) + '</span></div>').join('') : '<div><span></span><span style="color:var(--w-mut)">（空のファイル）</span></div>') + '</div></div>';
+  });
+  return h + '<div class="sub">緑の「+」が増えた行、赤の「−」が消えた行です。</div>';
+}
+
+function render() {
+  const app = $('app'), views = { home: vHome, file: vFile, edit: vEdit, hist: vHist, commit: vCommit };
+  app.innerHTML = views[V.v]();
+  $('url').textContent = HOST + (S.repo ? 'you/' + S.repo.name + (V.v === 'file' || V.v === 'edit' ? '/' + (V.path || '') : V.v === 'hist' ? '/commits/main' : V.v === 'commit' ? '/commit/' + short(V.id) : '') : 'new');
+  if (V.v === 'edit' && !V.del) updateGo();
+  renderMissions();
+}
+function updateGo() {
+  const go = $('edGo'); if (!go) return;
+  const msg = ($('edMsg').value || '').trim();
+  if (V.del) { go.disabled = !msg; return; }
+  const path = V.isNew ? ($('edPath').value || '').trim() : V.path, text = $('edText').value;
+  go.disabled = !msg || !path || (!V.isNew && text === tree()[V.path]);
+}
+
+/* ---------- 操作 ---------- */
+function showErr(id, m) { const e = $(id); e.textContent = m; e.style.display = 'block'; }
+$('app').addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return; const a = t.dataset.act, p = t.dataset.p;
+  if (a === 'home') V = { v: 'home' };
+  else if (a === 'create') {
+    const n = ($('rName').value || '').trim();
+    if (!/^[A-Za-z0-9._-]{1,40}$/.test(n)) return showErr('rErr', 'リポジトリ名は、半角の英数字、-、_、. で入力してください（例: my-first-repo）。');
+    S.repo = { name: n, desc: ($('rDesc').value || '').trim(), commits: [] }; S.ev.repo = true;
+    if ($('rReadme').checked) commit('Initial commit', { 'README.md': '# ' + n + '\n\n' + (S.repo.desc || 'ここにプロジェクトの説明を書きます。') + '\n' });
+    V = { v: 'home' };
+  }
+  else if (a === 'newfile') V = { v: 'edit', isNew: true, path: '', text: '' };
+  else if (a === 'open') V = { v: 'file', path: p };
+  else if (a === 'edit') V = { v: 'edit', isNew: false, path: p, text: tree()[p] };
+  else if (a === 'del') V = { v: 'edit', del: true, path: p };
+  else if (a === 'hist') { V = { v: 'hist' }; S.ev.hist = true; }
+  else if (a === 'commitview') { V = { v: 'commit', id: t.dataset.id }; S.ev.diffView = true; }
+  else if (a === 'docommit') {
+    const msg = ($('edMsg').value || '').trim(), nt = Object.assign({}, tree());
+    if (!msg) return showErr('edErr', '記録のメッセージを入力してください。');
+    if (V.del) { delete nt[V.path]; commit(msg, nt); V = { v: 'home' }; }
+    else {
+      const path = V.isNew ? ($('edPath').value || '').trim() : V.path, text = $('edText').value;
+      if (!validName(path)) return showErr('edErr', 'ファイル名に使えない文字が含まれています（スペースや / など）。');
+      if (V.isNew && has(nt, path)) return showErr('edErr', '同じ名前のファイルがすでにあります。別の名前にするか、そのファイルを編集してください。');
+      nt[path] = text; commit(msg, nt);
+      if (V.isNew) S.ev.fileCommit = true; else S.ev.edited = true;
+      V = { v: 'file', path };
+    }
+  }
+  render();
+});
+$('app').addEventListener('input', e => {
+  if (V.v !== 'edit') return;
+  if (e.target.id === 'edText') V.text = e.target.value; else if (e.target.id === 'edPath') V.path = e.target.value; else if (e.target.id === 'edMsg') V.msg = e.target.value;
+  updateGo();
+});
+$('app').addEventListener('keydown', e => { if (e.key === 'Enter' && V.v === 'home' && !S.repo && e.target.id === 'rName') { e.preventDefault(); $('app').querySelector('[data-act=create]').click(); } });
+
+/* ---------- ミッション ---------- */
+const MIS = [
+  { t: 'リポジトリを作る', d: '名前を入れて「Create repository」を押します。README にチェックを入れたままで大丈夫です。', ok: () => S.ev.repo },
+  { t: 'ファイルを作って記録する', d: '「＋ ファイルを作る」を押し、名前と中身を書きます。下の欄に「何をしたか」を書いて、「Commit changes」を押します。', ok: () => S.ev.fileCommit },
+  { t: 'ファイルを編集して記録する', d: '一覧のファイル名を押して、「✏️ 編集」で書き換えます。もう一度「Commit changes」を押します。', ok: () => S.ev.edited },
+  { t: '記録の一覧を見る', d: 'ファイル一覧の上の「🕘 commits」を押すと、これまでの記録が一覧で見られます。', ok: () => S.ev.hist },
+  { t: '変更の中身を見る', d: '一覧の中の記録を押すと、そのとき何が変わったかが、緑（増えた）と赤（消えた）で見られます。', ok: () => S.ev.diffView && S.ev.hist }
+];
+function renderMissions() {
+  const done = MIS.map(m => !!m.ok()); let cur = done.indexOf(false); if (cur < 0) cur = MIS.length;
+  $('prog').textContent = done.filter(Boolean).length + ' / ' + MIS.length;
+  $('mis').innerHTML = MIS.map((m, i) => '<div class="m ' + (done[i] ? 'done' : i === cur ? 'cur' : '') + '"><div class="no">' + (done[i] ? '✓' : i + 1) + '</div><div><b>' + esc(m.t) + '</b>' + (i <= cur ? '<p>' + esc(m.d) + '</p>' : '') + '</div></div>').join('') +
+    (cur === MIS.length ? '<div class="clear">🎉 ミッション完了です。ファイルを増やして、記録を重ねてみてください。<br>次の段階（ブランチ、プルリクエスト、Merge）は、これから追加します。</div>' : '');
+}
+$('reset').onclick = () => { if (confirm('作ったリポジトリも記録も消えて、最初の状態に戻ります。よろしいですか？')) { fresh(); render(); } };
+fresh(); render();
+})();
+</script>
+</body>
+</html>
