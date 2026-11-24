@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>MCP 体験</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --bg:#0d1220; --panel:#161d2f; --line:#2a3550; --text:#e8ecf7; --muted:#8f9ac0; --accent:#b79bff;
+          --user:#7be0a4; --ai:#6cb6ff; --srv:#ffb454; --bad:#ff7a7a; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, "Yu Gothic", "Hiragino Sans", sans-serif; padding: 16px; max-width: 1200px; margin: 0 auto; }
+  a.back { color: var(--accent); font-size: 13px; text-decoration: none; }
+  h1 { margin: 8px 0 4px; font-size: clamp(20px, 5vw, 28px); }
+  .lead { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.pri { background: var(--accent); color: #1c1233; border-color: var(--accent); font-weight: 700; }
+  .roles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .role { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: var(--muted); line-height: 1.55; }
+  .role b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .role.u b { color: var(--user); } .role.a b { color: var(--ai); } .role.s b { color: var(--srv); }
+  @media (max-width: 700px) { .roles { grid-template-columns: 1fr; } }
+  .cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; overflow: hidden; }
+  .box > .hd { padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .ctl { padding: 12px; }
+  .ctl .ask { display: flex; gap: 8px; }
+  .ctl input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #0f1524; color: var(--text); font: inherit; font-size: 14px; }
+  .samples { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+  .samples button { font-size: 12px; padding: 5px 10px; }
+  .run { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .run .st { font-size: 12px; color: var(--muted); }
+  #log { padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 160px; max-height: 560px; overflow: auto; }
+  .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; text-align: center; line-height: 1.8; }
+  .card { border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; padding: 8px 12px; background: #0f1524; cursor: pointer; font-size: 13.5px; line-height: 1.6; }
+  .card.sel { outline: 2px solid var(--accent); }
+  .card .who { font-size: 11px; color: var(--muted); margin-bottom: 2px; display: flex; justify-content: space-between; gap: 8px; }
+  .card.user { border-left-color: var(--user); } .card.ai { border-left-color: var(--ai); } .card.srv { border-left-color: var(--srv); }
+  .card.c2s { margin-right: 14%; } .card.s2c { margin-left: 14%; }
+  .card code { font: 12.5px ui-monospace, Consolas, monospace; color: #e7dcff; }
+  .card .think { color: var(--muted); font-style: italic; }
+  .perm { border: 1px solid var(--accent); background: rgba(183,155,255,.08); cursor: default; }
+  .perm .bt { display: flex; gap: 8px; margin-top: 8px; }
+  .detail { padding: 12px 14px 14px; min-height: 160px; }
+  .detail h3 { margin: 0 0 4px; font-size: 15px; }
+  .detail .tag { display: inline-block; font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); margin-bottom: 8px; }
+  .detail pre { margin: 8px 0; padding: 10px 12px; background: #0a0f1c; border: 1px solid var(--line); border-radius: 8px; overflow: auto; font: 12.5px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 340px; }
+  .detail .k { color: #9ecbff; } .detail .s { color: #b9f0c8; } .detail .n { color: #ffcf86; }
+  .detail .ex { padding: 8px 12px; border-left: 3px solid var(--accent); background: rgba(183,155,255,.08); font-size: 13px; line-height: 1.7; color: #e3d9ff; border-radius: 0 8px 8px 0; }
+  .info { margin-top: 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+  .info b { color: var(--text); }
+</style>
+</head>
+<body>
+<a class="back" href="../">← LAB 一覧</a>
+<h1>MCP 体験</h1>
+<p class="lead">MCP（Model Context Protocol）は、AI が外の「道具」を使うための共通のつなぎ方です。AI と道具の間で、裏でどんなやりとりが流れるかを、1歩ずつ「次へ」で進めて見てみましょう。ここでは本物の AI は動いていません。仕組みを再現した模擬です。</p>
+
+<div class="roles">
+  <div class="role u"><b>あなた</b>AI に質問する人。</div>
+  <div class="role a"><b>AI アプリ（ホスト／クライアント）</b>質問を理解して、道具が要るか決め、道具を呼ぶ側。</div>
+  <div class="role s"><b>MCP サーバー</b>道具を持っている側。天気・計算・メモなどの「できること」を公開する。</div>
+</div>
+
+<div class="cols">
+  <div>
+    <div class="box">
+      <div class="hd"><span>① AI に聞いてみる</span></div>
+      <div class="ctl">
+        <div class="ask"><input id="q" maxlength="80" autocomplete="off" placeholder="質問を入力（下の例を押してもOK）"><button class="pri" id="send" type="button">これで始める</button></div>
+        <div class="samples" id="samples"></div>
+        <div class="run"><button class="pri" id="next" type="button">次へ ▶</button><button id="reset" type="button">最初から</button><span class="st" id="st"></span></div>
+      </div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <div class="hd"><span>② やりとりの流れ（カードを押すと、右に詳しく出ます）</span></div>
+      <div id="log"></div>
+    </div>
+  </div>
+  <div class="box" style="position:sticky;top:12px">
+    <div class="hd"><span>③ いま何が起きている？</span></div>
+    <div class="detail" id="detail"></div>
+  </div>
+</div>
+
+<div class="info">
+  <b>本物との違い</b>：本物の MCP では、サーバーは別のプログラム（自分のパソコンで動くものや、ネット上のサービス）で、メッセージは「JSON-RPC 2.0」という形式で、標準入出力または HTTP を通じて送られます。この画面のメッセージの形は、その形式に沿っています。ただし、AI が「どの道具を使うか」を決める部分は、本物では言語モデルが行います。ここでは簡単なルールで再現しています。MCP の仕様は更新されるため、細部は最新の仕様でご確認ください。
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const PROTO = '2025-06-18';
+
+/* ---------- 模擬サーバー（道具そのもの） ---------- */
+const TOOLS = [
+  { name: 'get_weather', description: '指定した都市の、明日の天気を返す。', inputSchema: { type: 'object', properties: { city: { type: 'string', description: '都市名（例: 東京）' } }, required: ['city'] } },
+  { name: 'calculate', description: '四則演算（+ - * /）の式を計算して、結果を返す。', inputSchema: { type: 'object', properties: { expression: { type: 'string', description: '計算式（例: 12*3+4）' } }, required: ['expression'] } },
+  { name: 'add_note', description: '買い物メモに、1行を書き足す。', inputSchema: { type: 'object', properties: { text: { type: 'string', description: 'メモに書く内容' } }, required: ['text'] } }
+];
+const WEATHER = { '東京': '晴れ、18℃', '大阪': 'くもり、17℃', '札幌': '雪、2℃', '福岡': '雨、15℃', '那覇': '晴れ、24℃' };
+const NOTES = [];
+function callTool(name, a) {
+  if (name === 'get_weather') return WEATHER[a.city] ? { ok: true, text: a.city + 'の明日の天気: ' + WEATHER[a.city] } : { ok: false, text: '「' + a.city + '」のデータはありません。（対応: ' + Object.keys(WEATHER).join('、') + '）' };
+  if (name === 'calculate') {
+    if (!/^[\d+\-*/().\s]+$/.test(a.expression)) return { ok: false, text: '計算できない式です。' };
+    try { const v = Function('"use strict";return (' + a.expression + ')')(); if (!Number.isFinite(v)) return { ok: false, text: '計算できません（0 で割るなど）。' }; return { ok: true, text: String(Math.round(v * 1e9) / 1e9) }; } catch (e) { return { ok: false, text: '計算できない式です。' }; }
+  }
+  if (name === 'add_note') { NOTES.push(a.text); return { ok: true, text: 'メモに追加しました（現在 ' + NOTES.length + ' 件: ' + NOTES.join('、') + '）' }; }
+  return { ok: false, text: '知らない道具です。' };
+}
+
+/* ---------- 模擬 AI の判断（本物は言語モデルが行う） ---------- */
+const FW = s => s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[×✕]/g, '*').replace(/[÷]/g, '/').replace(/[＋]/g, '+').replace(/[－ー−]/g, '-').replace(/[（]/g, '(').replace(/[）]/g, ')').replace(/[．]/g, '.');
+function decide(q) {
+  const n = FW(q);
+  if (/天気/.test(q)) { const city = Object.keys(WEATHER).concat(['名古屋', '京都', '仙台', '広島', '横浜', '神戸']).find(c => q.includes(c)); return { tool: 'get_weather', args: city ? { city } : null, need: 'city（都市名）' }; }
+  const m = n.match(/\d[\d\s+\-*/().]*\d|\d/);
+  if (m && /[+\-*/]/.test(m[0]) && /^[\d+\-*/().\s]+$/.test(m[0])) return { tool: 'calculate', args: { expression: m[0].trim() } };
+  if (/メモ/.test(q)) {
+    const quoted = q.match(/[「『"'](.+?)[」』"']/), after = q.match(/メモに(.+?)(を|と)?(足|追加|書|入れ)/);
+    const text = quoted ? quoted[1] : after ? after[1].trim() : '';
+    return { tool: 'add_note', args: text ? { text } : null, need: 'text（メモの内容）' };
+  }
+  return { tool: null };
+}
+
+/* ---------- ステップの組み立て ---------- */
+let S;
+function fresh() { S = { log: [], pending: [], connected: false, rid: 3, cid: 0, waiting: null, sel: -1, started: false }; }
+const connectSteps = () => [
+  { k: 'msg', dir: 'c2s', phase: 'connect', method: 'initialize', title: 'initialize（最初のあいさつ）',
+    json: () => ({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: PROTO, capabilities: {}, clientInfo: { name: 'practice-ai-app', version: '1.0.0' } } }),
+    ex: 'まず、AI アプリ（クライアント）がサーバーにあいさつします。使いたい仕様の版（protocolVersion）と、自分の名前（clientInfo）を伝えます。「id」は、あとで返事と結びつけるための番号です。' },
+  { k: 'msg', dir: 's2c', phase: 'connect', method: 'initialize', title: 'initialize の返事',
+    json: () => ({ jsonrpc: '2.0', id: 1, result: { protocolVersion: PROTO, capabilities: { tools: {} }, serverInfo: { name: 'practice-server', version: '1.0.0' } } }),
+    ex: 'サーバーの返事です。同じ id（1）で返ります。「capabilities の中に tools がある」＝「道具を持っています」という宣言です。' },
+  { k: 'msg', dir: 'c2s', phase: 'connect', method: 'notifications/initialized', title: 'initialized（準備できた合図）',
+    json: () => ({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+    ex: '「こちらの準備もできました」という合図です。これは「通知（notification）」で、id がありません。返事を待たない、一方通行のメッセージです。' },
+  { k: 'msg', dir: 'c2s', phase: 'connect', method: 'tools/list', title: 'tools/list（道具の一覧をください）',
+    json: () => ({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
+    ex: '「どんな道具がありますか？」と聞きます。AI は、この一覧を知って初めて、道具を使えるようになります。' },
+  { k: 'msg', dir: 's2c', phase: 'connect', method: 'tools/list', title: 'tools/list の返事（道具のカタログ）',
+    json: () => ({ jsonrpc: '2.0', id: 2, result: { tools: TOOLS }, }),
+    ex: '道具の名前（name）、説明（description）、引数の形（inputSchema）の一覧です。AI はこの「説明文」を読んで、どの道具を使うか決めます。だから説明文は、とても大切です。', after: () => { S.connected = true; } }
+];
+function plan(q) {
+  const d = decide(q), st = [{ k: 'chat', who: 'user', text: q }];
+  if (!d.tool) {
+    st.push({ k: 'think', text: '質問を読みました。道具の一覧（天気・計算・メモ）のどれも必要なさそうです。道具は使わず、自分の知識で答えます。', ex: '道具を使うかどうかは、毎回 AI が判断します。必要なければ、MCP の通信は何も起きません。' });
+    st.push({ k: 'chat', who: 'ai', text: /こんにちは|はじめまして|やあ/.test(q) ? 'こんにちは！天気を調べる、計算する、買い物メモに書く、のお手伝いができます。' : '道具は使わずに答えます。（この練習用の AI は、天気・計算・メモ以外のことは、くわしく答えられません。）' });
+    return st;
+  }
+  if (!d.args) {
+    st.push({ k: 'think', text: '「' + d.tool + '」が合いそうですが、必須の引数 ' + d.need + ' が質問から分かりません。道具は呼ばず、聞き返します。', ex: '道具の inputSchema には「required（必須）」の引数があります。足りないときは、AI が聞き返すのが普通です。' });
+    st.push({ k: 'chat', who: 'ai', text: d.tool === 'get_weather' ? 'どの都市の天気ですか？（例: 東京）' : '何をメモに書けばいいですか？（例: 「牛乳」を足して）' });
+    return st;
+  }
+  st.push({ k: 'think', text: '質問と道具の説明文を照らし合わせました。「' + d.tool + '」を使います。引数は ' + JSON.stringify(d.args, null, 0) + ' と読み取りました。', ex: 'ここは MCP の通信ではなく、AI 自身の判断です。道具の説明文（description）が、選ぶときの手がかりになります。' });
+  if (d.tool === 'add_note') st.push({ k: 'perm', tool: d.tool, args: d.args });
+  st.push({ k: 'msg', dir: 'c2s', phase: 'use', method: 'tools/call', title: 'tools/call（道具を呼ぶ）',
+    json: () => { S.cid = S.rid++; return { jsonrpc: '2.0', id: S.cid, method: 'tools/call', params: { name: d.tool, arguments: d.args } }; },
+    ex: 'AI が選んだ道具の名前（name）と、引数（arguments）を送ります。実際の処理は、サーバー側で行われます。' });
+  st.push({ k: 'msg', dir: 's2c', phase: 'use', method: 'tools/call', title: 'tools/call の返事（結果）',
+    json: () => { const r = callTool(d.tool, d.args); S.last = r; return { jsonrpc: '2.0', id: S.cid, result: { content: [{ type: 'text', text: r.text }], isError: !r.ok } }; },
+    ex: '結果は result.content の中に入ります。isError が true なら、道具の実行が失敗した、という意味です。id は、呼んだときと同じです。' });
+  st.push({ k: 'chat', who: 'ai', text: () => !S.last.ok ? '道具がうまく動きませんでした。' + S.last.text : d.tool === 'get_weather' ? d.args.city + 'の明日の天気は、' + WEATHER[d.args.city] + ' です。' : d.tool === 'calculate' ? d.args.expression + ' の答えは ' + S.last.text + ' です。' : S.last.text });
+  return st;
+}
+function finalText(step) { return typeof step.text === 'function' ? step.text() : step.text; }
+
+/* ---------- 画面 ---------- */
+function colorJson(o) {
+  return esc(JSON.stringify(o, null, 2)).replace(/(&quot;[^&]*?&quot;)(\s*:)/g, '<span class="k">$1</span>$2').replace(/:\s*(&quot;[^&]*?&quot;)/g, ': <span class="s">$1</span>').replace(/:\s*(-?\d+\.?\d*|true|false|null)/g, ': <span class="n">$1</span>');
+}
+function renderLog() {
+  const el = $('log');
+  if (!S.log.length) { el.innerHTML = '<div class="empty">まだ何も起きていません。<br>上で質問を選んで「これで始める」→「次へ ▶」を押してください。</div>'; }
+  else el.innerHTML = S.log.map((e, i) => {
+    const sel = i === S.sel ? ' sel' : '';
+    if (e.k === 'chat') return '<div class="card ' + (e.who === 'user' ? 'user' : 'ai') + sel + '" data-i="' + i + '"><div class="who"><span>' + (e.who === 'user' ? 'あなた' : 'AI') + '</span></div>' + esc(e.text).replace(/\n/g, '<br>') + '</div>';
+    if (e.k === 'think') return '<div class="card ai' + sel + '" data-i="' + i + '"><div class="who"><span>AI の頭の中（MCP の通信ではありません）</span></div><span class="think">' + esc(e.text) + '</span></div>';
+    if (e.k === 'perm') return '<div class="card perm" data-i="' + i + '"><div class="who"><span>確認</span></div>AI が、道具「<code>' + esc(e.tool) + '</code>」を使おうとしています。<br>内容: <code>' + esc(JSON.stringify(e.args)) + '</code><br>' +
+      (e.answer ? '<b>' + (e.answer === 'ok' ? '✅ 許可しました' : '🚫 拒否しました') + '</b>' : '許可しますか？<div class="bt"><button class="pri" data-a="ok">許可する</button><button data-a="no">拒否する</button></div>') + '</div>';
+    return '<div class="card srv ' + e.dir + sel + '" data-i="' + i + '"><div class="who"><span>' + (e.dir === 'c2s' ? 'AIアプリ → サーバー' : 'サーバー → AIアプリ') + '</span><span>' + (e.json.id !== undefined ? 'id ' + e.json.id : '通知') + '</span></div><b>' + esc(e.title) + '</b></div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+  el.querySelectorAll('.card[data-i]').forEach(c => c.onclick = ev => { if (ev.target.closest('button')) return; S.sel = +c.dataset.i; renderLog(); renderDetail(); });
+  el.querySelectorAll('button[data-a]').forEach(b => b.onclick = () => answer(b.dataset.a));
+}
+function renderDetail() {
+  const e = S.log[S.sel], el = $('detail');
+  if (!e) { el.innerHTML = '<div class="ex">左の「次へ ▶」を押すと、ここに、いま起きていることの説明と、実際に流れるデータ（JSON）が出ます。</div>'; return; }
+  if (e.k === 'msg') el.innerHTML = '<span class="tag">' + (e.dir === 'c2s' ? 'AIアプリ → サーバー' : 'サーバー → AIアプリ') + '</span><h3>' + esc(e.title) + '</h3><pre>' + colorJson(e.json) + '</pre><div class="ex">' + esc(e.ex) + '</div>';
+  else if (e.k === 'think') el.innerHTML = '<span class="tag">AI 内部の処理</span><h3>AI が道具を選ぶ</h3><div class="ex">' + esc(e.ex) + '</div>';
+  else if (e.k === 'perm') el.innerHTML = '<span class="tag">安全のための確認</span><h3>実行前の許可</h3><div class="ex">メモを書き換えるような、何かを変える道具は、実行する前に人間に確認するのが一般的です。本物の AI アプリでも、「この道具を使ってよいか」を聞いてくるものが多くあります。拒否すると、道具は呼ばれません。</div>';
+  else el.innerHTML = '<span class="tag">' + (e.who === 'user' ? '質問' : 'AI の答え') + '</span><h3>' + (e.who === 'user' ? 'あなたの質問' : 'AI が文章で答える') + '</h3><div class="ex">' + (e.who === 'user' ? 'ここからスタートです。AI は、この質問を読んで、道具が必要かどうかを考えます。' : 'AI は、道具から返ってきた結果を、ふつうの文章に直して答えます。あなたには、MCP のやりとりは見えず、この答えだけが見えます。') + '</div>';
+}
+function renderCtl() {
+  const done = S.started && !S.pending.length && !S.waiting;
+  $('next').disabled = !S.started || !S.pending.length || !!S.waiting;
+  $('st').textContent = !S.started ? '' : S.waiting ? '↑ 確認に答えてください' : S.pending.length ? 'あと ' + S.pending.length + ' ステップ' : '終わりました。別の質問も試せます。';
+  $('send').textContent = S.started && !done ? '質問を変える' : 'これで始める';
+}
+function push(entry) { S.log.push(entry); S.sel = S.log.length - 1; }
+function step() {
+  if (S.waiting || !S.pending.length) return;
+  const s = S.pending.shift();
+  if (s.k === 'msg') { const e = { k: 'msg', dir: s.dir, title: s.title, ex: s.ex, phase: s.phase, json: s.json() }; push(e); if (s.after) s.after(); }
+  else if (s.k === 'perm') { push({ k: 'perm', tool: s.tool, args: s.args, phase: 'use' }); S.waiting = true; }
+  else if (s.k === 'chat') push({ k: 'chat', who: s.who, text: finalText(s), phase: 'use' });
+  else push({ k: 'think', text: s.text, ex: s.ex, phase: 'use' });
+  renderLog(); renderDetail(); renderCtl();
+}
+function answer(a) {
+  const e = S.log.find(x => x.k === 'perm' && !x.answer); if (!e) return;
+  e.answer = a; S.waiting = false;
+  if (a === 'no') { S.pending = [{ k: 'chat', who: 'ai', text: '了解しました。道具は使わず、メモには追加していません。' }]; }
+  renderLog(); renderDetail(); renderCtl();
+}
+function start() {
+  const q = $('q').value.trim(); if (!q) { $('q').focus(); return; }
+  S.log = S.log.filter(e => e.phase === 'connect'); S.waiting = null; S.started = true; S.sel = S.log.length - 1;
+  S.rid = 3; S.pending = (S.connected ? [] : connectSteps()).concat(plan(q));
+  if (!S.connected) S.log = [];
+  renderLog(); renderDetail(); renderCtl();
+}
+const SAMPLE = ['東京の明日の天気は？', '123 × 45 はいくつ？', '買い物メモに「牛乳」を足して', '明日の天気を教えて', '名古屋の天気は？', 'こんにちは'];
+SAMPLE.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.onclick = () => { $('q').value = t; $('q').focus(); }; $('samples').appendChild(b); });
+$('send').onclick = start;
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); start(); } });
+$('next').onclick = step;
+$('reset').onclick = () => { fresh(); NOTES.length = 0; $('q').value = ''; renderLog(); renderDetail(); renderCtl(); };
+fresh(); renderLog(); renderDetail(); renderCtl();
+})();
+</script>
+</body>
+</html>
