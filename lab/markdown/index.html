@@ -45,10 +45,15 @@
   #out img { max-width: 100%; }
   #out a { color: #1769d6; }
   .hint { margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .tools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .box.drag { outline: 3px dashed var(--accent); outline-offset: -3px; }
+  .box.drag textarea { background: #14263a; }
+  .msg { padding: 6px 14px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+  .msg:empty { display: none; }
   @media print {
     @page { margin: 15mm; }
     body { background: #fff; color: #000; padding: 0; max-width: none; }
-    .back, body > h1, .lead, .chips, .hint, .cols > .box:first-child, .box > .hd, #src { display: none !important; }
+    .back, body > h1, .lead, .chips, .hint, .cols > .box:first-child, .msg, .box > .hd, #src { display: none !important; }
     .cols { display: block; }
     .box { display: block; background: none; border: 0; overflow: visible; }
     #out { display: block !important; height: auto; min-height: 0; overflow: visible; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -61,13 +66,15 @@
 <body>
 <a class="back" href="../">← LAB 一覧</a>
 <h1>Markdown 体験</h1>
-<p class="lead">左の欄に書くと、右にどう見えるかがすぐ出ます。下の見本を押すと、その書き方の例が入ります。自由に書き換えて試してください。</p>
+<p class="lead">左の欄に書くと、右にどう見えるかがすぐ出ます。ファイルは、左の欄にドロップするか「開く」で読み込めます。HTML のタグも使えます。下の見本を押すと、その書き方の例が入ります。自由に書き換えて試してください。</p>
 <div class="chips" id="chips"></div>
 
 <div class="cols">
   <div class="box">
-    <div class="hd"><span>書く（Markdown）</span><span class="tools"><button id="clear" type="button">全部消す</button></span></div>
-    <textarea id="md" spellcheck="false" aria-label="Markdown を入力"></textarea>
+    <div class="hd"><span>書く（Markdown）</span><span class="tools"><button id="open" type="button" title="Markdown / HTML / テキストのファイルを読み込みます">📂 開く</button><button id="clear" type="button">全部消す</button></span></div>
+    <input type="file" id="file" accept=".md,.markdown,.txt,.html,.htm,text/markdown,text/plain,text/html" hidden>
+    <textarea id="md" spellcheck="false" aria-label="Markdown を入力" placeholder="ここに書きます。ファイルをドロップしても読み込めます。"></textarea>
+    <div class="msg" id="msg" role="status"></div>
   </div>
   <div class="box">
     <div class="hd"><span>結果</span>
@@ -104,6 +111,8 @@ const NUL = String.fromCharCode(0);
 function inline(s) {
   const codes = [];
   s = s.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, c) => { codes.push('<code>' + esc(c.trim()) + '</code>'); return NUL + (codes.length - 1) + NUL; });
+  s = s.replace(/<(https?:\/\/[^\s<>]+)>/g, (_, u) => { codes.push('<a href="' + esc(u) + '">' + esc(u) + '</a>'); return NUL + (codes.length - 1) + NUL; });
+  s = s.replace(/<\/?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?\/?>|<!--[\s\S]*?-->/g, t => { codes.push(t); return NUL + (codes.length - 1) + NUL; });
   s = esc(s);
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (_, a, u, t) => '<img src="' + esc(safeUrl(u.replace(/&amp;/g, '&'))) + '" alt="' + a + '"' + (t ? ' title="' + t + '"' : '') + '>');
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (_, a, u, t) => '<a href="' + esc(safeUrl(u.replace(/&amp;/g, '&'))) + '" target="_blank" rel="noopener noreferrer">' + a + '</a>');
@@ -113,17 +122,69 @@ function inline(s) {
   return s.split(NUL).map((p, k) => (k % 2 ? codes[+p] : p)).join('');
 }
 
+const BLOCK = /^\s*<(?:!--|!doctype|\/?(?:address|article|aside|blockquote|body|caption|center|col|colgroup|dd|details|dialog|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|head|header|hr|html|li|main|meta|link|nav|ol|p|pre|script|section|style|summary|table|tbody|td|tfoot|th|thead|title|tr|ul|iframe)(?=[\s\/>]|$))/i;
+
+/* 危ないもの（スクリプトやイベント属性など）を取り除いてから表示する */
+const DROP = /^(script|style|iframe|frame|frameset|object|embed|applet|form|input|button|select|textarea|meta|link|base|title|head|svg|math|template|noscript|audio|video|source)$/;
+const KEEP = /^(a|abbr|address|article|aside|b|bdi|bdo|big|blockquote|br|caption|center|cite|code|col|colgroup|dd|del|details|dfn|div|dl|dt|em|figcaption|figure|font|footer|h[1-6]|header|hr|i|img|ins|kbd|li|main|mark|nav|ol|p|pre|q|rp|rt|ruby|s|samp|section|small|span|strike|strong|sub|summary|sup|table|tbody|td|tfoot|th|thead|time|tr|tt|u|ul|var|wbr)$/;
+const ATTR = /^(align|valign|colspan|rowspan|width|height|alt|title|href|src|open|start|reversed|color|size|face|bgcolor|border|cellpadding|cellspacing|lang|dir|style|class)$/;
+const CSSOK = /^(color|background-color|text-align|text-decoration[a-z-]*|text-indent|font(-size|-weight|-style|-family)?|line-height|letter-spacing|vertical-align|white-space[a-z-]*|width|height|max-width|min-width|margin(-top|-right|-bottom|-left)?|padding(-top|-right|-bottom|-left)?|border(-[a-z]+)*|list-style(-type)?|float|clear|display)$/;
+let removed = 0;
+function sanitize(html) {
+  removed = 0;
+  const doc = new DOMParser().parseFromString('<!doctype html><body>' + html, 'text/html');
+  const walk = node => {
+    Array.from(node.childNodes).forEach(c => {
+      if (c.nodeType === 8) { c.remove(); return; }
+      if (c.nodeType !== 1) return;
+      const tag = c.localName;
+      if (DROP.test(tag)) {
+        if (tag === 'input' && c.type === 'checkbox') { c.replaceWith(c.checked ? '☑' : '☐'); return; }
+        if (!/^(meta|title|head|style|link|base)$/.test(tag)) removed++;
+        c.remove(); return;
+      }
+      walk(c);
+      if (!KEEP.test(tag)) { c.replaceWith(...c.childNodes); return; }
+      Array.from(c.attributes).forEach(a => {
+        const n = a.name.toLowerCase();
+        if (!ATTR.test(n)) { if (n.startsWith('on')) removed++; c.removeAttribute(a.name); return; }
+        // javascript: などは無効化（相対パス、http(s)、mailto は残す）
+        if (n === 'href' || n === 'src') {
+          const v = a.value.replace(/[\u0000-\u0020]/g, '');
+          if (/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^(https?:|mailto:|tel:|data:image\/)/i.test(v)) { removed++; c.setAttribute(a.name, '#'); }
+        }
+        if (n === 'class' && !/^(task|lang-[\w+-]+)$/.test(a.value)) c.removeAttribute(a.name);
+        if (n === 'style') {
+          const st = Array.from(c.style).filter(k => CSSOK.test(k) && !/url\(|expression/i.test(c.style.getPropertyValue(k))).map(k => k + ':' + c.style.getPropertyValue(k));
+          if (st.length) c.setAttribute('style', st.join(';')); else c.removeAttribute('style');
+        }
+      });
+      if (tag === 'a' && c.hasAttribute('href')) { c.setAttribute('target', '_blank'); c.setAttribute('rel', 'noopener noreferrer'); }
+    });
+  };
+  walk(doc.body);
+  return doc.body.innerHTML.trim();
+}
+
 function render(text) {
   const L = text.replace(/\r\n?/g, '\n').split('\n'), o = [];
   let i = 0;
   const isBlank = l => /^\s*$/.test(l);
   const isHr = l => /^\s*([-*_])(\s*\1){2,}\s*$/.test(l);
   const isLi = l => /^\s*([-*+]|\d+[.)])\s/.test(l);
-  const startsBlock = l => /^(#{1,6})\s/.test(l) || /^\s*(```|~~~)/.test(l) || /^\s*>/.test(l) || isLi(l) || isHr(l);
+  const startsBlock = l => BLOCK.test(l) || /^(#{1,6})\s/.test(l) || /^\s*(```|~~~)/.test(l) || /^\s*>/.test(l) || isLi(l) || isHr(l);
   while (i < L.length) {
     const l = L[i];
     if (isBlank(l)) { i++; continue; }
     let m;
+    if (BLOCK.test(l)) {
+      // HTML のかたまりは、そのまま通す（空行まで。script・style・pre・コメントは閉じるまで）
+      m = l.match(/^\s*<(script|style|pre)\b/i);
+      const buf = [], end = m ? new RegExp('</' + m[1] + '\\s*>', 'i') : /^\s*<!--/.test(l) ? /-->/ : null;
+      if (end) { while (i < L.length) { buf.push(L[i]); if (end.test(L[i++])) break; } }
+      else { while (i < L.length && !isBlank(L[i])) buf.push(L[i++]); }
+      o.push(buf.join('\n')); continue;
+    }
     if ((m = l.match(/^\s*(```|~~~)\s*([\w+-]*)/))) {
       const fence = m[1], buf = []; i++;
       while (i < L.length && !L[i].trim().startsWith(fence)) buf.push(L[i++]);
@@ -170,21 +231,50 @@ function render(text) {
   return o.join('\n');
 }
 
+let loaded = '', loadedText = null;
 function update() {
-  let h; try { h = render(md.value); } catch (e) { h = '<p>表示できませんでした: ' + esc(String(e)) + '</p>'; }
+  let h; try { h = sanitize(/^\s*(<!doctype html|<html[\s>])/i.test(md.value) ? md.value : render(md.value)); } catch (e) { h = '<p>表示できませんでした: ' + esc(String(e)) + '</p>'; }
   out.innerHTML = h || '<p style="color:#8a93a8">ここに結果が出ます。</p>';
   src.textContent = h;
+  $('msg').textContent = [loaded, removed ? '安全のため、スクリプトなど ' + removed + ' 件は表示していません。' : ''].filter(Boolean).join(' ');
   try { localStorage.setItem('lab-md', md.value); } catch (e) {}
 }
 md.addEventListener('input', update);
 $('tPrev').onclick = () => { out.style.display = ''; src.style.display = 'none'; $('tPrev').classList.add('on'); $('tSrc').classList.remove('on'); };
 $('tSrc').onclick = () => { out.style.display = 'none'; src.style.display = 'block'; $('tSrc').classList.add('on'); $('tPrev').classList.remove('on'); };
 $('print').onclick = () => window.print();
-$('clear').onclick = () => { md.value = ''; update(); md.focus(); };
+async function readFile(f) {
+  if (!f) return;
+  if (!/\.(md|markdown|txt|html?)$/i.test(f.name) && !/^text\//.test(f.type)) { $('msg').textContent = '読み込めるのは、Markdown（.md）、HTML、テキストのファイルです。'; return; }
+  if (f.size > 2 * 1024 * 1024) { $('msg').textContent = 'ファイルが大きすぎます（2MB まで）。'; return; }
+  const buf = await f.arrayBuffer(), head = new Uint8Array(buf.slice(0, 2));
+  let text;
+  if (head[0] === 0xFF && head[1] === 0xFE) text = new TextDecoder('utf-16le').decode(buf);
+  else { try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { text = new TextDecoder('shift_jis').decode(buf); } }
+  const cur = md.value;
+  if (cur.trim() && cur !== loadedText && !Object.values(SAMPLES).includes(cur) && !confirm('いま書いている内容は、読み込むファイルに置きかわります。よろしいですか？')) return;
+  md.value = text.replace(/\r\n?/g, '\n'); loadedText = md.value; loaded = '「' + f.name + '」を読み込みました。';
+  update(); md.scrollTop = 0; out.scrollTop = 0;
+}
+$('open').onclick = () => $('file').click();
+$('file').onchange = () => { readFile($('file').files[0]); $('file').value = ''; };
+const leftBox = md.closest('.box');
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+let depth = 0;
+leftBox.addEventListener('dragenter', e => { if (hasFiles(e)) { e.preventDefault(); depth++; leftBox.classList.add('drag'); } });
+leftBox.addEventListener('dragleave', e => { if (hasFiles(e) && depth > 0 && --depth === 0) leftBox.classList.remove('drag'); });
+// 欄の外に落としても、ブラウザがファイルを開いて画面が切りかわらないようにする
+window.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = leftBox.contains(e.target) ? 'copy' : 'none'; } });
+window.addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); depth = 0; leftBox.classList.remove('drag');
+  if (leftBox.contains(e.target)) readFile(e.dataTransfer.files[0]);
+});
+$('clear').onclick = () => { loaded = ''; md.value = ''; update(); md.focus(); };
 md.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); md.setRangeText('  ', md.selectionStart, md.selectionEnd, 'end'); update(); } });
 Object.keys(SAMPLES).forEach(k => {
   const b = document.createElement('button'); b.type = 'button'; b.textContent = k;
-  b.onclick = () => { md.value = SAMPLES[k]; update(); md.focus(); };
+  b.onclick = () => { loaded = ''; md.value = SAMPLES[k]; update(); md.focus(); };
   $('chips').appendChild(b);
 });
 let init = ''; try { init = localStorage.getItem('lab-md') || ''; } catch (e) {}
